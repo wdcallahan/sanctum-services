@@ -36,6 +36,12 @@ A short chronological record of significant observations, decisions, experiments
 - Kept this engineering log separate from operating instructions; reduced `PROJECT_LEAD_INTRODUCTION.md` to a short pointer-based handoff. Validated runbooks will be published only when their operations have been exercised.
 - **No application deployment or EE qualification occurred as part of this documentation work.** The shared engineering-standards amendment remains a proposed separate operation.
 
+## 2026-10-17 — Standard managed-host connection chosen
+
+- Nova explicitly chose Ansible's normal **smart/SSH** model, including SSH from a Kvin-based EE back into Kvin itself. This preserves the ability to run the same playbook from Peanut or against a replacement application host.
+- Removed `ansible_connection: local` from `ansible/inventory/hosts.yml` on `main`. The SSH credential and rootless user-systemd execution paths still require a live EE-based test.
+- Clarified the unrelated Python-version question: tests of **Python 3.12 and 3.14** came from Project Joule's separately documented application compatibility/CI matrix, not an Ansible requirement to install two interpreters globally on Kvin and Peanut. Joule's owning [ADR-0002](https://github.com/wdcallahan/joule/blob/main/docs/adr/0002-python-and-dependency-workflow.md) records that decision; it is not authority to introduce a project-local Ansible venv here.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
