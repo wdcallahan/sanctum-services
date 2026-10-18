@@ -95,6 +95,38 @@ inspection only until a shared installation owner/method is agreed.
 
 Nova provisionally selected **Sanctum Maintenance's existing controller-infrastructure workstream** to own shared Navigator/Builder tooling and a new general-purpose application EE. The decision can be revisited if it becomes a separate platform in its own right; this application repository will only consume its supported interface, not own controllers or their tooling. The accepted Maintenance EE must not be silently replaced or mutated.
 
+### Proposed EE composition (not accepted yet)
+
+The word **shared** can mean *shared image identity* or *shared foundation*;
+these are not the same choice. The proposed model combines both:
+
+```text
+Sanctum Maintenance controller infrastructure
+  |-- centrally managed Navigator + Builder (Kvin and Peanut)
+  |-- minimal, published base EE -- exact digest retained
+         |-- Nextcloud: use the base as-is, if sufficient
+         |-- Other service: use the base as-is, if sufficient
+         |-- Specialized project EE: derive from pinned base
+                    + only that project's required dependencies
+
+The existing qualified sanctum-maintenance-ee stays separate.
+```
+
+A project that needs no extra dependencies can consume the same pinned
+EE, with no needless duplicate image. A project needing incompatible
+collections or Python/system packages owns an independently qualified
+derivative. If incompatible core/Python or operational restrictions make
+even the base unsuitable, use an independently built EE as a justified
+exception. Builder accepts an image as its `base_image`, but before
+deriving from an **already-populated EE**, examine Builder's generated
+Containerfile to confirm its base-stage Ansible Core/Runner installation
+does not conflict or create pointless duplication.
+
+The ownership decision is recorded; **Nova has not yet accepted this
+specific layering plan**, and no images have been built or changed for
+it. The [controller-infrastructure owner](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md)
+has the corresponding proposed architecture.
+
 ## Ownership and migration boundaries
 
 | Component | Intended owner / contract |
