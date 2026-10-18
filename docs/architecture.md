@@ -60,6 +60,39 @@ Kvin or Peanut: centrally managed ansible-navigator
 
 **Do not confuse the EE container with the managed machine.** The original inventory used `ansible_connection: local`, which would have executed tasks **inside the EE container**, not on Kvin. On October 17 we removed that override and chose Ansible's ordinary **smart connection**, which uses SSH for this Linux host. This is intentional even when the controller is Kvin: **Navigator/EE on Kvin → SSH to Kvin as `wdc2` → rootless Quadlet operations**. Peanut can manage the same target later without rewriting the role. The configuration change is committed, but actual SSH authentication and user-systemd behavior **remain unverified**. A separate project venv running `ansible-playbook` is **not** the accepted intended runtime.
 
+## Where the EE comes from
+
+Navigator does **not** create the EE by reading its `ansible-navigator.yml`.
+That config tells Navigator **which image to use**. There are two normal paths:
+
+1. **Pull a prebuilt EE** from an image registry, as in Nova's classroom:
+   the provided image reference resolves to a finished container image.
+2. **Build an EE locally** with `ansible-builder`, using a
+   version-controlled `execution-environment.yml` plus collection, Python,
+   and system-package requirements. Builder creates a Containerfile and
+   invokes Podman to produce the image, which Navigator can use directly
+   from the local image store or after publication.
+
+**Actual existing Sanctum example:** [Maintenance's EE recipe](https://github.com/wdcallahan/sanctum-maintenance/blob/main/execution-environment.yml)
+starts from `quay.io/fedora/fedora:44`, declares `ansible-core==2.21.2`
+and `ansible-runner==2.4.3`, and draws dependencies from
+`requirements.yml`, `requirements-ee.txt`, and `bindep.txt`.
+Its [Navigator settings](https://github.com/wdcallahan/sanctum-maintenance/blob/main/ansible-navigator.yml)
+select the locally tagged `localhost/sanctum-maintenance-ee:2026.07` and
+set image pull policy to `never`. The image was qualified for **Maintenance**,
+not automatically for Nextcloud. It was copied to the peer controller; the
+Maintenance project documents an independent durable image-publication gap.
+A tag or a rebuild from mutable upstream inputs does **not** guarantee the
+same image bytes as the already accepted one.
+
+On October 18 Nova queried Kvin's APT metadata: neither
+`ansible-navigator` nor `ansible-builder` was found under those package
+names in its configured repositories. That is a **host-tool installation**
+question, not an EE dependency or evidence that every application requires
+a Python venv. We have not selected a replacement host-tool installation
+method; preserve and use the existing qualified Maintenance tools for
+inspection only until a shared installation owner/method is agreed.
+
 The shared controller tools and EE need a declared owning project. This application repository should consume their supported interface, not accidentally become the automation platform owner.
 
 ## Ownership and migration boundaries
