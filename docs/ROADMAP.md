@@ -38,7 +38,8 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 - [x] Record host/storage/port observations and the separation from adjacent projects.
 - [x] Correct the false claim that an installation or syntax test establishes a completed service.
 - [x] Withdraw the direct-via-venv deployment instructions pending EE design.
-- [ ] Agree the cross-project maintenance/learning requirements in the **owning** [engineering standards](https://github.com/wdcallahan/engineering-standards), without creating a competing policy copy. **Nova's approval required** before changing those standards.
+- [x] Preserve Nova's practical-learning, independent-operation and **teach when a real operation needs it** requirements in the existing cross-project [Nova–Pixel interface standard](https://github.com/wdcallahan/engineering-standards/blob/main/Nova-Pixel-Project-Interface-Standard.md). Preserve his choice of plain `git pull` in the existing [Git standard](https://github.com/wdcallahan/engineering-standards/blob/main/Git-Project-Engineering-Standard.md).
+- [ ] Separately review whether the [Operational Project Completion Standard](https://github.com/wdcallahan/engineering-standards/blob/main/Operational-Project-Completion-Standard.md) needs an explicit four-part exit test. This normative document has **not** been amended; avoid creating another overlapping policy.
 
 **Evidence:** Repository source and operator terminal observations, recorded separately in the [engineering log](history/engineering-log.md). The four requirements above are Nova's explicit objective for this project whether or not the shared standards amendment is approved yet.
 
