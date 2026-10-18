@@ -36,6 +36,18 @@ and must not be repurposed without verifying its contract.
 An EE setup and tested Navigator invocation will replace this section
 when they have been selected and qualified.
 
+## Managed-host connection
+
+The inventory deliberately omits `ansible_connection` and accepts Ansible's
+standard `smart` connection selection: SSH to `kvin.outer.sanctum`
+as `wdc2` on this Linux host. This remains correct when Navigator and
+the EE run on Kvin itself: **the EE connects by SSH back to Kvin**.
+From Peanut, the same inventory points to the same managed host.
+This is a *source design*, not an SSH authentication or runtime acceptance result.
+The EE must provide a supported, explicit SSH credential path and the
+connection must allow control of `wdc2`'s user systemd manager.
+
+
 ## Inputs required before the first apply
 
 1. Choose the stable Nextcloud service hostname and public scheme in
