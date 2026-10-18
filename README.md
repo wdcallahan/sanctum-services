@@ -2,7 +2,7 @@
 
 **Repeatable self-hosted applications, built to be understood and maintained.**
 
-Sanctum Services is the application-deployment project for the Sanctum home lab. It uses **Ansible, Ansible Navigator, execution environments, and rootless Podman Quadlets** to make services reproducible and operable without relying on a particular assistant or undocumented shell history.
+Sanctum Services is the application-deployment project for the Sanctum home lab. Its intended, still-being-qualified workflow uses **Ansible Navigator, containerized Ansible execution environments, and rootless Podman Quadlets** to make services reproducible and operable without relying on a particular assistant or undocumented shell history.
 
 The first service is **Nextcloud**. Home Assistant is a possible later addition. We build these systems for two outcomes: useful services **and** real hands-on engineering experience.
 
