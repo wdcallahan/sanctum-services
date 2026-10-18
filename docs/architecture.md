@@ -93,7 +93,7 @@ a Python venv. We have not selected a replacement host-tool installation
 method; preserve and use the existing qualified Maintenance tools for
 inspection only until a shared installation owner/method is agreed.
 
-The shared controller tools and EE need a declared owning project. This application repository should consume their supported interface, not accidentally become the automation platform owner.
+Nova provisionally selected **Sanctum Maintenance's existing controller-infrastructure workstream** to own shared Navigator/Builder tooling and a new general-purpose application EE. The decision can be revisited if it becomes a separate platform in its own right; this application repository will only consume its supported interface, not own controllers or their tooling. The accepted Maintenance EE must not be silently replaced or mutated.
 
 ## Ownership and migration boundaries
 
@@ -104,7 +104,7 @@ The shared controller tools and EE need a declared owning project. This applicat
 | Network/host facts | `sanctum` registry |
 | YXORP route and proxy | Existing reverse-proxy owner |
 | Shared PostgreSQL service, database provisioning and DB backup interface | Existing PostgreSQL owner |
-| Shared Navigator installation and reusable EE | **Owner to be agreed before implementation** |
+| Shared Navigator/Builder toolchain and future general-purpose application EE | [Sanctum Maintenance — controller infrastructure](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md), **provisionally agreed October 18**, not yet implemented; existing Maintenance-qualified image remains separate |
 | Nextcloud backup integration and documented restore | `sanctum-services` coordinated with database owner |
 | Later move to Void | Explicit future migration |
 
