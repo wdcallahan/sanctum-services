@@ -1,0 +1,91 @@
+---
+# All validation is before filesystem or service changes.
+- name: Confirm target and declared network/image inputs
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['fqdn'] == inventory_hostname
+      - nextcloud_host_port | int >= 1024
+      - nextcloud_host_port | int <= 65535
+      - nextcloud_public_hostname | length > 0
+      - nextcloud_public_scheme in ['http', 'https']
+      - nextcloud_postgres_host | length > 0
+      - nextcloud_postgres_host is search('[A-Za-z]')
+      - nextcloud_image is match('^.+@sha256:[0-9a-f]{64}$')
+    fail_msg: >-
+      Choose the intended service hostname, scheme, database DNS name,
+      and an immutable image digest before applying this playbook.
+
+- name: Confirm application credentials are supplied separately
+  ansible.builtin.assert:
+    that:
+      - vault_nextcloud_postgres_password is defined
+      - vault_nextcloud_admin_password is defined
+      - (vault_nextcloud_postgres_password | default('')) | length > 0
+      - (vault_nextcloud_admin_password | default('')) | length > 0
+    fail_msg: >-
+      Supply nonempty vault_nextcloud_postgres_password and
+      vault_nextcloud_admin_password through encrypted Ansible Vault.
+  no_log: true
+
+- name: Verify the declared PostgreSQL endpoint is reachable
+  ansible.builtin.wait_for:
+    host: "{{ nextcloud_postgres_host }}"
+    port: 5432
+    connect_timeout: 3
+    timeout: 10
+    state: started
+
+- name: Create the application storage directory
+  ansible.builtin.file:
+    path: "{{ nextcloud_html_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Create the private application configuration directory
+  ansible.builtin.file:
+    path: "{{ nextcloud_private_config_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Create the rootless Quadlet directory
+  ansible.builtin.file:
+    path: "{{ nextcloud_quadlet_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Write private container environment
+  ansible.builtin.template:
+    src: nextcloud.env.j2
+    dest: "{{ nextcloud_private_config_dir }}/nextcloud.env"
+    mode: "0600"
+  no_log: true
+  notify: Restart Nextcloud
+
+- name: Install Nextcloud Quadlet
+  ansible.builtin.template:
+    src: nextcloud.container.j2
+    dest: "{{ nextcloud_quadlet_dir }}/sanctum-nextcloud.container"
+    mode: "0644"
+  notify: Restart Nextcloud
+
+- name: Enable and start Nextcloud in the user service manager
+  ansible.builtin.systemd_service:
+    name: "{{ nextcloud_quadlet_service }}"
+    scope: user
+    daemon_reload: true
+    enabled: true
+    state: started
+
+- name: Apply any updated container inputs before checking readiness
+  ansible.builtin.meta: flush_handlers
+
+- name: Verify Nextcloud was actually installed
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ nextcloud_host_port }}/status.php"
+    return_content: true
+    status_code: 200
+  register: nextcloud_status
+  until: nextcloud_status.json.installed | default(false) | bool
+  retries: 20
+  delay: 5
+  changed_when: false

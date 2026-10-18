@@ -1,0 +1,7 @@
+---
+- name: Deploy the Sanctum Nextcloud application
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  roles:
+    - nextcloud

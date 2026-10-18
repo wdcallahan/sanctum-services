@@ -1,0 +1,7 @@
+---
+- name: Restart Nextcloud
+  ansible.builtin.systemd_service:
+    name: "{{ nextcloud_quadlet_service }}"
+    scope: user
+    daemon_reload: true
+    state: restarted

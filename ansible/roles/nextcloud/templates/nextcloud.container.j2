@@ -1,0 +1,16 @@
+[Unit]
+Description=Sanctum Nextcloud (Apache, rootless Podman)
+
+[Container]
+Image={{ nextcloud_image }}
+ContainerName=sanctum-nextcloud
+PublishPort=0.0.0.0:{{ nextcloud_host_port }}:80/tcp
+Volume={{ nextcloud_html_dir }}:/var/www/html
+EnvironmentFile={{ nextcloud_private_config_dir }}/nextcloud.env
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target

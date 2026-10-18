@@ -1,0 +1,19 @@
+---
+# These are deliberately unset until the agreed service identities are known.
+# Public app name is stable across host and port moves through YXORP.
+nextcloud_public_hostname: ""
+nextcloud_public_scheme: ""
+
+# This must be a service DNS name, not Kvin's observed IP address.
+nextcloud_postgres_host: ""
+
+# Select and test a platform-appropriate immutable image digest before deploy.
+nextcloud_image: ""
+
+nextcloud_host_port: 8085
+nextcloud_postgres_database: nextcloud
+nextcloud_postgres_user: nextcloud
+nextcloud_admin_user: admin
+
+# Values beginning vault_ are supplied by an encrypted
+# ansible/group_vars/nextcloud/vault.yml (not yet created).

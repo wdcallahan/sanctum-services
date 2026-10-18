@@ -1,0 +1,6 @@
+---
+nextcloud_state_root: "{{ ansible_env.HOME }}/srv/sanctum-services/nextcloud"
+nextcloud_html_dir: "{{ nextcloud_state_root }}/html"
+nextcloud_private_config_dir: "{{ ansible_env.HOME }}/.config/sanctum-services/nextcloud"
+nextcloud_quadlet_dir: "{{ ansible_env.HOME }}/.config/containers/systemd"
+nextcloud_quadlet_service: sanctum-nextcloud.service
