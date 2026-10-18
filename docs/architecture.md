@@ -49,7 +49,7 @@ Kvin or Peanut: centrally managed ansible-navigator
              Execution Environment
              (Ansible + collections + dependencies)
                      |
-                     | explicit connection to target host
+                     | Ansible default smart/SSH to target host
                      v
               Kvin as managed host
                      |
@@ -58,7 +58,7 @@ Kvin or Peanut: centrally managed ansible-navigator
             rootless Nextcloud application
 ```
 
-**Do not confuse the EE container with the managed machine.** The initial candidate inventory says `ansible_connection: local`; with Ansible running inside an EE, that would execute tasks **in the EE container**, not on Kvin. The role and connection model must be corrected and tested before deployment. A separate project venv running `ansible-playbook` is **not** the accepted intended runtime.
+**Do not confuse the EE container with the managed machine.** The original inventory used `ansible_connection: local`, which would have executed tasks **inside the EE container**, not on Kvin. On October 17 we removed that override and chose Ansible's ordinary **smart connection**, which uses SSH for this Linux host. This is intentional even when the controller is Kvin: **Navigator/EE on Kvin → SSH to Kvin as `wdc2` → rootless Quadlet operations**. Peanut can manage the same target later without rewriting the role. The configuration change is committed, but actual SSH authentication and user-systemd behavior **remain unverified**. A separate project venv running `ansible-playbook` is **not** the accepted intended runtime.
 
 The shared controller tools and EE need a declared owning project. This application repository should consume their supported interface, not accidentally become the automation platform owner.
 
