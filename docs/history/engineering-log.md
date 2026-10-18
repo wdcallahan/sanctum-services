@@ -49,6 +49,13 @@ A short chronological record of significant observations, decisions, experiments
 - The shared [Nova–Pixel interface standard](https://github.com/wdcallahan/engineering-standards/blob/main/Nova-Pixel-Project-Interface-Standard.md) was updated to preserve learning as a deliverable and require **in-session durable recording** of meaningful corrections to purpose, architecture, operator independence, and instructional practice. This project handoff now points to those rules.
 - These are GitHub source/documentation updates only, not evidence of successful EE deployment, system changes, or user comprehension.
 
+## 2026-10-18 — Navigator inspection, first live learning checkpoint
+
+- On Kvin, Nova invoked the already-installed Sanctum Maintenance `ansible-navigator images --mode interactive`, without installing or creating another environment.
+- The interactive Podman image list identified `sanctum-maintenance-ee:2026.07` as **Execution environment: True**, image size **468 MB**. Other local images (including Prism and SearXNG) were marked `False`, confirming Navigator lists ordinary container images alongside recognized EEs.
+- This is **read-only discovery of an existing project-qualified EE**, not Nextcloud runtime acceptance or approval to reuse the Maintenance EE as a generic shared runtime.
+- Nova is already familiar with Navigator's **stdout mode** for playbook execution. Interactive image inspection was selected specifically to explore an EE's contents; the next useful teaching step is inspecting the image details before choosing new tooling.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
