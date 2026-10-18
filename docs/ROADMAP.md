@@ -53,7 +53,8 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 - [ ] Define a minimal, version-controlled EE with the required Ansible/collection/system dependencies; pin the selected content and document rebuilding and reobtaining the exact accepted image. Qualify it on **ARM64** and establish usable availability on both controllers.
 - [ ] Use Navigator to inspect the EE contents and run a small harmless read-only playbook. Nova practices the steps and understands the output.
 - [x] Remove the **wrong inventory override** `ansible_connection: local`. The inventory now uses Ansible's default **smart** connection (SSH for Kvin) and names `wdc2` as the managed user. **Source correction only; no EE/SSH acceptance test yet.**
-- [ ] Qualify SSH from the EE to Kvin, including **Kvin → SSH → Kvin** and **Peanut → SSH → Kvin**. Confirm access to the intended `wdc2` rootless user-systemd manager without mounting arbitrary host control sockets into the EE.
+- [x] From Kvin, launch the existing Maintenance EE with Navigator and confirm an **ad hoc `ansible.builtin.ping` over smart/SSH back to Kvin** returned `SUCCESS` and `pong` (October 18); this qualifies **that existing EE-to-Kvin path only**.
+- [ ] Confirm the intended `wdc2` rootless user-systemd path from an approved EE and the applicable controller/SSH permissions; establish **Peanut → SSH → Kvin** through the selected runtime as part of shared-controller acceptance. Existing Maintenance peer evidence is relevant but does not automatically qualify the new Nextcloud setup.
 
 **Exit test:** Starting in a normal shell on either controller, Nova can identify the configured EE, launch Navigator, inspect its Ansible and collections, and run a read-only task against the intended *host* (not the EE container). Both controllers can reconstruct the tooling from its owning source and durable image inputs.
 
