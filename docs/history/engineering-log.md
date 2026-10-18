@@ -42,6 +42,13 @@ A short chronological record of significant observations, decisions, experiments
 - Removed `ansible_connection: local` from `ansible/inventory/hosts.yml` on `main`. The SSH credential and rootless user-systemd execution paths still require a live EE-based test.
 - Clarified the unrelated Python-version question: tests of **Python 3.12 and 3.14** came from Project Joule's separately documented application compatibility/CI matrix, not an Ansible requirement to install two interpreters globally on Kvin and Peanut. Joule's owning [ADR-0002](https://github.com/wdcallahan/joule/blob/main/docs/adr/0002-python-and-dependency-workflow.md) records that decision; it is not authority to introduce a project-local Ansible venv here.
 
+## 2026-10-17 — Learning and continuity requirements made cross-project
+
+- Nova reaffirmed that practical experience is gained by **using commands when they are actually needed**, not by memorizing unexplained switches inserted for hypothetical cases. Using `git -C` from the current repository is unnecessary; it is useful when invoking Git for a *different* directory. A repeated explanation of what a flag means does not answer why that flag was needed in the actual task.
+- Nova explicitly chose ordinary `git pull` in his usual sequential workflow, accepting that genuine divergence, if it ever arises, will be diagnosed as a real learning event. The shared [Git standard](https://github.com/wdcallahan/engineering-standards/blob/main/Git-Project-Engineering-Standard.md) was amended; no hidden `pull.ff only` configuration is authorized.
+- The shared [Nova–Pixel interface standard](https://github.com/wdcallahan/engineering-standards/blob/main/Nova-Pixel-Project-Interface-Standard.md) was updated to preserve learning as a deliverable and require **in-session durable recording** of meaningful corrections to purpose, architecture, operator independence, and instructional practice. This project handoff now points to those rules.
+- These are GitHub source/documentation updates only, not evidence of successful EE deployment, system changes, or user comprehension.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
