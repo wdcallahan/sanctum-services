@@ -62,6 +62,13 @@ A short chronological record of significant observations, decisions, experiments
 - These are **observed contents of Maintenance's existing EE**, not a qualification of a reusable EE for Nextcloud. The difference between the EE's core 2.21.2 and Nextcloud's earlier venv core 2.19.14 illustrates independent Python/Ansible environments.
 - Nova pointed out that the interactive Navigator interface renders its menu numbers in very dark gray against black and is hard to read. **He normally uses stdout mode and prefers it for ordinary operation.** Interactive inspection was a one-off learning exercise, not a new operating requirement. Avoid imposing inaccessible navigation or troubleshooting his terminal theme without a real need.
 
+## 2026-10-18 — Navigator executed Ansible inside the Maintenance EE
+
+- On Kvin, from `~/src/sanctum-maintenance`, Nova ran `./.venv/bin/ansible-navigator exec -- ansible --version`. The output reported **Ansible Core 2.21.2**, **Python 3.14.6**, executable `/usr/local/bin/ansible`, and Ansible module directory `/usr/local/lib/python3.14/site-packages/ansible`.
+- The EE process loaded `/home/wdc2/src/sanctum-maintenance/ansible.cfg`. This demonstrates the distinction between the project configuration mounted or made available from Kvin, the host-side Navigator executable (presently installed in Maintenance's `.venv`), and the **Ansible runtime inside the EE**. No venv activation was necessary.
+- **Acceptance limit:** `ansible --version` proves the launched runtime, **not** an SSH connection from the EE to the native Kvin managed host. A subsequent read-only module test must establish that separate boundary before treating the EE as usable for this project's remote host operations.
+- The existing Maintenance [inventory](https://github.com/wdcallahan/sanctum-maintenance/blob/main/inventories/production/hosts.yml) contains `kvin.outer.sanctum` as a Debian/controller host. Its [ansible.cfg](https://github.com/wdcallahan/sanctum-maintenance/blob/main/ansible.cfg) supplies the inventory and requires host-key checking. Prefer the actual existing EE/connection for a read-only test rather than installing other controller tooling prematurely.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
