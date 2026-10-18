@@ -49,7 +49,8 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 - [ ] Decide and document how Navigator/Builder are installed on both Debian controllers: supported native packages if available; otherwise a separately justified and centrally managed host-tool installation. An EE does not require a project-local Python venv.
 - [ ] Define a minimal, version-controlled EE with the required Ansible/collection/system dependencies; pin the selected content and document rebuilding and reobtaining the exact accepted image. Qualify it on **ARM64** and establish usable availability on both controllers.
 - [ ] Use Navigator to inspect the EE contents and run a small harmless read-only playbook. Nova practices the steps and understands the output.
-- [ ] Fix the **current inventory error** before an EE deployment: `ansible_connection: local` in an EE refers to the **EE container**, not Kvin. Establish and test an explicit supported connection to Kvin as `wdc2`, with appropriate rootless user-systemd access. Do not solve this by silently mounting arbitrary host control sockets into the EE.
+- [x] Remove the **wrong inventory override** `ansible_connection: local`. The inventory now uses Ansible's default **smart** connection (SSH for Kvin) and names `wdc2` as the managed user. **Source correction only; no EE/SSH acceptance test yet.**
+- [ ] Qualify SSH from the EE to Kvin, including **Kvin → SSH → Kvin** and **Peanut → SSH → Kvin**. Confirm access to the intended `wdc2` rootless user-systemd manager without mounting arbitrary host control sockets into the EE.
 
 **Exit test:** Starting in a normal shell on either controller, Nova can identify the configured EE, launch Navigator, inspect its Ansible and collections, and run a read-only task against the intended *host* (not the EE container). Both controllers can reconstruct the tooling from its owning source and durable image inputs.
 
@@ -106,6 +107,8 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 - [ ] Reuse the same established operator and documentation patterns without copying an unnecessary new EE or implementation for each service.
 
 These items are **future work**, not reasons to keep the completed Nextcloud pilot perpetually unfinished.
+
+The normal managed-host connection is **smart/SSH**, including when the controller and managed host happen to be the same physical machine. This makes controller location an operational choice rather than changing playbook semantics.
 
 ## Important work boundaries
 
