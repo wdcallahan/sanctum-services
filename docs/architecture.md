@@ -87,6 +87,17 @@ automation platforms can use that interface instead of implementing their
 own invocation and event capture. Runner is not a separate always-running
 service, second control node, or replacement for Ansible Core.
 
+**Important qualification:** Runner is not a dependency of Ansible Core:
+ordinary `ansible` and `ansible-playbook` work without it. For an EE intended
+for Navigator and automation-platform execution, however, it belongs in the
+supported runtime contract. Ansible Builder 3.1.1 checks for both Core and
+Runner at the end of an image build by default (`skip_ansible_check: false`).
+If Runner is absent from the image, that check fails, unless deliberately
+skipped; skipping does not qualify Runner-dependent execution. An explicit
+`ansible-navigator exec -- ansible ...` invocation can execute the Core CLI
+without requiring that the invoked command use Runner's API.
+
+
 Builder's definition deliberately has separate `dependencies.ansible_core`
 and `dependencies.ansible_runner` entries; its normal final-image check
 expects both, because the EE is intended for automation-tool execution as
