@@ -77,6 +77,26 @@ That config tells Navigator **which image to use**. There are two normal paths:
 starts from `quay.io/fedora/fedora:44`, declares `ansible-core==2.21.2`
 and `ansible-runner==2.4.3`, and draws dependencies from
 `requirements.yml`, `requirements-ee.txt`, and `bindep.txt`.
+### Ansible Core vs Runner in an EE
+
+**Ansible Core** runs playbooks and modules. **Ansible Runner** is the
+Python library and CLI that provides a stable *programmatic execution and
+results interface* around Ansible: it starts an operation, gathers stdout,
+status/return code, individual task events and artifacts. Other tools and
+automation platforms can use that interface instead of implementing their
+own invocation and event capture. Runner is not a separate always-running
+service, second control node, or replacement for Ansible Core.
+
+Builder's definition deliberately has separate `dependencies.ansible_core`
+and `dependencies.ansible_runner` entries; its normal final-image check
+expects both, because the EE is intended for automation-tool execution as
+well as direct CLI operation. See the official [Runner overview](https://docs.ansible.com/projects/runner/en/latest/)
+and [Builder definition](https://docs.ansible.com/projects/builder/en/latest/definition/).
+Our prior Maintenance EE explicitly installed `ansible-runner==2.4.3`
+alongside `ansible-core==2.21.2`. Whether these exact versions are
+appropriate for the **new foundation** is still subject to compatibility
+review during its participatory build.
+
 Its [Navigator settings](https://github.com/wdcallahan/sanctum-maintenance/blob/main/ansible-navigator.yml)
 select the locally tagged `localhost/sanctum-maintenance-ee:2026.07` and
 set image pull policy to `never`. The image was qualified for **Maintenance**,
