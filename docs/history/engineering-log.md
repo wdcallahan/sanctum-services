@@ -69,6 +69,12 @@ A short chronological record of significant observations, decisions, experiments
 - **Acceptance limit:** `ansible --version` proves the launched runtime, **not** an SSH connection from the EE to the native Kvin managed host. A subsequent read-only module test must establish that separate boundary before treating the EE as usable for this project's remote host operations.
 - The existing Maintenance [inventory](https://github.com/wdcallahan/sanctum-maintenance/blob/main/inventories/production/hosts.yml) contains `kvin.outer.sanctum` as a Debian/controller host. Its [ansible.cfg](https://github.com/wdcallahan/sanctum-maintenance/blob/main/ansible.cfg) supplies the inventory and requires host-key checking. Prefer the actual existing EE/connection for a read-only test rather than installing other controller tooling prematurely.
 
+## 2026-10-18 — EE-to-Kvin ad hoc SSH accepted
+
+- From Kvin's regular terminal, in `~/src/sanctum-maintenance`, Nova ran `./.venv/bin/ansible-navigator exec -- ansible kvin.outer.sanctum -m ansible.builtin.ping`. **Actual output:** `kvin.outer.sanctum | SUCCESS => {"changed": false, "ping": "pong"}`. This verifies the existing Maintenance EE executed an Ansible ad hoc module **over its configured connection to native Kvin**, rather than merely reporting container runtime metadata.
+- **Limit:** Maintenance's qualified EE and host connection were exercised, but a reusable new EE, shared host-side Navigator installation, and Nextcloud's rootless user-systemd apply path have **not** been accepted. Do not mark the whole controller architecture complete.
+- Nova already teaches Ansible ad hoc commands and `ansible.builtin.ping`; he does **not** need introductory Ansible explanations. His new learning here is `ansible-navigator exec -- ansible …` as a way to run familiar ad hoc commands **inside an EE**, versus the classroom's direct `ansible` executable on PATH. Keep future guidance at his actual experience level, distinguish host Python from EE Python, and explain only the genuinely unfamiliar Navigator/EE mechanics.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
