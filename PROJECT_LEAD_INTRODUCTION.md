@@ -22,7 +22,7 @@ When needed for the *active decision*, consult the current cross-project [Git](h
 
 - Kvin and Peanut are the designated Ansible controllers. Kvin is the initial Nextcloud application host; Peanut is the proposed backup destination; Void is the eventual file-storage destination. Kvin's first host-port mapping is **8085 → Nextcloud Apache 80**; YXORP will provide the stable client-facing service name.
 - Source: Ansible role and Quadlet candidate on `main`; **no application deployment**. Nova installed `ansible-core==2.19.14` into a project venv and passed **direct-Ansible syntax-check** on Kvin. That is syntax evidence only.
-- **Mistake to repair:** per-project venv/direct-Ansible was not the requested Navigator/EE learning workflow. The current inventory uses `ansible_connection: local`, which under EE execution would target the **EE container, not Kvin**. The source must be reviewed and corrected, not wrapped to disguise the error.
+- **Mistake to repair:** per-project venv/direct-Ansible was not the requested Navigator/EE learning workflow. The original inventory used `ansible_connection: local`, which would target an **EE container, not Kvin**. Nova chose ordinary **Ansible smart/SSH**, explicitly allowing Kvin's controller to SSH back into Kvin; the inventory override was **removed on main**. **Actual SSH and rootless user-systemd behavior have not been tested from the EE.** The remaining runtime design still needs review and correction, not a concealing wrapper.
 - Existing application code has **no qualified deployment, backup/restore, normal operation or clean uninstall**. The original application README's deploy commands were withdrawn. The exact dates/observations are in the engineering log.
 - The current active milestone is **Roadmap Stage 1**: explain and establish a supported shared Navigator/EE/controller workflow, including the infrastructure owner and an explicit managed-host connection. No deployment until proven and understood.
 
@@ -37,6 +37,6 @@ When needed for the *active decision*, consult the current cross-project [Git](h
 
 ## Smallest next step
 
-Explain to Nova the practical Navigator/EE installation choices **on Debian controller hosts** and agree which bounded infrastructure owner maintains the reusable toolchain. Choose a read-only test proving that Ansible inside the EE manages **Kvin** rather than the EE itself. Record the design and only then repair the initial application candidate. The roadmap is the authoritative current progress map; verify newer source and live evidence before acting.
+Explain to Nova the practical Navigator/EE installation choices **on Debian controller hosts** and agree which bounded infrastructure owner maintains the reusable toolchain. Choose a read-only **smart/SSH** test proving that Ansible inside the EE manages **Kvin**, even when Navigator itself is running on Kvin, rather than silently operating inside the EE. Record the design and only then repair the initial application candidate. The roadmap is the authoritative current progress map; verify newer source and live evidence before acting.
 
 **End condition for a useful handoff:** Nova can tell what is accepted, what failed or is still proposed, and who has the next action, without searching chat history.
