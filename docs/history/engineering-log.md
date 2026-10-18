@@ -56,6 +56,12 @@ A short chronological record of significant observations, decisions, experiments
 - This is **read-only discovery of an existing project-qualified EE**, not Nextcloud runtime acceptance or approval to reuse the Maintenance EE as a generic shared runtime.
 - Nova is already familiar with Navigator's **stdout mode** for playbook execution. Interactive image inspection was selected specifically to explore an EE's contents; the next useful teaching step is inspecting the image details before choosing new tooling.
 
+## 2026-10-18 — Maintenance EE inspected; stdout mode preferred
+
+- Nova selected image 14 (`sanctum-maintenance-ee:2026.07`) in Navigator's interactive image browser, then chose **Ansible version and collections**. Inspection showed **ansible-core 2.21.2**, with `ansible.netcommon 8.6.0`, `ansible.posix 2.2.2`, `ansible.utils 6.0.3`, `community.general 13.2.0`, `community.library_inventory_filtering_v1 1.1.5`, `community.openwrt 1.5.0`, `containers.podman 1.20.1`, and `vyos.vyos 6.0.0`.
+- These are **observed contents of Maintenance's existing EE**, not a qualification of a reusable EE for Nextcloud. The difference between the EE's core 2.21.2 and Nextcloud's earlier venv core 2.19.14 illustrates independent Python/Ansible environments.
+- Nova pointed out that the interactive Navigator interface renders its menu numbers in very dark gray against black and is hard to read. **He normally uses stdout mode and prefers it for ordinary operation.** Interactive inspection was a one-off learning exercise, not a new operating requirement. Avoid imposing inaccessible navigation or troubleshooting his terminal theme without a real need.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
