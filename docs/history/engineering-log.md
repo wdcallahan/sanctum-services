@@ -106,6 +106,12 @@ A short chronological record of significant observations, decisions, experiments
 - **Accepted architecture:** one published, pinned minimal Ansible EE foundation maintained by the Sanctum Maintenance controller-infrastructure workstream. A project can use the identical pinned image directly if sufficient; otherwise it can create, test, and pin a derivative with additional required dependencies. Specialized preexisting Maintenance EE stays independently qualified. This acceptance does not establish specific base image or dependency versions.
 - The acceptance was recorded in the [owning controller roadmap](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md), [Services roadmap](../ROADMAP.md), [architecture](../architecture.md), and [lead handoff](../../PROJECT_LEAD_INTRODUCTION.md). **No tool installation or EE build yet occurred.** Next is collaborative recipe design and first build with Nova participating in the work.
 
+## 2026-10-18 — Builder installed; Ansible Runner explained at point of use
+
+- On Kvin, Nova ran `./.venv/bin/ansible-builder --version`, which returned **3.1.1**. That is the *existing Maintenance-installed Builder* invoked without activating its venv; it is not yet a centralized host-tool installation and no image build occurred.
+- Before authoring the new base EE, Nova asked what **Ansible Runner** is. It is a Python library/CLI for stable invocation of Ansible and structured output/event/artifact collection, **not** Ansible Core itself, a new management daemon, or a separate controller. Builder has distinct `ansible_core` and `ansible_runner` dependencies and normally verifies both in a completed EE. Explanation is now maintained in the [architecture guide](../architecture.md).
+- Nova's question is a useful stop point: do not proceed through unfamiliar recipe ingredients without explaining *why each is present*, despite his deep general Ansible experience.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
