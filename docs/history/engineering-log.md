@@ -29,6 +29,13 @@ A short chronological record of significant observations, decisions, experiments
 - Additional review identified that the candidate `ansible_connection: local` would target an EE container rather than Kvin after the runtime switch. The inventory and connection approach remain **unaccepted**.
 - Nova restated four nonnegotiable requirements: **documented, repeatable, understandable, uninstallable**. There is no initial value in a running but unmaintainable service. Work on the operator documentation, architecture explanation, roadmap, and this log began in response.
 
+## 2026-10-17 — Human documentation and roadmap separated
+
+- Replaced the repository landing page with a newcomer-readable README, explicit unqualified status, and navigation.
+- Published a [roadmap](../ROADMAP.md) with bounded stages and acceptance tests and an [architecture explanation](../architecture.md) distinguishing the planned EE/controller/host path from runtime evidence.
+- Kept this engineering log separate from operating instructions; reduced `PROJECT_LEAD_INTRODUCTION.md` to a short pointer-based handoff. Validated runbooks will be published only when their operations have been exercised.
+- **No application deployment or EE qualification occurred as part of this documentation work.** The shared engineering-standards amendment remains a proposed separate operation.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
