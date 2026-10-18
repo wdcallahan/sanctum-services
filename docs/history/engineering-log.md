@@ -88,6 +88,12 @@ A short chronological record of significant observations, decisions, experiments
 - Reviewed actual Maintenance builder inputs: Fedora 44 base, Python 3, `ansible-core==2.21.2`, `ansible-runner==2.4.3`; `requirements.yml` lists the seven directly required collections; `requirements-ee.txt` lists `ansible-pylibssh==1.4.0`; `bindep.txt` lists RPM `openssh-clients` and `sshpass`. These Python packages are installed **inside the EE**, not by changing Debian's system Python.
 - Added a concrete Stage 1 hands-on deliverable: design a *new* reusable EE with Nova, examine the generated Containerfile, run the build, inspect the image in Navigator, and practice rebuild and removal. Existing Maintenance EE is only a reference; avoid altering or rebuilding its qualified image. No new EE has been built as a result of this conversation.
 
+## 2026-10-18 — Shared EE ownership selected (planning)
+
+- Nova said he would accept Sanctum Maintenance's existing controller infrastructure owning a general-purpose EE, with the higher objective that Sanctum's systems become **coherent**. The decision is **provisional and reversible**, not proof that a separate controller-platform owner was impossible.
+- Maintenance's [roadmap](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md) now records responsibility for the host-side Navigator/Builder toolchain and a **new general-purpose application EE**, separate from the existing qualified `sanctum-maintenance-ee:2026.07`. Sanctum Services remains the owner of application playbooks, Quadlets, and lifecycle.
+- **No packages, EEs, playbooks or running services changed.** Nova and Pixel will design and build the new EE **together**, beginning with a review of the necessary contents, rather than having an assistant create a completed image without teaching the build process.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
