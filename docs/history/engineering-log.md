@@ -82,6 +82,12 @@ A short chronological record of significant observations, decisions, experiments
 - On Kvin, Nova's `apt-cache policy ansible-navigator ansible-builder` returned `Unable to locate package` for each. This rules out those package names from **currently configured local APT metadata**, not every possible distro/package source. Host-side controller tooling installation is still undecided; do not jump to another per-project venv by default.
 - [Architecture](../architecture.md) now explains EE origins and their separation from host-side Navigator/Builder installation. Nextcloud is still not deployed.
 
+## 2026-10-18 — Nova must participate in the first new EE build
+
+- Pixel excitedly told Nova "We built our own!" about Sanctum Maintenance's EE. Nova corrected the statement: **he had not participated in creating that EE**, and doing so would have been an especially valuable practical learning opportunity. Treat this as a missed educational deliverable, not as completed hands-on experience.
+- Reviewed actual Maintenance builder inputs: Fedora 44 base, Python 3, `ansible-core==2.21.2`, `ansible-runner==2.4.3`; `requirements.yml` lists the seven directly required collections; `requirements-ee.txt` lists `ansible-pylibssh==1.4.0`; `bindep.txt` lists RPM `openssh-clients` and `sshpass`. These Python packages are installed **inside the EE**, not by changing Debian's system Python.
+- Added a concrete Stage 1 hands-on deliverable: design a *new* reusable EE with Nova, examine the generated Containerfile, run the build, inspect the image in Navigator, and practice rebuild and removal. Existing Maintenance EE is only a reference; avoid altering or rebuilding its qualified image. No new EE has been built as a result of this conversation.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
