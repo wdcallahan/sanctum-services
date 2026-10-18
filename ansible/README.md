@@ -9,19 +9,32 @@ are configuration inputs rather than part of Nextcloud's identity.
 This is an **unqualified initial source candidate**, not a published claim
 that a working Nextcloud or reliable backups have been deployed.
 
-## Independent controller runtime
+## Operator learning and execution model (not yet implemented)
 
-On Kvin, from the root of this checkout:
+**This candidate is paused before first deployment.** Nova's actual project
+objective includes acquiring hands-on, independent operating experience with
+**ansible-navigator and a containerized Ansible Execution Environment (EE)**.
+The deployment is not a successful deliverable merely because it runs: it
+must be documented, repeatable, understandable to its owner, and cleanly
+uninstallable.
 
-```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -r ansible/requirements-controller.txt
-.venv/bin/ansible-playbook --syntax-check ansible/site.yml
-```
+The initial repository mistakenly selected a project-local Python `venv`
+and direct host-side `ansible-playbook`. On October 17, Nova installed
+`ansible-core==2.19.14` into that venv and successfully ran the syntax
+check (`playbook: ansible/site.yml`). That is historical syntax evidence,
+**not approval of the runtime architecture**, and no Nextcloud deployment
+was made. Do not repeat those venv commands as the standard procedure.
 
-The controller dependency is pinned separately from Sanctum Maintenance.
-A complete transitive dependency lock and native execution qualification
-remain open; do not describe this venv recipe as byte-for-byte reproducible.
+Next establish and explain the actual
+**Navigator → selected EE → project playbook → Kvin container** path,
+including how Kvin and Peanut reconstruct the chosen controller tooling.
+Keep the runtime simple and shared where it makes sense; do not introduce
+an additional wrapper that hides the mechanism Nova wants to practice.
+The existing Sanctum Maintenance qualified runtime is separately owned
+and must not be repurposed without verifying its contract.
+
+An EE setup and tested Navigator invocation will replace this section
+when they have been selected and qualified.
 
 ## Inputs required before the first apply
 
@@ -36,20 +49,22 @@ remain open; do not describe this venv recipe as byte-for-byte reproducible.
 4. Supply `vault_nextcloud_postgres_password` and
    `vault_nextcloud_admin_password` in encrypted
    `ansible/group_vars/nextcloud/vault.yml`. For example create it with
-   `.venv/bin/ansible-vault create ansible/group_vars/nextcloud/vault.yml`.
-   Keep the Vault unlock secret outside Git.
+   the approved encrypted-variables workflow. Keep the Vault unlock secret
+   outside Git.
 5. Verify the desired user systemd manager is reachable and lingering is
    correctly managed for persistent rootless services. Confirm no other
    service is bound to the configured host port.
 
-Then, from Kvin and only when these inputs and dependencies exist:
+**No apply command is approved yet.** After the EE-based operator path
+has been chosen, tested, and documented, qualify the installation and
+unchanged repeat. Verify Nextcloud login through YXORP, not just a
+running process or HTTP status.
 
-```sh
-.venv/bin/ansible-playbook ansible/site.yml --ask-vault-pass
-```
-
-Repeat that same command unchanged and require a no-change run. Verify
-Nextcloud login through YXORP, not only an HTTP status or running process.
+Also implement and exercise distinct operator procedures for start/stop,
+inspection, upgrades, backup, restore, and **uninstall**. Uninstall must
+remove only application-owned resources while clearly offering *retain*
+versus explicit *purge* handling for user data, configuration and secrets.
+None of these lifecycle promises is presently accepted.
 
 ## Persistent state, backups, and migration
 
