@@ -95,7 +95,7 @@ inspection only until a shared installation owner/method is agreed.
 
 Nova provisionally selected **Sanctum Maintenance's existing controller-infrastructure workstream** to own shared Navigator/Builder tooling and a new general-purpose application EE. The decision can be revisited if it becomes a separate platform in its own right; this application repository will only consume its supported interface, not own controllers or their tooling. The accepted Maintenance EE must not be silently replaced or mutated.
 
-### Proposed EE composition (not accepted yet)
+### Accepted EE composition (October 18; implementation pending)
 
 The word **shared** can mean *shared image identity* or *shared foundation*;
 these are not the same choice. The proposed model combines both:
@@ -122,8 +122,8 @@ deriving from an **already-populated EE**, examine Builder's generated
 Containerfile to confirm its base-stage Ansible Core/Runner installation
 does not conflict or create pointless duplication.
 
-The ownership decision is recorded; **Nova has not yet accepted this
-specific layering plan**, and no images have been built or changed for
+**Nova explicitly accepted this layering plan with a fully understood yes.**
+The architecture is accepted; no new images have been built or changed for
 it. The [controller-infrastructure owner](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md)
 has the corresponding proposed architecture.
 
