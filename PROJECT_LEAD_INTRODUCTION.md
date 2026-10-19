@@ -8,17 +8,18 @@ This is a **short handoff for the next assistant**, not a second design authorit
 
 **Joule tool-model correction (October 18):** Pixel mistakenly suggested Runner would need to enforce Joule permissions. No: Joule's established tool menu accepts a selected tool, inventory limit and supported arguments; the tool processes the **actual attempted action** and either runs it or returns denial/escalation instructions. Joule is scored on justified tool calls/arguments regardless of outcome, so even an inevitably denied attempt must be sent to the real tool; **no dry-run surrogate**. Runner may provide structured results **behind Ansible-backed tools**, not replace the existing tool boundary or grading. The first file-based Runner demo returned `failed` / `rc=250`, with diagnostics suppressed; cause undetermined. See [engineering log](docs/history/engineering-log.md), and do not treat that run as accepted success.
 
-**Runner needs a real demonstration (October 18):** Nova is frustrated
-that explanations of Runner remain abstract. He has **not** seen it
-execute, produce machine-readable job events, or fail when absent.
-Do not claim this learning objective is met by definitions or by
-Builder's dependency check. Use a disposable example to show Runner
-as a Python/CLI process launcher yielding result/event objects and then
-compare with Ansible Core continuing to work without Runner. Distinguish
-Runner on the Navigator controller from Runner inside the EE, and
-re-evaluate whether the new base image needs the latter. Protect the
-qualified Maintenance EE and avoid introducing Runner API dependencies
-into ordinary application playbooks.
+**Runner rabbit hole closed October 18:** After three unsuccessful
+assistant-designed demonstrations, diagnostic output identified an
+`awx_display` callback-loading exception caused by a likely nested Runner
+initialization through Navigator. Nova verified that Navigator exports
+`ANSIBLE_STDOUT_CALLBACK=awx_display`. He already understands Runner's value
+as a job/results adapter for possible Joule Ansible-backed tools and questioned
+the diminishing returns of repairing a disposable demonstration. **We agreed
+to stop here; no further Runner demo or workaround is a prerequisite to the
+base EE.** Runner itself and the qualified Maintenance EE have not been
+established to be broken. Return to designing and building the minimal base
+EE **with Nova participating**. The Ansible Core-first learning requirement
+remains in force.
 
 **Learning guardrail October 18:** Nova teaches **ordinary Ansible Core**, not Ansible Runner. He is not opposed to Runner being inside an EE, but is concerned that using Runner's interface in everyday project automation would erode the transferability of his practice to teaching. Keep Ansible inventories, roles, playbooks and usual CLI behavior as the **portable project contract**. Using Navigator to execute the same Ansible code in an EE is fine; writing project-specific Runner API/CLI/artifact dependencies is **not the default**. Runner's presence serves the EE/tooling layer, not a new coding model. This is a design constraint, not a request to delete Runner.
 
