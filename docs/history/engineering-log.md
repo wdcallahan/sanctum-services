@@ -154,6 +154,14 @@ A short chronological record of significant observations, decisions, experiments
 - The reason to inspect is to verify the actual ARM64 image selected for Kvin and capture its content-addressed manifest identity for repeatable deployment. The versioned tag alone can be retargeted. Nova rightly asked for this purpose to be explained **at command introduction rather than after output appears**.
 - **Acceptance boundary:** Image pull/inspect only. No Nextcloud container, Quadlet, application database, or usable service was started by these commands. Do not misstate image availability as Nextcloud deployment. Continue the actual application installation workflow; avoid another generic EE/Runner detour.
 
+## 2026-10-19 — PostgreSQL connection identity checked against Project Joule (read-only)
+
+- Joule's [October 17 Wicket/Maintenance handoff](https://github.com/wdcallahan/joule/blob/main/docs/handoffs/2026-10-17-wicket-maintenance-contract-response.md) identifies its **actual shared database** as **Kvin `192.168.1.192:5432`**, with network/publication ownership outside Joule; its prior Wicket tunnel mechanism is retired.
+- Joule's [October 16 qualification evidence](https://github.com/wdcallahan/joule/blob/main/docs/reviews/Joule_Attachment_Native_Qualification_2026-10-16.md) confirms that address and PostgreSQL 18.4 in the `sanctum-postgresql` container. Kvin's host DNS name `kvin.outer.sanctum` is known.
+- **No dedicated PostgreSQL service DNS alias was established in the reviewed Joule records**, but repository evidence cannot prove that an alias does not exist in live Bind configuration. Verify with the responsible DNS/PostgreSQL owner before adopting a service address. Avoid assigning an invented `*.nexus.sanctum` name or changing another project's live configuration.
+- `ansible/group_vars/nextcloud.yml` deliberately retains **empty `nextcloud_postgres_host`** pending that owner-backed decision and DNS/reachability check. A host FQDN and a moveable database service identity are different, both preferable to baking an observed IP into an application.
+- This is a read-only dependency finding, **not** a database provisioning result, deployment, network change, or authorization to edit Joule/Maintenance.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
