@@ -16,9 +16,8 @@ nextcloud_postgres_host: "db.nexus.sanctum"
 nextcloud_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145"
 
 nextcloud_host_port: 8085
-# Kvin public firewalld zone: expose this application ONLY to YXORP.
-# Observed YXORP/Kvar source and Kvin active zone on 2026-10-19.
-nextcloud_proxy_ipv4_cidr: "192.168.1.7/32"
+# Open the published application TCP port normally in Kvin's active
+# public firewalld zone. No application-specific source restrictions.
 nextcloud_firewall_zone: "public"
 nextcloud_postgres_database: nextcloud
 nextcloud_postgres_user: nextcloud
