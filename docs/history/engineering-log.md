@@ -147,6 +147,13 @@ A short chronological record of significant observations, decisions, experiments
 - Runner's conceptual role as a structured job/results interface, useful behind Joule's existing tool menu for possible Ansible-backed operations, has been understood adequately. Its presence in the base EE should be evaluated with actual Builder/Navigator contract requirements, not a detour into coding against its API.
 - **Supersedes historical entries above that prescribe more Runner demo steps.** Do not continue `env -u` experiments or require success as a gate. Restore the agreed Stage 1 frontier: participate with Nova in a clean new base-EE recipe, inspect Builder's generated Containerfile, build and qualify separately from Maintenance's existing EE.
 
+## 2026-10-18 — Nextcloud Apache ARM64 image pulled onto Kvin
+
+- From `~/src/sanctum-services` on Kvin, Nova ran `podman pull docker.io/library/nextcloud:34.0.5-apache`. Rootless Podman reported successful blob copies and final local image ID `dcdf0b20ac50bce33cb2585c96fc92968e7c2d7378aef185547f735c9058f7b2`.
+- Nova ran `podman image inspect --format '{{.Os}}/{{.Architecture}} {{.Digest}}' docker.io/library/nextcloud:34.0.5-apache` and observed **`linux/arm64`**, digest **`sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145`**. This is observed local image metadata; the exact digest identity and registry fetchability should be verified when wiring the immutable image reference into automation.
+- The reason to inspect is to verify the actual ARM64 image selected for Kvin and capture its content-addressed manifest identity for repeatable deployment. The versioned tag alone can be retargeted. Nova rightly asked for this purpose to be explained **at command introduction rather than after output appears**.
+- **Acceptance boundary:** Image pull/inspect only. No Nextcloud container, Quadlet, application database, or usable service was started by these commands. Do not misstate image availability as Nextcloud deployment. Continue the actual application installation workflow; avoid another generic EE/Runner detour.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
