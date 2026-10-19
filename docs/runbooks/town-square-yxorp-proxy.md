@@ -1,13 +1,25 @@
 # Town Square — YXORP reverse-proxy route
 
-**Status (October 19, 2026):** Nextcloud application on Kvin is **running** using
-Ansible-managed rootless Podman; native first deployment passed and unchanged
-repeat passed `ok=15 changed=0`. The public-facing YXORP proxy host has
-**not yet been created or accepted**. A `curl -i --max-time 10
-https://square.nexus.sanctum/status.php` probe returned an OpenSSL
-`tlsv1 unrecognized name` alert before an HTTP response; this is consistent
-with the HTTPS proxy not recognizing that SNI name. It is not evidence of
-an application failure.
+**Status (October 19, 2026):** Nextcloud's Kvin listener returned HTTP 200
+from Kvin at 192.168.1.192:8085 (installed=false), and the accepted Services
+playbook repeated unchanged. NPM's newly configured HTTP proxy host reached
+OpenResty but returned 502. Kvar's native curl to Kvin:8085 returned
+"connection refused". Kvin's live public firewalld zone lacked 8085;
+existing source-restricted Joule 8084 rule already permits 192.168.1.7/32.
+The Services role now declares the analogous app-specific TCP 8085 rich rule,
+with both runtime and permanent state, **not yet applied or accepted**.
+
+**Current TLS decision:** NPM has no appropriate certificate. The initial
+proxy route is HTTP only, and the application scheme is temporarily HTTP to
+match it. This is a conscious staging choice, not proof that HTTP logins
+are safe: administrator passwords, sessions and content may be intercepted
+on the LAN. Prefer trusted HTTPS for actual user login/sensitive data,
+or obtain Nova's explicit acceptance of the pilot HTTP risk. No Force SSL.
+When adding a certificate, restore the declared https scheme in Services.
+
+**Next acceptance:** Apply the bounded Services firewall task and confirm
+Kvar -> 192.168.1.192:8085 -> HTTP 200, then the NPM host's URL -> HTTP 200.
+Kvar's native SSH is **port 10022**; port 22 intentionally reaches a tarpit.
 
 ## Existing owner and request path
 
@@ -52,39 +64,30 @@ Retain other defaults on initial bring-up unless an established shared
 proxy policy requires otherwise. This is **not** a request to publish the
 service to the Internet or to modify the wildcard DNS.
 
-### Certificate / SSL tab
+### HTTP-only staging and later TLS
 
-- Check whether NPM already holds an appropriate **trusted** certificate
-  covering `square.nexus.sanctum` or the wildcard `*.nexus.sanctum`.
-  If one exists, select it and enable **Force SSL**.
-- If none exists, **do not assign an unrelated host certificate**, do not
-  pretend a public ACME issuer can validate a private `.sanctum` name,
-  and **do not enter administrator credentials over plain HTTP**.
-  A bare HTTP proxy entry can be used for credential-free reachability
-  checks only. Provision/trust the appropriate private CA certificate through
-  YXORP's owning procedure before administrator setup.
-- HSTS is not a prerequisite to first bring-up. Use it only after a
-  trusted HTTPS route is proven. A certificate existing in the UI is
-  not itself proof that the client trusts its chain.
+For the present pilot, NPM's SSL certificate is **None** and Force SSL
+is **off**, with no HSTS. Public scheme is temporarily `http`.
+A certificate is not required for HTTP routing, but using administrator
+credentials over HTTP risks LAN interception. Revisit trusted private
+TLS before sensitive use. Future HTTPS will require a suitable certificate,
+NPM host SSL configuration and a matching `https` scheme in Services.
 
 ## Acceptance
 
-1. From a real intended user/client, `curl -i --max-time 10
-   https://square.nexus.sanctum/status.php` must complete **trusted TLS**
-   without `-k`, reach Nextcloud and report HTTP 200 with
-   `"installed":false` until first setup (then `true`). Never use
-   `curl -k` to treat an untrusted certificate as accepted.
-2. Open the **HTTPS** page in a real browser. Nova creates the initial
-   administrator account interactively and manages the website login in
-   Bitwarden; Services automation must not generate/store that account's
-   password. Confirm Nextcloud's browser installer chooses the existing
-   PostgreSQL database from its private `_FILE` inputs.
-3. After install verify application schema, login, and basic file operations
-   from the actual URL. Configure/check forwarded headers and trusted proxies
-   against real NPM source addresses; do not hardcode inferred proxies.
-4. Record the validated proxy host + certificate association and intended
-   removal operation. Subsequent normal operation, backup, restore and
-   application-only uninstall remain separate project acceptance gates.
+1. After Services applies the restricted firewall rule, verify from Kvar
+   using `ssh -p 10022 kvar.outer.sanctum 'curl -i --max-time 10 http://192.168.1.192:8085/status.php'`.
+   Expect HTTP 200, not connection refused. Then verify from the browser
+   or Kvin `curl -i --max-time 10 http://square.nexus.sanctum/status.php`
+   and expect Nextcloud JSON instead of NPM's 502.
+2. Confirm Nextcloud's web installer uses the existing PostgreSQL _FILE
+   credential contract. Administrator is created by Nova in the browser
+   and stored in Bitwarden, not generated by this playbook. Make an
+   explicit decision about HTTP login risk before entering credentials.
+3. After setup verify PostgreSQL schema, login, upload/download and proxy
+   headers/trusted proxies with the actual source observed, not a guess.
+4. Preserve an exportable/reconstructible NPM proxy definition and
+   documented removal. HTTPS is a later separately accepted step.
 
 **Non-goal:** This runbook does not claim existing automated proxy host
 reconciliation or disaster restore. The lasting route must eventually be
