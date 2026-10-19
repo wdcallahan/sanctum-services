@@ -126,15 +126,12 @@
   delay: 5
   changed_when: false
 
-# This is an application-specific ingress rule, not an adjustment of
-# Maintenance's shared PostgreSQL/Joule or global host firewall policy.
-# Apply permanent and runtime state together; no firewalld reload required.
-- name: Permit only YXORP to reach the Nextcloud published port
+# Publish Nextcloud's declared service port in Kvin's firewalld zone.
+# Manage both runtime and permanent state; no source-restricted rich rule.
+- name: Open the Nextcloud service port in firewalld
   ansible.posix.firewalld:
     zone: "{{ nextcloud_firewall_zone }}"
-    rich_rule: >-
-      rule family="ipv4" source address="{{ nextcloud_proxy_ipv4_cidr }}"
-      port port="{{ nextcloud_host_port }}" protocol="tcp" accept
+    port: "{{ nextcloud_host_port }}/tcp"
     state: enabled
     permanent: true
     immediate: true
