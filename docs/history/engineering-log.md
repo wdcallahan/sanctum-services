@@ -181,6 +181,14 @@ Add an entry only for a meaningful changed design, verified run, discovery, acce
 - First requested **read-only live test**: run the already-pulled official Nextcloud image as a disposable default-network rootless container, checking `getent ahostsv4 db.nexus.sanctum` and expecting Kvin `192.168.1.192`. **Outcome pending Nova's terminal output.** This tests container DNS, not PostgreSQL authentication or Nextcloud install. Next qualify actual-container credentials, image/volume permissions, Quadlet/systemd, and YXORP/HTTPS before human web-admin creation.
 - No changes were made to Maintenance, Joule, PostgreSQL, DNS, YXORP or running Kvin services by the Services session.
 
+## 2026-10-19 — Rootless container networking diagnostics
+
+- Nova tested container DNS using the pulled Nextcloud 34.0.5 Apache image under rootless Podman: `getent ahostsv4 db.nexus.sanctum` returned Kvin's `192.168.1.192` successfully.
+- A first PHP/PDO authenticated database test returned only `Nextcloud database authentication: FAILED`; that overly generic diagnostic did **not** establish bad credentials. A follow-on read-only PHP test confirmed the `pgsql` driver **PRESENT** but Podman's **default** rootless network yielded `Connection refused (111)` for `db.nexus.sanctum:5432`.
+- Same image and TCP test with `--network=host`: **PASSED**; with `--network=slirp4netns`: **PASSED**. This isolates the failure to the default container network path, not an observed PostgreSQL auth rejection or missing PHP driver. Host networking was diagnostic only; it is not selected as the final arrangement because its Apache port bindings conflict with the planned 8085→80 published mapping.
+- A new credential-safe PDO authentication test using **rootless slirp4netns** has been requested. **Result pending**. Do **not** treat TCP-only success as proof of authenticated login or application schema initialization. The Quadlet network mode is still unchanged until the authenticated test and published-port behavior are qualified.
+- No shared PostgreSQL/HBA/firewall changes or credential regeneration was requested.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
