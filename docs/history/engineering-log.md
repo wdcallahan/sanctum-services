@@ -227,6 +227,13 @@ This **proves HBA rejected the source address before password validation**. DNS,
 - The run emitted Ansible Core injected-facts deprecation warnings for three uses of `ansible_env.HOME` in `ansible/roles/nextcloud/defaults/main.yml`. These were accidental legacy notation in the original draft, **not** a compatibility requirement. Replaced all three with modern `ansible_facts['env']['HOME']` in source; other role references already used `ansible_facts['fqdn']` and `ansible_facts['user_uid']`. Re-run from latest Services source and require no fact warnings and a truthful unchanged repeat; **not yet verified**.
 - Next acceptance is independent HTTPS/YXORP access to the browser installer and creation of Nova's admin account through the browser (Bitwarden-controlled), followed by schema/login/representative file tests. Avoid asserting that pending HTTP installer status proves working database setup.
 
+## 2026-10-19 — First unchanged Nextcloud repeat accepted
+
+- Nova synced the updated Services source with `git pull` and reran `ansible-navigator run ansible/site.yml` from Kvin using the existing explicit Maintenance EE, host-networked **controller EE**, inventory smart/SSH to Kvin, and existing privately mounted Vault.
+- **Native acceptance:** `kvin.outer.sanctum : ok=15 changed=0 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0`. Nova confirms **no Ansible fact deprecation warnings** following the three `ansible_facts['env']['HOME']` corrections.
+- The prior first deployment recap was `ok=16 changed=10`. The one-task reduction is consistent with the restart handler not being invoked on an unchanged repeat. No handler was reported in this supplied recap; it establishes Ansible convergence but not external end-user availability.
+- **Remaining acceptance:** Nextcloud reports `web_installer_pending=True`. The final HTTPS/DNS/YXORP route to `square.nexus.sanctum`, Nova's browser-created administrator account, database schema, human login, file operations, backups and uninstall remain unverified. Next action is an ordinary HTTPS probe of the intended user-facing URL; do not infer YXORP acceptance from local 8085 HTTP success.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
