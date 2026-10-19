@@ -140,6 +140,13 @@ A short chronological record of significant observations, decisions, experiments
 - Next test: run only the *nested demonstration* with a child-process environment that removes `ANSIBLE_STDOUT_CALLBACK` and `ORIGINAL_STDOUT_CALLBACK`, for example `ansible-navigator exec -- env -u ANSIBLE_STDOUT_CALLBACK -u ORIGINAL_STDOUT_CALLBACK python3 SCRIPT`. Do not alter system configuration or the qualified EE, and do not carry this workaround into the normal project's Ansible operations. The normal Runner-backed use case is a direct tool integration, not Runner launched recursively inside Navigator.
 - Nova has correctly required **research and falsifiable evidence before additional operator commands**. The previous shell quoting error and callback recursion were assistant-designed demo faults, not negative evidence of Runner's standalone value.
 
+## 2026-10-18 — Stop the unnecessary Runner demo; resume EE build
+
+- Nova identified that the Runner demonstrations had become an **untamed ornithoid** (a wild-goose chase) unrelated to the real goal: co-design and build Sanctum's minimal EE foundation, learning Builder and Podman.
+- Answer: **No, fixing our nested Runner demo would not help the EE build**. Its failure is not evidence of a broken Maintenance EE or a blocking Runner dependency problem. The source-level callback recursion hypothesis is supported by `ANSIBLE_STDOUT_CALLBACK=awx_display` under Navigator, but there is no longer a relevant need to demonstrate or fix that niche invocation.
+- Runner's conceptual role as a structured job/results interface, useful behind Joule's existing tool menu for possible Ansible-backed operations, has been understood adequately. Its presence in the base EE should be evaluated with actual Builder/Navigator contract requirements, not a detour into coding against its API.
+- **Supersedes historical entries above that prescribe more Runner demo steps.** Do not continue `env -u` experiments or require success as a gate. Restore the agreed Stage 1 frontier: participate with Nova in a clean new base-EE recipe, inspect Builder's generated Containerfile, build and qualify separately from Maintenance's existing EE.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
