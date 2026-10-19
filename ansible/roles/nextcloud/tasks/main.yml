@@ -126,6 +126,20 @@
   delay: 5
   changed_when: false
 
+# This is an application-specific ingress rule, not an adjustment of
+# Maintenance's shared PostgreSQL/Joule or global host firewall policy.
+# Apply permanent and runtime state together; no firewalld reload required.
+- name: Permit only YXORP to reach the Nextcloud published port
+  ansible.posix.firewalld:
+    zone: "{{ nextcloud_firewall_zone }}"
+    rich_rule: >-
+      rule family="ipv4" source address="{{ nextcloud_proxy_ipv4_cidr }}"
+      port port="{{ nextcloud_host_port }}" protocol="tcp" accept
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+
 - name: Report whether the web installer is still pending
   ansible.builtin.debug:
     msg: >-
