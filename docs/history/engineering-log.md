@@ -183,6 +183,15 @@ Add an entry only for a meaningful changed design, verified run, discovery, acce
 
 ## 2026-10-19 — Rootless container networking diagnostics
 
+**Update — definitive source rejection found:** A passwordless PDO connection from the official Nextcloud image using rootless `--network=slirp4netns` was deliberately attempted to expose the PostgreSQL protocol error without passing any credential. PostgreSQL returned:
+
+```text
+SQLSTATE[08006] [7] connection to server at "db.nexus.sanctum" (192.168.1.192), port 5432 failed: FATAL:  pg_hba.conf rejects connection for host "169.254.1.2", user "nextcloud", database "nextcloud", no encryption
+```
+
+This **proves HBA rejected the source address before password validation**. DNS, PHP driver, TCP path, and the precise server response are now observed; **no real password failure has been established**. Maintenance's allowed LAN source range `192.168.0.0/16` does not include `169.254.1.2`. The plaintext “no encryption” qualifier is not a standalone TLS requirement (Maintenance confirmed server TLS disabled). Do not repeat generic masked diagnostics or rotate credentials. The PostgreSQL HBA/firewall are *owned by Maintenance*: Services should pass the exact sanitized evidence and request review of a **narrow, justified exception** scoped to `nextcloud` db/role and verified Podman source host `169.254.1.2/32` using SCRAM, before a catch-all reject, **or** a documented network routing strategy that presents an already-authorized source. Neither solution is approved/deployed yet; verify in the actual application runtime once resolved.
+
+
 - Nova tested container DNS using the pulled Nextcloud 34.0.5 Apache image under rootless Podman: `getent ahostsv4 db.nexus.sanctum` returned Kvin's `192.168.1.192` successfully.
 - A first PHP/PDO authenticated database test returned only `Nextcloud database authentication: FAILED`; that overly generic diagnostic did **not** establish bad credentials. A follow-on read-only PHP test confirmed the `pgsql` driver **PRESENT** but Podman's **default** rootless network yielded `Connection refused (111)` for `db.nexus.sanctum:5432`.
 - Same image and TCP test with `--network=host`: **PASSED**; with `--network=slirp4netns`: **PASSED**. This isolates the failure to the default container network path, not an observed PostgreSQL auth rejection or missing PHP driver. Host networking was diagnostic only; it is not selected as the final arrangement because its Apache port bindings conflict with the planned 8085→80 published mapping.
