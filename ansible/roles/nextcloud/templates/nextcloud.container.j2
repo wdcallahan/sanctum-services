@@ -6,6 +6,7 @@ Image={{ nextcloud_image }}
 ContainerName=sanctum-nextcloud
 PublishPort=0.0.0.0:{{ nextcloud_host_port }}:80/tcp
 Volume={{ nextcloud_html_dir }}:/var/www/html
+Volume={{ nextcloud_private_config_dir }}/postgresql-password:/run/secrets/nextcloud-postgresql-password:ro
 EnvironmentFile={{ nextcloud_private_config_dir }}/nextcloud.env
 
 [Service]
