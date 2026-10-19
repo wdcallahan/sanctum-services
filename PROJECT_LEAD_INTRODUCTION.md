@@ -6,6 +6,18 @@ This is a **short handoff for the next assistant**, not a second design authorit
 
 `sanctum-services` owns reproducible self-hosted application deployment, lifecycle operations, and recovery, beginning with Nextcloud. **The learning is a deliverable**: Nova wants real Ansible Navigator/EE practice, professional skill, and independent ability to understand and maintain the system. He does *not* want an opaque turnkey result.
 
+**Runner needs a real demonstration (October 18):** Nova is frustrated
+that explanations of Runner remain abstract. He has **not** seen it
+execute, produce machine-readable job events, or fail when absent.
+Do not claim this learning objective is met by definitions or by
+Builder's dependency check. Use a disposable example to show Runner
+as a Python/CLI process launcher yielding result/event objects and then
+compare with Ansible Core continuing to work without Runner. Distinguish
+Runner on the Navigator controller from Runner inside the EE, and
+re-evaluate whether the new base image needs the latter. Protect the
+qualified Maintenance EE and avoid introducing Runner API dependencies
+into ordinary application playbooks.
+
 **Learning guardrail October 18:** Nova teaches **ordinary Ansible Core**, not Ansible Runner. He is not opposed to Runner being inside an EE, but is concerned that using Runner's interface in everyday project automation would erode the transferability of his practice to teaching. Keep Ansible inventories, roles, playbooks and usual CLI behavior as the **portable project contract**. Using Navigator to execute the same Ansible code in an EE is fine; writing project-specific Runner API/CLI/artifact dependencies is **not the default**. Runner's presence serves the EE/tooling layer, not a new coding model. This is a design constraint, not a request to delete Runner.
 
 **Important correction on October 18:** Pixel said "We built our own!" about the Maintenance EE. Nova pointed out **he did not get to participate in creating it and wanted that experience**. Observing Navigator, running an ad hoc command, or merely pasting a Builder invocation is not equivalent to understanding and co-building the EE. Stage 1 now requires Nova to help design the new EE, inspect Builder-generated output, build it with Podman, and learn how to maintain, reproduce and uninstall it. Don't run ahead and produce a finished EE for him. The current [Maintenance recipe](https://github.com/wdcallahan/sanctum-maintenance/blob/main/execution-environment.yml) is useful as a reference, but its qualified image must stay intact.
