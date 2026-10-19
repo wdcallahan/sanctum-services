@@ -163,6 +163,16 @@ A short chronological record of significant observations, decisions, experiments
 - `ansible/group_vars/nextcloud.yml` deliberately retains **empty `nextcloud_postgres_host`** pending that owner-backed decision and DNS/reachability check. A host FQDN and a moveable database service identity are different, both preferable to baking an observed IP into an application.
 - This is a read-only dependency finding, **not** a database provisioning result, deployment, network change, or authorization to edit Joule/Maintenance.
 
+## 2026-10-19 — Database-only Nextcloud credential prepared; handoff sent
+
+- Nova created the private Kvin directory `/home/wdc2/.config/sanctum-services/secrets/`, generated a locally stored Vault unlock file `vault.key`, and used Ansible Vault to create an encrypted **database-only** input `nextcloud-postgresql.vault.yml` containing `vault_nextcloud_postgres_password`. Password and Vault unlock material were retained privately, with recovery values recorded by Nova in Bitwarden; **none were sent into chat or committed to Git**.
+- A first verification regular expression incorrectly required letters/digits only and thus failed on valid punctuation in a generated password. Nova corrected it to `grep -Eq '^vault_nextcloud_postgres_password: "[[:print:]]+"
+
+Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
+`; the local `ansible-vault view --vault-password-file ... | grep ...` check printed **`Vault verification PASSED`**. This establishes decryption and matching single-line format, **not** independent application database authentication.
+- Exact **native** paths: encrypted source `/home/wdc2/.config/sanctum-services/secrets/nextcloud-postgresql.vault.yml`; key `/home/wdc2/.config/sanctum-services/secrets/vault.key`. Maintenance must arrange approved private EE access to both and handle database-only provisioning through its [October 19 contract](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/handoffs/2026-10-19-nextcloud-postgresql-contract.md).
+- Nova reports the handoff letter has been sent to Maintenance. Production `nextcloud` database/login **not yet confirmed created**, and Nextcloud itself **not deployed**. Await Maintenance's production result before client acceptance. Do not repeat credential generation.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
