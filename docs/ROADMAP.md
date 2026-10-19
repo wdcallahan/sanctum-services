@@ -86,6 +86,12 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 
 **Exit test:** Nova can use and diagnose the application without guessing which host, port, volume, or database it uses.
 
+### Planned next user feature — collaborative spreadsheets (decision October 19)
+
+Nova explicitly wants browser-editable **collaborative spreadsheets** after the basic Nextcloud service becomes usable. Nextcloud's core Files server alone is not the spreadsheet editor: evaluate a Nextcloud-compatible office integration and document server (e.g. Collabora Online/CODE), qualified for Kvin ARM64 and the existing proxy/Quadlet model. Keep office deployment as a separately operable component, not a hidden precondition for basic Files installation.
+
+Nova also wants **Joule to work with him on the same spreadsheet**, preferably through a narrowly scoped tool in Joule/Prism. This is a feature goal, **not an implemented integration**. Evaluate (a) Nextcloud WebDAV-backed file reading/writing with robust version/concurrency checks for turn-based assistance, versus (b) a genuine editor-session integration for live simultaneous cell edits. Do not describe wholesale WebDAV .ods/.xlsx uploads as safe real-time coediting. Request approval from Joule's owning session before adding or altering its write-capable tool interfaces; do not independently modify Joule source. Prefer least-privilege app credentials and explicit mutation confirmation.
+
 ### Stage 4 — Backup, restore, and replaceability
 
 - [ ] Implement automated, recoverable copies on **Peanut**, including retention and an observable last-success status. A mirror that propagates accidental deletion is **not** sufficient.
