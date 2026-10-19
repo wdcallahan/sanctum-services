@@ -7,8 +7,10 @@ nextcloud_public_scheme: ""
 # This must be a service DNS name, not Kvin's observed IP address.
 nextcloud_postgres_host: ""
 
-# Select and test a platform-appropriate immutable image digest before deploy.
-nextcloud_image: ""
+# Kvin pull/inspect on October 18 confirmed linux/arm64 for Nextcloud 34.0.5-apache.
+# Pin the observed registry manifest digest rather than a mutable tag.
+# Image availability and application startup still require deployment qualification.
+nextcloud_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145"
 
 nextcloud_host_port: 8085
 nextcloud_postgres_database: nextcloud
