@@ -16,7 +16,7 @@ nextcloud_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3
 nextcloud_host_port: 8085
 nextcloud_postgres_database: nextcloud
 nextcloud_postgres_user: nextcloud
-nextcloud_admin_user: admin
-
-# Values beginning vault_ are supplied by an encrypted
-# ansible/group_vars/nextcloud/vault.yml (not yet created).
+# The human administrator account is created in the web installer, not supplied
+# as an Ansible variable. Its password belongs to Nova's Bitwarden.
+# vault_nextcloud_postgres_password is supplied only by the existing private
+# database-only Vault file at ~/.config/sanctum-services/secrets/ on Kvin.
