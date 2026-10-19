@@ -4,6 +4,10 @@ Description=Sanctum Nextcloud (Apache, rootless Podman)
 [Container]
 Image={{ nextcloud_image }}
 ContainerName=sanctum-nextcloud
+# Actual Nextcloud-image TCP to db.nexus.sanctum succeeded using rootless
+# slirp4netns; the default pasta network hairpinned to its own source IP.
+# The shared PostgreSQL receiver requires its separate coordinated network fix.
+Network=slirp4netns
 PublishPort=0.0.0.0:{{ nextcloud_host_port }}:80/tcp
 Volume={{ nextcloud_html_dir }}:/var/www/html
 Volume={{ nextcloud_private_config_dir }}/postgresql-password:/run/secrets/nextcloud-postgresql-password:ro
