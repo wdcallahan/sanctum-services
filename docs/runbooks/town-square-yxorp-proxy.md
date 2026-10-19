@@ -6,8 +6,10 @@ playbook repeated unchanged. NPM's newly configured HTTP proxy host reached
 OpenResty but returned 502. Kvar's native curl to Kvin:8085 returned
 "connection refused". Kvin's live public firewalld zone lacked 8085;
 existing source-restricted Joule 8084 rule already permits 192.168.1.7/32.
-The Services role now declares the analogous app-specific TCP 8085 rich rule,
-with both runtime and permanent state, **not yet applied or accepted**.
+Nova explicitly rejected an analogous source-restricted Nextcloud rule.
+The Services role instead declares the ordinary open TCP 8085 port in the
+active public zone, for both runtime and permanent state. **Not yet applied
+or accepted**.
 
 **Current TLS decision:** NPM has no appropriate certificate. The initial
 proxy route is HTTP only, and the application scheme is temporarily HTTP to
@@ -17,7 +19,7 @@ on the LAN. Prefer trusted HTTPS for actual user login/sensitive data,
 or obtain Nova's explicit acceptance of the pilot HTTP risk. No Force SSL.
 When adding a certificate, restore the declared https scheme in Services.
 
-**Next acceptance:** Apply the bounded Services firewall task and confirm
+**Next acceptance:** Apply the ordinary Services port task and confirm
 Kvar -> 192.168.1.192:8085 -> HTTP 200, then the NPM host's URL -> HTTP 200.
 Kvar's native SSH is **port 10022**; port 22 intentionally reaches a tarpit.
 
@@ -33,7 +35,7 @@ individual proxy hosts.
 Desired path:
 
 ```text
-browser -> square.nexus.sanctum (YXORP:443; trusted HTTPS)
+browser -> http://square.nexus.sanctum (YXORP:80; HTTP pilot)
         -> NPM proxy host for square.nexus.sanctum
         -> http://kvin.outer.sanctum:8085
         -> Kvin's rootless sanctum-nextcloud container :80
@@ -75,7 +77,7 @@ NPM host SSL configuration and a matching `https` scheme in Services.
 
 ## Acceptance
 
-1. After Services applies the restricted firewall rule, verify from Kvar
+1. After Services applies the normal 8085/tcp firewall opening, verify from Kvar
    using `ssh -p 10022 kvar.outer.sanctum 'curl -i --max-time 10 http://192.168.1.192:8085/status.php'`.
    Expect HTTP 200, not connection refused. Then verify from the browser
    or Kvin `curl -i --max-time 10 http://square.nexus.sanctum/status.php`
