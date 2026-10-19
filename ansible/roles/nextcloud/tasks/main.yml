@@ -66,6 +66,23 @@
   no_log: true
   notify: Restart Nextcloud
 
+# The official Nextcloud 34 browser autoconfig expects the _FILE variant for
+# database name, user and password together; mixing raw DB/USER with a
+# password-only _FILE leaves PostgreSQL unset in the installation wizard.
+- name: Install the non-secret PostgreSQL database-name file
+  ansible.builtin.copy:
+    content: "{{ nextcloud_postgres_database }}"
+    dest: "{{ nextcloud_private_config_dir }}/postgresql-database"
+    mode: "0644"
+  notify: Restart Nextcloud
+
+- name: Install the non-secret PostgreSQL username file
+  ansible.builtin.copy:
+    content: "{{ nextcloud_postgres_user }}"
+    dest: "{{ nextcloud_private_config_dir }}/postgresql-username"
+    mode: "0644"
+  notify: Restart Nextcloud
+
 - name: Write non-secret container environment
   ansible.builtin.template:
     src: nextcloud.env.j2
