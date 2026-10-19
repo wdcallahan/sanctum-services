@@ -2,7 +2,9 @@
 # Intended family-facing service URL through YXORP; DNS and proxy route are not yet deployed.
 # The public name remains stable across moves of the backend host and port.
 nextcloud_public_hostname: "square.nexus.sanctum"
-nextcloud_public_scheme: "https"
+# YXORP currently has no trusted certificate for the internal service name.
+# This is an explicitly HTTP-only initial route; revisit when private TLS is ready.
+nextcloud_public_scheme: "http"
 
 # Maintenance confirmed the app-facing service DNS name on October 19, 2026.
 # db1 names Kvin; db follows the chosen writable primary (no HA assumed yet).
@@ -14,6 +16,10 @@ nextcloud_postgres_host: "db.nexus.sanctum"
 nextcloud_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145"
 
 nextcloud_host_port: 8085
+# Kvin public firewalld zone: expose this application ONLY to YXORP.
+# Observed YXORP/Kvar source and Kvin active zone on 2026-10-19.
+nextcloud_proxy_ipv4_cidr: "192.168.1.7/32"
+nextcloud_firewall_zone: "public"
 nextcloud_postgres_database: nextcloud
 nextcloud_postgres_user: nextcloud
 # The human administrator account is created in the web installer, not supplied
