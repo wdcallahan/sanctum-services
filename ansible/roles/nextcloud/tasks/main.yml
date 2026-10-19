@@ -20,12 +20,11 @@
   ansible.builtin.assert:
     that:
       - vault_nextcloud_postgres_password is defined
-      - vault_nextcloud_admin_password is defined
       - (vault_nextcloud_postgres_password | default('')) | length > 0
-      - (vault_nextcloud_admin_password | default('')) | length > 0
     fail_msg: >-
-      Supply nonempty vault_nextcloud_postgres_password and
-      vault_nextcloud_admin_password through encrypted Ansible Vault.
+      Supply nonempty vault_nextcloud_postgres_password via the existing
+      database-only encrypted Ansible Vault; the human administrator creates
+      their own account in the Nextcloud web installation wizard.
   no_log: true
 
 - name: Verify the declared PostgreSQL endpoint is reachable
@@ -54,12 +53,22 @@
     state: directory
     mode: "0755"
 
-- name: Write private container environment
+# The host directory is mode 0700; the mounted single file is mode 0644
+# because PHP runs as UID 33 inside the container and must read it.
+# It is never placed in source control or passed in the container's environment.
+- name: Install the database password as a privately scoped file
+  ansible.builtin.copy:
+    content: "{{ vault_nextcloud_postgres_password }}"
+    dest: "{{ nextcloud_private_config_dir }}/postgresql-password"
+    mode: "0644"
+  no_log: true
+  notify: Restart Nextcloud
+
+- name: Write non-secret container environment
   ansible.builtin.template:
     src: nextcloud.env.j2
     dest: "{{ nextcloud_private_config_dir }}/nextcloud.env"
     mode: "0600"
-  no_log: true
   notify: Restart Nextcloud
 
 - name: Install Nextcloud Quadlet
@@ -81,13 +90,24 @@
 - name: Apply any updated container inputs before checking readiness
   ansible.builtin.meta: flush_handlers
 
-- name: Verify Nextcloud was actually installed
+# The first deployment deliberately stops at the web installation wizard;
+# installed=false is expected until Nova creates the admin account there.
+- name: Verify Nextcloud is serving its installation or installed state
   ansible.builtin.uri:
     url: "http://127.0.0.1:{{ nextcloud_host_port }}/status.php"
     return_content: true
     status_code: 200
   register: nextcloud_status
-  until: nextcloud_status.json.installed | default(false) | bool
+  until: >-
+    nextcloud_status.status | default(0) == 200
+    and nextcloud_status.json.installed is defined
   retries: 20
   delay: 5
   changed_when: false
+
+- name: Report whether the web installer is still pending
+  ansible.builtin.debug:
+    msg: >-
+      Nextcloud status endpoint responded; web_installer_pending={{
+      not (nextcloud_status.json.installed | bool) }}.
+      This is not yet an authenticated database or user-login acceptance.
