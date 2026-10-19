@@ -1,7 +1,7 @@
 # Sanctum Services — Roadmap
 
-**Status:** Initial Nextcloud source exists; deployment paused for runtime-design correction.  
-**Updated:** 2026-10-17.  
+**Status:** Nextcloud ARM64 image acquired and production PostgreSQL database/login provisioned; application container not deployed or qualified. First-boot source revised; next live test is container DNS. Shared EE/controller qualification remains unfinished.  
+**Updated:** 2026-10-19.  
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
 **Current waypoint: Stage 1 — choose and demonstrate the Ansible Navigator + EE operating model.**
 
@@ -22,7 +22,7 @@ A healthy service, passing syntax test, or documented procedure alone does not m
 
 - First service: **Nextcloud**, using the Apache container variant and existing PostgreSQL.
 - Initial application host: **Kvin** (`aarch64`, rootless Podman); host TCP **8085 → container TCP 80**. Port was observed unoccupied on October 17; confirm at deployment.
-- Users reach a **stable service name via YXORP**. The actual public hostname and scheme remain to be chosen. Moving hosts or host ports changes the proxy upstream, not the user's service identity.
+- Users are intended to reach **Town Square** at `https://square.nexus.sanctum` through YXORP; proxy/DNS/TLS integration is not yet qualified. Moving hosts or host ports changes the proxy upstream, not the user's service identity.
 - Initial live file storage: **Kvin's NVMe**, with an approximate **50 GiB soft planning budget**. **Peanut** is the separate backup destination (434 GB free on October 17). **Void** is the eventual intended persistent-storage host, not a dependency for the initial pilot.
 - **Podman Quadlets, not Docker Compose**. The long-lived Ansible experience should use **Ansible Navigator with an EE**. Do not reproduce per-project venvs as a default merely because they are easy to create.
 - Secrets and nonreconstructible data are managed outside public plaintext Git. Existing PostgreSQL, proxy, network registry, and controller infrastructure each retain their own ownership boundaries.
@@ -67,8 +67,8 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 
 - [ ] Review the existing `ansible/` candidate against the approved execution model; revise or replace mistaken assumptions at source instead of layering workarounds.
 - [ ] Configure a stable user-facing Nextcloud hostname/scheme and confirm YXORP's intended route.
-- [ ] Confirm a stable **named** endpoint and the PostgreSQL owner's supported way to provision Nextcloud's dedicated database and role. Do not embed a transient IP or change shared database ownership from this repo.
-- [ ] Choose and verify a platform-compatible **digest-pinned Nextcloud Apache image**.
+- [x] Confirm the stable **named** PostgreSQL endpoint `db.nexus.sanctum:5432` and the PostgreSQL owner's supported dedicated `nextcloud` database/login provisioner. **Production creation and unchanged repeat accepted by Maintenance October 19.** Actual authentication from the Nextcloud container and application schema creation remain untested.
+- [x] Pull/inspect the ARM64 Nextcloud Apache image on Kvin and pin its observed image manifest digest. **No successful container launch or app-specific image test yet.**
 - [ ] Define persistent directories, appropriate rootless ownership, private secrets, Quadlet, startup/lingering, and a bounded host port through Ansible.
 - [ ] Define **installation and removal** procedures together, so each managed object has a clear owner and safe removal behavior.
 - [ ] Run static checks (syntax and relevant lint/tests) **in the intended EE**, then deploy from Kvin through Navigator.
