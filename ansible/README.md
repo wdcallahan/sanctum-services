@@ -9,6 +9,13 @@ are configuration inputs rather than part of Nextcloud's identity.
 This is an **unqualified initial source candidate**, not a published claim
 that a working Nextcloud or reliable backups have been deployed.
 
+**October 19 progress:** Maintenance created production `nextcloud` database and
+least-privilege `nextcloud` login, verified unchanged repeat and preserved Joule
+readiness. The supported endpoint is `db.nexus.sanctum:5432`. Nextcloud has
+**not** yet authenticated from its application container, initialized its
+schema, or started its web service. See the [Maintenance handoff](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/handoffs/2026-10-19-nextcloud-postgresql-contract.md).
+
+
 ## Operator learning and execution model (not yet implemented)
 
 **This candidate is paused before first deployment.** Nova's actual project
@@ -48,35 +55,45 @@ The EE must provide a supported, explicit SSH credential path and the
 connection must allow control of `wdc2`'s user systemd manager.
 
 
-## Inputs required before the first apply
+## First-boot contract and remaining qualifications (October 19)
 
-1. Choose the stable Nextcloud service hostname and public scheme in
-   `ansible/group_vars/nextcloud.yml`, plus the authoritative named
-   PostgreSQL endpoint (never hard-code an IP address).
-2. Resolve and select a Nextcloud **Apache image by digest** that supports
-   the host architecture; do not treat a floating tag as immutable.
-3. Have the PostgreSQL owning operation provision the dedicated `nextcloud`
-   role and database with its own credential. This deployment does not
-   modify the shared database's service, network binding, roles, or HBA.
-4. Supply `vault_nextcloud_postgres_password` and
-   `vault_nextcloud_admin_password` in encrypted
-   `ansible/group_vars/nextcloud/vault.yml`. For example create it with
-   the approved encrypted-variables workflow. Keep the Vault unlock secret
-   outside Git.
-5. Verify the desired user systemd manager is reachable and lingering is
-   correctly managed for persistent rootless services. Confirm no other
-   service is bound to the configured host port.
+- The intended public name is `https://square.nexus.sanctum`, but DNS/HTTPS
+  and the YXORP route have **not** been qualified by this project.
+- ARM64 Nextcloud Apache 34.0.5 was pulled onto Kvin and its image digest
+  pinned in source; the rootless Quadlet startup remains untested.
+- The supported PostgreSQL endpoint is `db.nexus.sanctum:5432`, with database
+  and login `nextcloud`. The real container must still prove DNS, authenticated
+  SCRAM connection, and the application's actual schema creation.
+- Nova prepared the **database-only encrypted** credential file at
+  `/home/wdc2/.config/sanctum-services/secrets/nextcloud-postgresql.vault.yml`
+  and the separate local Vault key at
+  `/home/wdc2/.config/sanctum-services/secrets/vault.key`.
+  Use those existing inputs through an explicitly qualified Vault/EE path;
+  **do not regenerate passwords, paste them into chat, or put them in Git**.
+- The first run intentionally **does not** supply
+  `NEXTCLOUD_ADMIN_USER` or `NEXTCLOUD_ADMIN_PASSWORD` because Nova will create
+  his own login in the **browser** and save it in Bitwarden. A fresh uninstalled
+  `status.php` response with `installed=false` is expected and **not** a
+  failing health check before the web wizard completes.
+- The source places the database credential in a file inside a mode-0700
+  host-only configuration directory. The individual file is mode 0644
+  (accessible to the unprivileged web process within its read-only bind mount),
+  but cannot be traversed by other normal host users through its private
+  parent. The container environment holds only the secret-file **path**.
+  This mechanism still needs actual user-namespace and Nextcloud image tests.
+- Qualify rootless Podman storage ownership, the `wdc2` user systemd manager
+  and lingering, and port 8085 availability. Arrange the authorized YXORP
+  route and HTTPS access before entering the human admin password.
 
-**No apply command is approved yet.** After the EE-based operator path
-has been chosen, tested, and documented, qualify the installation and
-unchanged repeat. Verify Nextcloud login through YXORP, not just a
-running process or HTTP status.
+**No production apply command is approved yet.** We first test container DNS,
+then authenticate from the actual Nextcloud image/network without displaying
+secrets, and qualify first startup through the chosen Ansible/EE controller.
+After browser setup, verify a real login and unchanged repeat. Plain HTTP or a
+successful `status.php` response is not sufficient acceptance.
 
-Also implement and exercise distinct operator procedures for start/stop,
-inspection, upgrades, backup, restore, and **uninstall**. Uninstall must
-remove only application-owned resources while clearly offering *retain*
-versus explicit *purge* handling for user data, configuration and secrets.
-None of these lifecycle promises is presently accepted.
+The source is a **candidate** until those native observations occur. We also
+need actual backup, restore, upgrade and application-only uninstall procedures;
+none are silently waived by first startup.
 
 ## Persistent state, backups, and migration
 
