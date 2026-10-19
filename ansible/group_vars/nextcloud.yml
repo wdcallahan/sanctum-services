@@ -1,8 +1,8 @@
 ---
-# These are deliberately unset until the agreed service identities are known.
-# Public app name is stable across host and port moves through YXORP.
-nextcloud_public_hostname: ""
-nextcloud_public_scheme: ""
+# Intended family-facing service URL through YXORP; DNS and proxy route are not yet deployed.
+# The public name remains stable across moves of the backend host and port.
+nextcloud_public_hostname: "square.nexus.sanctum"
+nextcloud_public_scheme: "https"
 
 # This must be a service DNS name, not Kvin's observed IP address.
 nextcloud_postgres_host: ""
