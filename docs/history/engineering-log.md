@@ -198,6 +198,14 @@ This **proves HBA rejected the source address before password validation**. DNS,
 - A new credential-safe PDO authentication test using **rootless slirp4netns** has been requested. **Result pending**. Do **not** treat TCP-only success as proof of authenticated login or application schema initialization. The Quadlet network mode is still unchanged until the authenticated test and published-port behavior are qualified.
 - No shared PostgreSQL/HBA/firewall changes or credential regeneration was requested.
 
+## 2026-10-19 — Maintenance source-preservation outcome supersedes suggested HBA exception
+
+- Nova **rejected** allowing Podman's `169.254.1.2` address through the shared PostgreSQL HBA; the earlier Services suggestion to add a narrow HBA exception is **withdrawn**, not the selected architecture.
+- Maintenance's [updated production handoff](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/handoffs/2026-10-19-nextcloud-postgresql-contract.md) reports a native **isolated** PostgreSQL `slirp4netns:port_handler=slirp4netns` test passing Nextcloud-client SCRAM authentication twice, with a source observed as **`192.168.1.192`**, unchanged HBA, and rejected wrong-password test. The exact single-line source change was previewed on Production successfully at **21:06 UTC**, without activation.
+- The live Kvin PostgreSQL service **still uses pasta** pending an approved shared-database reconnection window: Joule must pause new requests, drain queued/in-flight work, and attest readiness before the responsible Maintenance owner activates the exact change. Changing Podman networking recreates the database container and interrupts live clients. See the [guarded activation runbook](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/postgresql-network-activation.md). **Services must not directly activate Maintenance.**
+- Services' own **unqualified** Nextcloud Quadlet template now specifies `Network=slirp4netns`, matching the tested client mode; its 8085:80 mapping still requires real native qualification. The Nextcloud source is not deployed and does not yet prove end-to-end database authentication against live PostgreSQL.
+- Pending Maintenance's live activation and sanitized result, Services should qualify its actual browser-based Nextcloud setup. No password rotation, no 169.254 HBA exception and no untimed production outage are authorized by this note.
+
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
