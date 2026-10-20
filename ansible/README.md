@@ -174,7 +174,7 @@ the shared proxy or database ownership contracts.
 The [pinned app manifest](nextcloud-apps.yml) and separate
 [`apps.yml` reconciliation playbook](apps.yml) are now source-controlled.
 The normal `site.yml` includes this role **after** the container is running
-and web installation has completed. The manifest is initially empty, so no
-third-party apps are changed by default. See the
+and web installation has completed. The manifest pins Calendar 6.6.2 as the first qualified-source candidate;
+no third-party app was deployed merely by committing the source. See the
 [operator guide](../docs/runbooks/nextcloud-apps.md) for the review, validation,
 verification and repeat requirements. Source is not native-accepted yet.
