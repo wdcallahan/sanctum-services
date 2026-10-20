@@ -21,8 +21,20 @@ class NextcloudAppsContract(unittest.TestCase):
             (ANSIBLE / "roles/nextcloud_apps/tasks/manage.yml").read_text()
         )
 
-    def test_manifest_empty_by_default_not_an_unplanned_install(self):
-        self.assertEqual(self.manifest["nextcloud_extra_apps"], [])
+    def test_first_approved_app_is_exact_calendar_release(self):
+        apps = self.manifest["nextcloud_extra_apps"]
+        self.assertEqual(len(apps), 1)
+        self.assertEqual(apps[0]["id"], "calendar")
+        self.assertEqual(apps[0]["version"], "6.6.2")
+        self.assertEqual(apps[0]["state"], "enabled")
+        self.assertEqual(
+            apps[0]["url"],
+            "https://github.com/nextcloud-releases/calendar/releases/download/v6.6.2/calendar-v6.6.2.tar.gz",
+        )
+        self.assertEqual(
+            apps[0]["sha256"],
+            "7e83632d4436d3037a34d1c73cbc06d5ccb6e8fc10f096a86a43a0515588529c",
+        )
 
     def test_site_reconciles_after_base_role_and_installer(self):
         play = self.site[0]
