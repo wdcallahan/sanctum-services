@@ -1,0 +1,15 @@
+---
+# Approved third-party apps for Town Square.
+# Empty until an app/version/archive has been explicitly approved.
+# Example entry (NOT ACTIVE; supply a real HTTPS artifact URL and SHA-256):
+#
+# nextcloud_extra_apps:
+#   - id: calendar
+#     version: "6.6.2"
+#     state: enabled
+#     url: "https://example.invalid/reviewed-calendar-release.tar.gz"
+#     sha256: "REPLACE_WITH_64_HEX_CHARACTERS"
+#
+# Do not add apps merely because they appear in the App Store.
+# Core Nextcloud apps remain managed by Nextcloud itself.
+nextcloud_extra_apps: []
