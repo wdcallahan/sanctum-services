@@ -11,7 +11,7 @@ rootless Nextcloud Quadlet. The shared PostgreSQL service, YXORP, host firewall
 and platform baseline remain with their established owners.
 
 The approved list is [`ansible/nextcloud-apps.yml`](../../ansible/nextcloud-apps.yml).
-It is **empty by default**. Apps not listed there are left alone: no surprising
+It currently pins **Calendar 6.6.2**, its official release URL, and the SHA-256 from the publisher's GitHub release metadata; this is the first live-qualification candidate. Apps not listed there are left alone: no surprising
 uninstalls, no upgrades, and no bulk disabling of shipped Nextcloud components.
 
 ## Approve an app
@@ -63,12 +63,12 @@ reapplying the container role.
 
 ## Qualification sequence before first live apply
 
-1. On Kvin, pull the current `main` and inspect the intended diff.
+1. On Kvin, pull the current `main` and inspect the intended diff (Calendar 6.6.2 is now pinned).
 2. Run `python3 -m unittest discover -s tests` in the repository.
 3. Run `ansible-navigator run ansible/apps.yml --syntax-check` through the
    **approved project EE/controller context**, with its inventory and Vault
    conventions. Don't assume the existing Maintenance EE is generally approved.
-4. Add **one** vetted, checksum-pinned app. Use the app-only playbook first,
+4. Use the pinned **Calendar 6.6.2** entry and the app-only playbook first,
    recording the actual launch command, target, and the output.
 5. Confirm web UI, local `/status.php`, `occ app:list`, and Apache logs.
    If workers segfault, preserve evidence. Test service restart before
