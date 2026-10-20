@@ -1,0 +1,170 @@
+---
+- name: Observe current app states before reconciling this app
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --user
+      - www-data
+      - sanctum-nextcloud
+      - php
+      - /var/www/html/occ
+      - app:list
+      - --output=json
+  register: app_current
+  changed_when: false
+
+- name: Cache existing app state
+  ansible.builtin.set_fact:
+    app_enabled: "{{ (app_current.stdout | from_json).enabled }}"
+    app_disabled: "{{ (app_current.stdout | from_json).disabled }}"
+
+- name: Prepare verified archive for missing app
+  when:
+    - approved_app.id not in app_enabled
+    - approved_app.id not in app_disabled
+  block:
+    - name: Create private application artifact staging directory
+      ansible.builtin.file:
+        path: "{{ nextcloud_apps_stage_dir }}"
+        state: directory
+        mode: "0700"
+
+    - name: Download exact approved release archive with SHA-256 verification
+      ansible.builtin.get_url:
+        url: "{{ approved_app.url }}"
+        dest: "{{ nextcloud_apps_stage_dir }}/{{ approved_app.id }}-{{ approved_app.version }}.tar.gz"
+        checksum: "sha256:{{ approved_app.sha256 }}"
+        mode: "0600"
+
+    - name: Inspect archive paths, identity, declared version and compatibility
+      ansible.builtin.script:
+        cmd: >-
+          validate_archive.py
+          {{ nextcloud_apps_stage_dir }}/{{ approved_app.id }}-{{ approved_app.version }}.tar.gz
+          {{ approved_app.id }} {{ approved_app.version }}
+          {{ nextcloud_status.json.versionstring.split('.')[0] }}
+        executable: python3
+      changed_when: false
+
+    - name: Copy vetted archive into existing rootless container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - cp
+          - "{{ nextcloud_apps_stage_dir }}/{{ approved_app.id }}-{{ approved_app.version }}.tar.gz"
+          - "sanctum-nextcloud:/tmp/sanctum-{{ approved_app.id }}.tar.gz"
+
+    - name: Extract vetted app into persistent Nextcloud custom_apps
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --user
+          - "0"
+          - sanctum-nextcloud
+          - tar
+          - --no-same-owner
+          - -xzf
+          - "/tmp/sanctum-{{ approved_app.id }}.tar.gz"
+          - -C
+          - /var/www/html/custom_apps
+
+    - name: Give Nextcloud's web process ownership of its new application
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --user
+          - "0"
+          - sanctum-nextcloud
+          - chown
+          - -R
+          - www-data:www-data
+          - "/var/www/html/custom_apps/{{ approved_app.id }}"
+
+    - name: Remove transient archive from container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --user
+          - "0"
+          - sanctum-nextcloud
+          - rm
+          - -f
+          - "/tmp/sanctum-{{ approved_app.id }}.tar.gz"
+
+- name: Enable app only when desired and not already enabled
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --user
+      - www-data
+      - sanctum-nextcloud
+      - php
+      - /var/www/html/occ
+      - app:enable
+      - "{{ approved_app.id }}"
+  when:
+    - approved_app.state == 'enabled'
+    - approved_app.id not in app_enabled
+
+- name: Disable app only when explicitly desired and currently enabled
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --user
+      - www-data
+      - sanctum-nextcloud
+      - php
+      - /var/www/html/occ
+      - app:disable
+      - "{{ approved_app.id }}"
+  when:
+    - approved_app.state == 'disabled'
+    - approved_app.id in app_enabled
+
+- name: Reobserve Nextcloud app status after any requested transition
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --user
+      - www-data
+      - sanctum-nextcloud
+      - php
+      - /var/www/html/occ
+      - app:list
+      - --output=json
+  register: app_verified
+  changed_when: false
+
+- name: Require pinned installed version and intended enabled state
+  ansible.builtin.assert:
+    that:
+      - >-
+        (approved_app.id in (app_verified.stdout | from_json).enabled)
+        if approved_app.state == 'enabled'
+        else (approved_app.id in (app_verified.stdout | from_json).disabled)
+      - >-
+        ((app_verified.stdout | from_json).enabled | combine((app_verified.stdout | from_json).disabled))[approved_app.id]
+        == approved_app.version
+    fail_msg: "{{ approved_app.id }} did not converge to the declared version and state."
+
+- name: Require responsive Nextcloud after this application
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ nextcloud_host_port }}/status.php"
+    return_content: true
+    status_code: 200
+    timeout: 10
+  register: app_http_check
+  until: >-
+    app_http_check.status | default(0) == 200
+    and app_http_check.json.installed | default(false) | bool
+    and not (app_http_check.json.maintenance | default(true) | bool)
+  retries: 3
+  delay: 2
+  changed_when: false
