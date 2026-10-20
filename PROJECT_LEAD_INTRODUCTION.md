@@ -2,6 +2,31 @@
 
 This is a **short handoff for the next assistant**, not a second design authority, an automatic project-lead appointment, or required reading for human operators. Nova's actual request appoints the scope of each session.
 
+## Active handoff — October 20 firewall ownership transfer
+
+[Services issue 1](https://github.com/wdcallahan/sanctum-services/issues/1)
+is the current bounded task. Maintenance's native **read-only** Kvin firewall
+preview and separate Pi-baseline no-change preview passed. Maintenance owns
+ordinary 8084/5432/8085 service-port publication on Kvin; its live correction
+has **not** been approved or applied. Services' Nextcloud role has now removed
+its application-owned firewalld port-opening mutation and added an early,
+**read-only** preflight checking `eth0`/`public` and **both runtime and
+permanent 8085/tcp**. A missing prerequisite fails before Nextcloud file,
+credential or service mutation and points to Maintenance's
+[owner runbook](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/kvin-service-firewall.md).
+The cross-project installation/reconstruction sequence is documented in
+[Services' Ansible README](ansible/README.md) and
+[Town Square proxy runbook](docs/runbooks/town-square-yxorp-proxy.md).
+
+No live firewall or Nextcloud deployment action is authorized by this source
+transfer. Nextcloud **does** already run locally with `status.php` HTTP 200,
+`installed=false`; previous "not installed" notes below are historical.
+Next: source-qualify and post Services issue 1 implementation; Maintenance
+reviews it and obtains Nova's separate approval before any live host change.
+Do not run the old PostgreSQL deploy play or the full platform baseline.
+The new general-purpose EE co-build with Nova remains a separate learning
+goal, not a missing source-handoff approval.
+
 ## What this project is for
 
 `sanctum-services` owns reproducible self-hosted application deployment, lifecycle operations, and recovery, beginning with Nextcloud. **The learning is a deliverable**: Nova wants real Ansible Navigator/EE practice, professional skill, and independent ability to understand and maintain the system. He does *not* want an opaque turnkey result.
