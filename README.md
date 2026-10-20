@@ -6,7 +6,7 @@ Sanctum Services is the application-deployment project for the Sanctum home lab.
 
 The first service is **Nextcloud**. Home Assistant is a possible later addition. We build these systems for two outcomes: useful services **and** real hands-on engineering experience.
 
-> **Current status — 2026-10-17:** Nextcloud is **not installed or qualified**. An initial Ansible role exists, and a direct-Ansible syntax check passed on Kvin. That role has an unaccepted controller/inventory design; deployment is paused until we qualify a proper Navigator + EE workflow. The repository is currently a working engineering project, **not a ready-to-run installation recipe**.
+> **Current status — 2026-10-20:** The Nextcloud rootless container on Kvin answered HTTP 200 locally (`installed=false`). It is **not yet accepted**: the browser installer/login, direct peer path, recoverable backups and operational lifecycle remain unfinished. Maintenance's published-service firewall correction for TCP 8085 is previewed but **not authorized/applied**. Services no longer mutates Kvin's firewall; its early, read-only dual-state prerequisite waits for Maintenance. [Source and deployment order](ansible/README.md) · [Owner runbook](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/kvin-service-firewall.md).
 
 ## Start here
 
@@ -14,7 +14,7 @@ The first service is **Nextcloud**. Home Assistant is a possible later addition.
 | --- | --- |
 | Understand our destination and current milestone | [Project roadmap](docs/ROADMAP.md) |
 | Understand hosts, data paths, EEs, and component ownership | [Architecture](docs/architecture.md) |
-| Inspect the initial, **unqualified** application automation | [Ansible candidate and prerequisites](ansible/README.md) |
+| Understand application automation and host-firewall prerequisites | [Ansible deployment and owner order](ansible/README.md) |
 | Review what changed and what actually happened | [Engineering log](docs/history/engineering-log.md) |
 | Resume an interrupted assistant-led engineering session | [Short lead handoff](PROJECT_LEAD_INTRODUCTION.md) |
 
@@ -31,11 +31,11 @@ A service has no initial value merely because it starts. It must be:
 
 We measure progress through demonstrated operating outcomes, not source-code volume or passing tests alone.
 
-## Initial Nextcloud pilot — planned, not active
+## Initial Nextcloud pilot — container running, installer pending
 
 - **Compute:** Kvin (ARM64), rootless Podman; host port 8085 is the chosen initial mapping to Nextcloud Apache port 80.
-- **User-facing name:** stable behind YXORP; hostname and scheme to be agreed.
-- **Database:** existing Sanctum PostgreSQL, with Nextcloud's own role/database provisioned through its owner.
+- **User-facing name:** `square.nexus.sanctum`; initial pilot route is HTTP via YXORP, not yet accepted; TLS requires a separate later decision.
+- **Database:** existing Sanctum PostgreSQL, with Nextcloud's own role/database provisioned by its owner and a qualified client SCRAM path.
 - **Files:** Kvin NVMe, about **50 GiB soft budget** for the learning period; separately restorable copies planned on Peanut. Void is the intended later long-term file-storage location.
 - **Automation runtime:** centrally managed Navigator/EE workflow on the Kvin and Peanut controllers; actual runtime ownership and qualified image to be selected.
 
