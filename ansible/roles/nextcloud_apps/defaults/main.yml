@@ -1,0 +1,3 @@
+---
+# These archives are a disposable cache, not part of Nextcloud's persistent state.
+nextcloud_apps_stage_dir: "{{ ansible_facts['env']['HOME'] }}/.cache/sanctum-services/nextcloud-apps"
