@@ -261,3 +261,11 @@ This **proves HBA rejected the source address before password validation**. DNS,
 ## How to extend this log
 
 Add an entry only for a meaningful changed design, verified run, discovery, accepted decision or failed experiment. Include what was observed, what conclusion is justified, and links to commits/tests/receipts where useful. Keep everyday instructions in runbooks, plans in the roadmap, and transient command output in appropriate private evidence artifacts. Never make new users read this log before operating the system.
+
+## 2026-10-20 — Nextcloud first-party App Store incident; pinned-app source candidate
+
+- Nova used the Nextcloud administrator interface to install/enable Countdown 1.2.36. HTTP logs show appstore enable HTTP 200 at 11:46 local, then Apache child SIGSEGVs from 11:51. Container remained up but direct `/status.php` returned an empty reply; the proxy returned 502. The exact native crash cause has **not** been established.
+- `occ app:disable countdown` succeeded but did not restore HTTP. `systemctl --user restart sanctum-nextcloud.service` then restored HTTP 200 with `installed=true`, maintenance off, and no DB upgrade required. Since the restart followed disablement, no conclusion about whether restart alone would have worked is justified.
+- Nova transferred about 5 GB of music using GNOME's WebDAV mount and played a file over VPN from his phone. He explicitly classified current uploads as disposable test data and did **not** request backup as a prerequisite to application-management development.
+- Pixel created a pinned-apps manifest, `nextcloud_apps` role, standalone `ansible/apps.yml`, archive vetting and regression source, and an operator runbook on linear `main`. This is a **source-only candidate**, not an EE syntax/native execution qualification or live app deployment. Default manifest is empty; no existing app changed. Fresh build is gated on completion of the web installer, with app-only reconciliation separate from base deploy.
+- Next owner action: run regression tests and syntax checks from the actual Kvin checkout and selected EE; resolve failures at the source. Then authorize one real app version/artifact and test a native app-only apply followed by a zero-change repeat. Do not assume the existing maintenance image is a globally accepted generic EE.
