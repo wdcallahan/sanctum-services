@@ -3,5 +3,13 @@
   hosts: nextcloud
   gather_facts: true
   become: false
+  vars_files:
+    - nextcloud-apps.yml
   roles:
     - nextcloud
+    # Initial installer still belongs to Nova's web session. Once it
+    # completes, this role restores approved third-party app software/state.
+    - role: nextcloud_apps
+      when:
+        - nextcloud_extra_apps | length > 0
+        - nextcloud_status.json.installed | default(false) | bool
