@@ -46,3 +46,16 @@ Those facts and decisions may evolve. The [roadmap](docs/ROADMAP.md) identifies 
 This repo owns applications and their supported lifecycle. The Sanctum registry owns canonical network facts; Sanctum Maintenance owns host/OS maintenance; existing infrastructure projects own PostgreSQL, YXORP and shared controller facilities. We consume their supported interfaces instead of silently replacing them.
 
 The source is developed on linear `main`, with no default branch/PR workflow. The original project material is licensed under the **GNU General Public License, version 3 or later**; see [LICENSE](LICENSE).
+
+## Approved third-party applications
+
+[Application manifest](ansible/nextcloud-apps.yml) ·
+[App-only playbook](ansible/apps.yml) ·
+[App management and reconstruction runbook](docs/runbooks/nextcloud-apps.md)
+
+The October 20 app management source is **not yet natively qualified**. Its
+manifest begins empty; a tested application/version/checksum must be approved
+before any third-party app is deployed through it. The normal site playbook
+reconciles approved apps only after the web installer completes. Unlisted apps
+are preserved, not silently uninstalled. No current test uploads are treated
+as irreplaceable data; eventual data recovery is a separate qualification.
