@@ -21,10 +21,11 @@ class NextcloudAppsContract(unittest.TestCase):
             (ANSIBLE / "roles/nextcloud_apps/tasks/manage.yml").read_text()
         )
 
-    def test_ee_ssh_uses_native_kvin_lan_not_loopback(self):
-        node = self.inventory["all"]["children"]["nextcloud"]["hosts"]["kvin.outer.sanctum"]
-        self.assertEqual(node["ansible_host"], "192.168.1.192")
+    def test_inventory_uses_sanctum_dns_not_pinned_transport(self):
+        inventory = yaml.safe_load((ANSIBLE / "inventory/hosts.yml").read_text())
+        node = inventory["all"]["children"]["nextcloud"]["hosts"]["kvin.outer.sanctum"]
         self.assertEqual(node["ansible_user"], "wdc2")
+        self.assertNotIn("ansible_host", node)
         self.assertNotIn("ansible_connection", node)
 
     def test_first_approved_app_is_exact_calendar_release(self):
