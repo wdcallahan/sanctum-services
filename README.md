@@ -54,8 +54,8 @@ The source is developed on linear `main`, with no default branch/PR workflow. Th
 [App management and reconstruction runbook](docs/runbooks/nextcloud-apps.md)
 
 The October 20 app management source is **not yet natively qualified**. Its
-manifest begins empty; a tested application/version/checksum must be approved
-before any third-party app is deployed through it. The normal site playbook
+manifest now pins Calendar 6.6.2 (reviewed release archive and SHA-256); no
+third-party app has been deployed through it yet. The normal site playbook
 reconciles approved apps only after the web installer completes. Unlisted apps
 are preserved, not silently uninstalled. No current test uploads are treated
 as irreplaceable data; eventual data recovery is a separate qualification.
