@@ -18,7 +18,9 @@
 
 # Host firewall publication is owned by Sanctum Maintenance. These are
 # observations, not permission for Services to modify runtime/permanent state.
-# Fail before creating files, touching credentials or restarting Nextcloud.
+# Firewalld may require polkit authorization even for --query-port. Run just
+# these two non-mutating port queries with privilege; keep the Nextcloud
+# application and all other tasks unprivileged. Fail before touching app state.
 - name: Observe the active firewall zone for Kvin's service interface
   ansible.builtin.command:
     argv:
@@ -35,6 +37,7 @@
       - firewall-cmd
       - "--zone={{ nextcloud_firewall_zone }}"
       - "--query-port={{ nextcloud_host_port }}/tcp"
+  become: true
   register: nextcloud_firewall_runtime_port
   changed_when: false
   failed_when: false
@@ -47,6 +50,7 @@
       - --permanent
       - "--zone={{ nextcloud_firewall_zone }}"
       - "--query-port={{ nextcloud_host_port }}/tcp"
+  become: true
   register: nextcloud_firewall_permanent_port
   changed_when: false
   failed_when: false
@@ -67,10 +71,12 @@
       nextcloud_firewall_interface_zone.stdout | default('unknown') | trim }},
       runtime query rc={{ nextcloud_firewall_runtime_port.rc | default('unknown') }},
       permanent query rc={{ nextcloud_firewall_permanent_port.rc | default('unknown') }}.
-      Have Sanctum Maintenance apply its reviewed
-      playbooks/configure-kvin-firewall.yml according to
-      docs/runbooks/kvin-service-firewall.md after Nova's live approval;
-      then rerun Services. Services does not open host firewall ports.
+      An error such as NOT_AUTHORIZED (rc=253) means this query could not
+      observe policy; it does not establish the port is closed. Only if the
+      authorized queries prove the port absent, refer to Maintenance's
+      playbooks/configure-kvin-firewall.yml and
+      docs/runbooks/kvin-service-firewall.md. Services does not open host
+      firewall ports.
 
 - name: Confirm application credentials are supplied separately
   ansible.builtin.assert:

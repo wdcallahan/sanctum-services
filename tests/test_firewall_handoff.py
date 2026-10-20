@@ -26,9 +26,14 @@ class MaintenanceFirewallPrerequisiteTests(unittest.TestCase):
             any("ansible.posix.firewalld" in task for task in self.tasks),
             "Host firewall changes belong to Maintenance, not Services.",
         )
-        self.assertFalse(
-            any("become" in task and task["become"] for task in self.tasks),
-            "Read-only firewall queries must not request privilege escalation.",
+        privileged = [task["name"] for task in self.tasks if task.get("become") is True]
+        self.assertEqual(
+            privileged,
+            [
+                "Observe Maintenance-owned runtime admission for Nextcloud",
+                "Observe Maintenance-owned permanent admission for Nextcloud",
+            ],
+            "Privilege escalation is limited to read-only firewalld port queries.",
         )
 
     def test_preflight_is_before_all_app_mutations(self) -> None:
@@ -57,7 +62,9 @@ class MaintenanceFirewallPrerequisiteTests(unittest.TestCase):
             self.assertEqual(task.get("failed_when"), False)
             self.assertEqual(task.get("check_mode"), False)
             self.assertIn("ansible.builtin.command", task)
-            self.assertNotIn("become", task)
+        self.assertNotIn("become", zone)
+        self.assertIs(runtime.get("become"), True)
+        self.assertIs(permanent.get("become"), True)
         self.assertIn("--query-port={{ nextcloud_host_port }}/tcp", runtime["ansible.builtin.command"]["argv"])
         self.assertIn("--query-port={{ nextcloud_host_port }}/tcp", permanent["ansible.builtin.command"]["argv"])
         self.assertIn("--permanent", permanent["ansible.builtin.command"]["argv"])

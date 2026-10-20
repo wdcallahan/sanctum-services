@@ -26,7 +26,11 @@ Quadlet, or service operation, its read-only `firewall-cmd` queries require:
 Kvin's `eth0` in `public`, and `8085/tcp` permitted in **both runtime
 and permanent** `public` state. Missing permission fails with a diagnostic
 that directs the operator to the Maintenance runbook; no compensating
-application-owned firewall command is permitted.
+application-owned firewall command is permitted. The two read-only
+`firewall-cmd --query-port` tasks use task-scoped `become: true`: firewalld
+may return `NOT_AUTHORIZED` (253) for an unprivileged query, which is not proof
+that a port is closed. There is no Services-owned firewall mutation, and
+other Nextcloud tasks continue as the unprivileged deployment user.
 
 **Reconstruction order on a fresh Kvin:**
 1. Complete the platform owner's host/network/firewalld foundations; apply
