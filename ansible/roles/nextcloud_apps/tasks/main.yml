@@ -15,7 +15,55 @@
       - item.id is match('^[a-z][a-z0-9_]*$')
       - item.version is match('^[0-9][A-Za-z0-9._+~-]*$')
       - item.state in ['enabled', 'disabled']
-      - item.url is match('^https://[^[:space:]]+$')
+      - item.url is match('^https://\\S+
+      - item.sha256 is match('^[0-9a-f]{64}$')
+    fail_msg: >-
+      Each approved app must declare a safe id, exact version, enabled/disabled
+      state, immutable HTTPS release artifact URL, and lowercase SHA-256 hash.
+  loop: "{{ nextcloud_extra_apps }}"
+  loop_control:
+    label: "{{ item.id | default('invalid') }}"
+
+- name: Observe enabled and disabled Nextcloud applications as JSON
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - --user
+      - www-data
+      - sanctum-nextcloud
+      - php
+      - /var/www/html/occ
+      - app:list
+      - --output=json
+  register: nextcloud_apps_before
+  changed_when: false
+
+- name: Record enabled and disabled app version maps
+  ansible.builtin.set_fact:
+    nextcloud_apps_before_enabled: "{{ (nextcloud_apps_before.stdout | from_json).enabled }}"
+    nextcloud_apps_before_disabled: "{{ (nextcloud_apps_before.stdout | from_json).disabled }}"
+
+- name: Reject drift in any already installed pinned app
+  ansible.builtin.assert:
+    that:
+      - >-
+        item.id not in (nextcloud_apps_before_enabled | combine(nextcloud_apps_before_disabled))
+        or (nextcloud_apps_before_enabled | combine(nextcloud_apps_before_disabled))[item.id] == item.version
+    fail_msg: >-
+      {{ item.id }} already exists at a version other than {{ item.version }}.
+      Stop: this role never silently upgrades, downgrades, or overwrites apps.
+  loop: "{{ nextcloud_extra_apps }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+- name: Reconcile approved applications one at a time
+  ansible.builtin.include_tasks: manage.yml
+  loop: "{{ nextcloud_extra_apps }}"
+  loop_control:
+    loop_var: approved_app
+    label: "{{ approved_app.id }}"
+)
       - item.sha256 is match('^[0-9a-f]{64}$')
     fail_msg: >-
       Each approved app must declare a safe id, exact version, enabled/disabled
