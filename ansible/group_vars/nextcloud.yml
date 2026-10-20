@@ -16,9 +16,10 @@ nextcloud_postgres_host: "db.nexus.sanctum"
 nextcloud_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145"
 
 nextcloud_host_port: 8085
-# Open the published application TCP port normally in Kvin's active
-# public firewalld zone. No application-specific source restrictions.
+# Read-only prerequisite expectations, matching the Maintenance-owned Kvin
+# host policy. Services never opens these ports or installs rich rules.
 nextcloud_firewall_zone: "public"
+nextcloud_firewall_interface: "eth0"
 nextcloud_postgres_database: nextcloud
 nextcloud_postgres_user: nextcloud
 # The human administrator account is created in the web installer, not supplied
