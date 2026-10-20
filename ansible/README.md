@@ -89,23 +89,25 @@ owned and are not prerequisites to this firewall ownership source transfer.
 
 ## Managed-host connection
 
-The inventory retains Ansible's **smart/SSH** managed-host connection and
-the identity `kvin.outer.sanctum`. On October 20, the first app-only apply
-stopped at SSH with `Connection refused`. Native Kvin observations showed
-SSH **active and listening on 0.0.0.0:22**, the LAN address
-`192.168.1.192`, and `getent ahostsv4 kvin.outer.sanctum` resolving to
-Debian's host-local `127.0.1.1`. This is unsuitable as the EE-to-host
-connection address when the EE has an independent loopback namespace.
+The inventory uses `kvin.outer.sanctum` with Ansible's default **smart/SSH**
+transport; no `ansible_host` IP override or EE-local connection is allowed.
+This deliberately delegates Kvin's current connection address to Sanctum's
+name service, whether the controller is Kvin or Peanut.
 
-To avoid asking an EE to SSH to itself, the inventory now sets
-`ansible_host: 192.168.1.192` for transport while preserving
-`kvin.outer.sanctum` as the host identity. This is a documented
-pilot-network address, not a DNS ownership change, SSH daemon change,
-or switch to `ansible_connection: local`. When the address moves, update
-the inventory or qualify a stable non-loopback resolution path from both
-Kvin and Peanut. Validate with a real EE-managed `ansible.builtin.ping`
-before claiming the app-only deployment works.
+On October 20 the first app-only apply failed during `Gathering Facts`
+with `Connection refused`. Native Kvin's SSH service was active and
+listening on port 22, while its `getent ahostsv4 kvin.outer.sanctum` returned
+`127.0.1.1` even though `eth0` had `192.168.1.192/24`. The observed
+native resolution is evidence of a name-service problem; the exact resolver
+inside the EE is not yet measured. NSS may take the name from `/etc/hosts`
+before DNS, or another configured NSS provider may intervene.
 
+Do not work around name resolution by hard-coding an address in the inventory,
+changing the SSH service, or switching to EE-local connection mode. First
+inspect the native and EE-specific name-service results, verify the expected
+record via Sanctum's DNS, and fix the actual name-service owner before retry.
+The target should resolve to a reachable host address in both controller
+contexts. App installation never started during this SSH failure.
 
 ## First-boot contract and remaining qualifications (October 19)
 
