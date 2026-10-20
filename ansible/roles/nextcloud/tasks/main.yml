@@ -16,6 +16,62 @@
       Choose the intended service hostname, scheme, database DNS name,
       and an immutable image digest before applying this playbook.
 
+# Host firewall publication is owned by Sanctum Maintenance. These are
+# observations, not permission for Services to modify runtime/permanent state.
+# Fail before creating files, touching credentials or restarting Nextcloud.
+- name: Observe the active firewall zone for Kvin's service interface
+  ansible.builtin.command:
+    argv:
+      - firewall-cmd
+      - "--get-zone-of-interface={{ nextcloud_firewall_interface }}"
+  register: nextcloud_firewall_interface_zone
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Observe Maintenance-owned runtime admission for Nextcloud
+  ansible.builtin.command:
+    argv:
+      - firewall-cmd
+      - "--zone={{ nextcloud_firewall_zone }}"
+      - "--query-port={{ nextcloud_host_port }}/tcp"
+  register: nextcloud_firewall_runtime_port
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Observe Maintenance-owned permanent admission for Nextcloud
+  ansible.builtin.command:
+    argv:
+      - firewall-cmd
+      - --permanent
+      - "--zone={{ nextcloud_firewall_zone }}"
+      - "--query-port={{ nextcloud_host_port }}/tcp"
+  register: nextcloud_firewall_permanent_port
+  changed_when: false
+  failed_when: false
+  check_mode: false
+
+- name: Require Maintenance's live and durable Nextcloud firewall prerequisite
+  ansible.builtin.assert:
+    that:
+      - nextcloud_firewall_interface_zone.rc == 0
+      - nextcloud_firewall_interface_zone.stdout | trim == nextcloud_firewall_zone
+      - nextcloud_firewall_runtime_port.rc == 0
+      - nextcloud_firewall_permanent_port.rc == 0
+    fail_msg: >-
+      Nextcloud needs Maintenance-owned {{ nextcloud_host_port }}/tcp in BOTH
+      runtime and permanent firewalld state, in zone
+      {{ nextcloud_firewall_zone }} on interface
+      {{ nextcloud_firewall_interface }}. Observed interface-zone result={{
+      nextcloud_firewall_interface_zone.stdout | default('unknown') | trim }},
+      runtime query rc={{ nextcloud_firewall_runtime_port.rc | default('unknown') }},
+      permanent query rc={{ nextcloud_firewall_permanent_port.rc | default('unknown') }}.
+      Have Sanctum Maintenance apply its reviewed
+      playbooks/configure-kvin-firewall.yml according to
+      docs/runbooks/kvin-service-firewall.md after Nova's live approval;
+      then rerun Services. Services does not open host firewall ports.
+
 - name: Confirm application credentials are supplied separately
   ansible.builtin.assert:
     that:
@@ -125,17 +181,6 @@
   retries: 20
   delay: 5
   changed_when: false
-
-# Publish Nextcloud's declared service port in Kvin's firewalld zone.
-# Manage both runtime and permanent state; no source-restricted rich rule.
-- name: Open the Nextcloud service port in firewalld
-  ansible.posix.firewalld:
-    zone: "{{ nextcloud_firewall_zone }}"
-    port: "{{ nextcloud_host_port }}/tcp"
-    state: enabled
-    permanent: true
-    immediate: true
-  become: true
 
 - name: Report whether the web installer is still pending
   ansible.builtin.debug:
