@@ -1,9 +1,9 @@
 # Sanctum Services — Roadmap
 
-**Status:** Nextcloud ARM64 image acquired and production PostgreSQL database/login provisioned; application container not deployed or qualified. First-boot source revised; next live test is container DNS. Shared EE/controller qualification remains unfinished.  
-**Updated:** 2026-10-19.  
+**Status:** Nextcloud rootless service was deployed and its local `/status.php` returned HTTP 200 / `installed=false`; installer/login and full application acceptance remain pending. Kvin's missing published-service port 8085 is now owned by Maintenance. Services' source has a read-only runtime/permanent firewall prerequisite, but it has NOT been applied natively. The independent Maintenance and baseline previews passed; no live firewall change is authorized by this source work. Shared general-purpose EE/controller co-building remains unfinished.  
+**Updated:** 2026-10-20.  
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
-**Current waypoint: Stage 1 — choose and demonstrate the Ansible Navigator + EE operating model.**
+**Current waypoint:** Maintenance-owned Kvin firewall acceptance → Services' direct/proxy Nextcloud acceptance, while the separately scoped Navigator/EE learning milestone remains open.
 
 ## Destination
 
@@ -21,8 +21,8 @@ A healthy service, passing syntax test, or documented procedure alone does not m
 ## Decisions already established
 
 - First service: **Nextcloud**, using the Apache container variant and existing PostgreSQL.
-- Initial application host: **Kvin** (`aarch64`, rootless Podman); host TCP **8085 → container TCP 80**. Port was observed unoccupied on October 17; confirm at deployment.
-- Users are intended to reach **Town Square** at `https://square.nexus.sanctum` through YXORP; proxy/DNS/TLS integration is not yet qualified. Moving hosts or host ports changes the proxy upstream, not the user's service identity.
+- Initial application host: **Kvin** (`aarch64`, rootless Podman); host TCP **8085 → container TCP 80**. The listener returned HTTP 200 locally October 19. The missing **host firewall** publication is a distinct Maintenance-owned prerequisite, not a reason for Services to mutate firewalld.
+- The initial HTTP-only Town Square route is `http://square.nexus.sanctum` through YXORP, with no matching internal certificate; the current 502 remains unaccepted. Moving hosts/ports changes the proxy upstream, not the stable service name. Later trusted TLS is a separate decision.
 - Initial live file storage: **Kvin's NVMe**, with an approximate **50 GiB soft planning budget**. **Peanut** is the separate backup destination (434 GB free on October 17). **Void** is the eventual intended persistent-storage host, not a dependency for the initial pilot.
 - **Podman Quadlets, not Docker Compose**. The long-lived Ansible experience should use **Ansible Navigator with an EE**. Do not reproduce per-project venvs as a default merely because they are easy to create.
 - Secrets and nonreconstructible data are managed outside public plaintext Git. Existing PostgreSQL, proxy, network registry, and controller infrastructure each retain their own ownership boundaries.
@@ -61,9 +61,14 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 
 **Exit test:** Starting in a normal shell on either controller, Nova can identify the configured EE, launch Navigator, inspect its Ansible and collections, and run a read-only task against the intended *host* (not the EE container). Both controllers can reconstruct the tooling from its owning source and durable image inputs.
 
-**YOU ARE HERE.** No Nextcloud application deployment until this model is working and understood.
+**Learning stage still open.** The initial container was deployed through the existing Maintenance Navigator/EE as a bounded deployment; Nova's hands-on new shared-EE build remains a separate, unfinished deliverable.
 
 ### Stage 2 — Build a complete first-deployment path
+
+**Host firewall owner boundary (October 20):**
+- [x] Transfer the **Services source** from opening its own host port to only checking Kvin's `eth0`/`public` zone and `8085/tcp` in both runtime/permanent firewalld before changing Nextcloud resources. See [Services issue 1](https://github.com/wdcallahan/sanctum-services/issues/1). This is **source-only** pending native controller qualification.
+- [ ] Obtain Nova's separate approval and live acceptance for [Maintenance's ordinary published-service port correction](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/kvin-service-firewall.md); Maintenance owns its `8084/5432/8085` policy and exact old-rich-rule removal. The bounded native Maintenance/baseline previews passed with zero live changes.
+- [ ] Verify the Services role's prereq on the actual managed Kvin, then perform independent direct Nextcloud `/status.php` and proxy/browser acceptance. Host firewall convergence is not proof of a working Nextcloud login.
 
 - [ ] Review the existing `ansible/` candidate against the approved execution model; revise or replace mistaken assumptions at source instead of layering workarounds.
 - [ ] Configure a stable user-facing Nextcloud hostname/scheme and confirm YXORP's intended route.
