@@ -89,14 +89,22 @@ owned and are not prerequisites to this firewall ownership source transfer.
 
 ## Managed-host connection
 
-The inventory deliberately omits `ansible_connection` and accepts Ansible's
-standard `smart` connection selection: SSH to `kvin.outer.sanctum`
-as `wdc2` on this Linux host. This remains correct when Navigator and
-the EE run on Kvin itself: **the EE connects by SSH back to Kvin**.
-From Peanut, the same inventory points to the same managed host.
-This is a *source design*, not an SSH authentication or runtime acceptance result.
-The EE must provide a supported, explicit SSH credential path and the
-connection must allow control of `wdc2`'s user systemd manager.
+The inventory retains Ansible's **smart/SSH** managed-host connection and
+the identity `kvin.outer.sanctum`. On October 20, the first app-only apply
+stopped at SSH with `Connection refused`. Native Kvin observations showed
+SSH **active and listening on 0.0.0.0:22**, the LAN address
+`192.168.1.192`, and `getent ahostsv4 kvin.outer.sanctum` resolving to
+Debian's host-local `127.0.1.1`. This is unsuitable as the EE-to-host
+connection address when the EE has an independent loopback namespace.
+
+To avoid asking an EE to SSH to itself, the inventory now sets
+`ansible_host: 192.168.1.192` for transport while preserving
+`kvin.outer.sanctum` as the host identity. This is a documented
+pilot-network address, not a DNS ownership change, SSH daemon change,
+or switch to `ansible_connection: local`. When the address moves, update
+the inventory or qualify a stable non-loopback resolution path from both
+Kvin and Peanut. Validate with a real EE-managed `ansible.builtin.ping`
+before claiming the app-only deployment works.
 
 
 ## First-boot contract and remaining qualifications (October 19)
