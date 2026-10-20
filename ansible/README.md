@@ -167,3 +167,14 @@ unattended operations are complete.
 The initial host/port can change without changing the stable service URL
 if YXORP is updated to point at the new backend. Never silently replace
 the shared proxy or database ownership contracts.
+
+
+## Declarative third-party applications (source candidate, October 20)
+
+The [pinned app manifest](nextcloud-apps.yml) and separate
+[`apps.yml` reconciliation playbook](apps.yml) are now source-controlled.
+The normal `site.yml` includes this role **after** the container is running
+and web installation has completed. The manifest is initially empty, so no
+third-party apps are changed by default. See the
+[operator guide](../docs/runbooks/nextcloud-apps.md) for the review, validation,
+verification and repeat requirements. Source is not native-accepted yet.
