@@ -1,15 +1,12 @@
 ---
-# Approved third-party apps for Town Square.
-# Empty until an app/version/archive has been explicitly approved.
-# Example entry (NOT ACTIVE; supply a real HTTPS artifact URL and SHA-256):
-#
-# nextcloud_extra_apps:
-#   - id: calendar
-#     version: "6.6.2"
-#     state: enabled
-#     url: "https://example.invalid/reviewed-calendar-release.tar.gz"
-#     sha256: "REPLACE_WITH_64_HEX_CHARACTERS"
-#
-# Do not add apps merely because they appear in the App Store.
-# Core Nextcloud apps remain managed by Nextcloud itself.
-nextcloud_extra_apps: []
+# Approved third-party apps for Town Square (Nextcloud 34.0.5).
+# Source: Nextcloud App Store compatibility listing; upstream release artifact.
+# Release: https://github.com/nextcloud-releases/calendar/releases/tag/v6.6.2
+# SHA-256: digest of the release asset reported by GitHub's release API.
+# Reconciliation rejects other installed versions, never silently upgrades.
+nextcloud_extra_apps:
+  - id: calendar
+    version: "6.6.2"
+    state: enabled
+    url: "https://github.com/nextcloud-releases/calendar/releases/download/v6.6.2/calendar-v6.6.2.tar.gz"
+    sha256: "7e83632d4436d3037a34d1c73cbc06d5ccb6e8fc10f096a86a43a0515588529c"
