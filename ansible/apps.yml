@@ -1,0 +1,29 @@
+---
+# Application-only reconcile. This does not run the base container deployment.
+- name: Reconcile approved third-party Nextcloud applications
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars_files:
+    - nextcloud-apps.yml
+  tasks:
+    - name: Require installed, healthy Nextcloud before managing applications
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ nextcloud_host_port }}/status.php"
+        return_content: true
+        status_code: 200
+        timeout: 10
+      register: nextcloud_status
+      changed_when: false
+
+    - name: Require installed application, not the first-run wizard
+      ansible.builtin.assert:
+        that:
+          - nextcloud_status.json.installed | bool
+          - not (nextcloud_status.json.maintenance | bool)
+        fail_msg: Finish Nextcloud's initial web installation before reconciling apps.
+
+    - name: Reconcile approved application manifest
+      ansible.builtin.import_role:
+        name: nextcloud_apps
+      when: nextcloud_extra_apps | length > 0
