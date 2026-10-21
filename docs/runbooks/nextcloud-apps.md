@@ -1,8 +1,13 @@
 # Town Square: reproducible third-party Nextcloud applications
 
-**Status: source candidate (2026-10-20).** Not yet syntax-checked or qualified in the
-Kvin/Peanut approved execution environment. Do not describe this as accepted
-live automation until the actual run, repeat, and recovery tests pass.
+**Status: first native Calendar 6.6.2 installation accepted (2026-10-21);
+unchanged repeat, UI function and reconstruction still pending.** The
+original application-only play ran on Kvin through the existing Maintenance EE
+and Services' own Navigator `--net=host` setting. Its 22 completed tasks
+reported seven changes and zero failures or unreachable hosts; exact installed
+version/enabled state and local HTTP responsiveness were asserted. The
+production-app-management lifecycle is not fully qualified until the unchanged
+repeat and recovery gates also pass.
 
 ## Scope and ownership
 
