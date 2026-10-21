@@ -1,0 +1,10 @@
+---
+# This project targets Kvin through SSH from inside a Podman EE.
+# Share the host network namespace, matching the already-qualified
+# Sanctum Maintenance Navigator runtime; otherwise an EE-local loopback
+# address can be mistaken for native Kvin.
+# The managed-host inventory remains FQDN-based; do not pin an address.
+ansible-navigator:
+  execution-environment:
+    container-options:
+      - --net=host
