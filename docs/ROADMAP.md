@@ -1,9 +1,9 @@
 # Sanctum Services — Roadmap
 
-**Status:** Nextcloud rootless service was deployed and its local `/status.php` returned HTTP 200 / `installed=false`; installer/login and full application acceptance remain pending. Kvin's missing published-service port 8085 is now owned by Maintenance. Services' source has a read-only runtime/permanent firewall prerequisite, but it has NOT been applied natively. The independent Maintenance and baseline previews passed; no live firewall change is authorized by this source work. Shared general-purpose EE/controller co-building remains unfinished.  
-**Updated:** 2026-10-20.  
+**Status:** Native Calendar 6.6.2 install and unchanged application-only repeat passed on Kvin (October 21). Nextcloud Calendar opens in the browser; Nova reports that an existing example event is also visible in desktop GNOME Calendar. This is positive first-application functional evidence, not a tested new-event write, independent bidirectional sync, protected reverse-proxy login, full service recovery, or fresh-instance reconstruction. The shared general-purpose EE/controller co-build remains open. Some lower sections retain earlier dated infrastructure observations that require separate live verification before updating.  
+**Updated:** 2026-10-21.  
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
-**Current waypoint:** Maintenance-owned Kvin firewall acceptance → Services' direct/proxy Nextcloud acceptance, while the separately scoped Navigator/EE learning milestone remains open.
+**Current waypoint:** Calendar initial app acceptance achieved → verify deliberate event write/persistence and separately complete protected access/reconstruction; the hands-on shared Navigator/EE milestone remains open.
 
 ## Destination
 
@@ -82,6 +82,9 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 **Exit test:** A new application host can be configured from source and declared secrets; the Nextcloud service starts, survives the supported restart sequence, and a second unchanged deployment reports no changes.
 
 ### Stage 3 — Demonstrate real Nextcloud use
+
+- [x] **First third-party app milestone (October 21):** Calendar 6.6.2 installed and enabled through Ansible; unchanged repeat `changed=0`; Nova opened Calendar successfully and saw an existing example event both there and in GNOME Calendar.
+- [ ] Demonstrate new Calendar event write, reload persistence, and propagation to GNOME; optionally test a desktop-created event propagating back. The pre-existing example alone does not prove these paths.
 
 - [ ] Establish and verify PostgreSQL connectivity and initial application setup.
 - [ ] Verify the service through YXORP at its stable name; confirm trusted domains/proxy headers, expected scheme, and absence of undesired direct public exposure.
