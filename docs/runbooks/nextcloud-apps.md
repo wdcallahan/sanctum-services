@@ -1,16 +1,16 @@
 # Town Square: reproducible third-party Nextcloud applications
 
-**Status: Calendar 6.6.2 live install, unchanged repeat, and initial UI
-visibility accepted (2026-10-21).** On Kvin, the first application-only play
-reported `ok=22 changed=7 unreachable=0 failed=0`, and the unchanged repeat
-reported `ok=14 changed=0 unreachable=0 failed=0 skipped=9`. The role asserted
-the pinned version, enabled state and local Nextcloud responsiveness. Nova
-subsequently reported the Calendar UI functioning and the same pre-existing
-example event visible in both Nextcloud and GNOME Calendar. This confirms
-initial human-facing visibility, **not** a newly created event surviving reload
-or proven bidirectional synchronization. Fresh-instance reconstruction and
-full service recovery remain unqualified. The browser route/TLS status was
-not captured by this UI observation.
+**Status: Calendar 6.6.2 native installation, unchanged repeat and
+bidirectional desktop/browser access accepted (2026-10-21).** On Kvin, the first
+application-only play reported `ok=22 changed=7 unreachable=0 failed=0`, and
+the unchanged repeat reported `ok=14 changed=0 unreachable=0 failed=0 skipped=9`.
+The role asserted the pinned version, enabled state and local Nextcloud
+responsiveness. Nova saw an existing example event in both Nextcloud and GNOME
+Calendar and subsequently explicitly confirmed that **Calendar access is
+bidirectional**. This is accepted operator-observed functionality; exact
+event-writing/reload steps were not separately supplied. Fresh-instance
+reconstruction, full service recovery, and the browser route/TLS transport
+remain separately unqualified.
 
 ## Scope and ownership
 
