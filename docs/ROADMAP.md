@@ -1,9 +1,9 @@
 # Sanctum Services — Roadmap
 
-**Status:** Native Calendar 6.6.2 install and unchanged application-only repeat passed on Kvin (October 21). Nextcloud Calendar opens in the browser; Nova reports that an existing example event is also visible in desktop GNOME Calendar. This is positive first-application functional evidence, not a tested new-event write, independent bidirectional sync, protected reverse-proxy login, full service recovery, or fresh-instance reconstruction. The shared general-purpose EE/controller co-build remains open. Some lower sections retain earlier dated infrastructure observations that require separate live verification before updating.  
+**Status:** Native Calendar 6.6.2 install and unchanged application-only repeat passed on Kvin (October 21). Nextcloud Calendar opens in the browser; Nova observed an existing event in GNOME Calendar and explicitly confirmed **bidirectional Calendar access** between desktop and Nextcloud. The exact event-write/reload steps were not separately reported. Protected reverse-proxy login, full service recovery and fresh-instance reconstruction remain separate; the general-purpose EE/controller co-build is still open. Some lower sections retain dated infrastructure observations requiring separate verification.  
 **Updated:** 2026-10-21.  
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
-**Current waypoint:** Calendar initial app acceptance achieved → verify deliberate event write/persistence and separately complete protected access/reconstruction; the hands-on shared Navigator/EE milestone remains open.
+**Current waypoint:** Calendar installation, idempotence and operator-confirmed bidirectional client access accepted → separately qualify protected service access, recoverability and the hands-on shared Navigator/EE milestone.
 
 ## Destination
 
@@ -84,7 +84,7 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 ### Stage 3 — Demonstrate real Nextcloud use
 
 - [x] **First third-party app milestone (October 21):** Calendar 6.6.2 installed and enabled through Ansible; unchanged repeat `changed=0`; Nova opened Calendar successfully and saw an existing example event both there and in GNOME Calendar.
-- [ ] Demonstrate new Calendar event write, reload persistence, and propagation to GNOME; optionally test a desktop-created event propagating back. The pre-existing example alone does not prove these paths.
+- [x] **Operator confirmation (October 21):** Calendar access works bidirectionally between Nextcloud and desktop GNOME Calendar. Exact event-writing/reload steps were not logged individually; no further bidirectional-access confirmation is requested simply to repeat the accepted result.
 
 - [ ] Establish and verify PostgreSQL connectivity and initial application setup.
 - [ ] Verify the service through YXORP at its stable name; confirm trusted domains/proxy headers, expected scheme, and absence of undesired direct public exposure.
