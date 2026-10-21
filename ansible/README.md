@@ -109,6 +109,29 @@ record via Sanctum's DNS, and fix the actual name-service owner before retry.
 The target should resolve to a reachable host address in both controller
 contexts. App installation never started during this SSH failure.
 
+**October 21, after Maintenance's native repair:** Maintenance qualified its
+own Kvin self-SSH through the installed EE and corrected the host-level NSS
+entry. The Services app-only apply still failed at SSH before executing any app
+task. The observed controller configuration difference is that Maintenance's
+`ansible-navigator.yml` explicitly selects `--net=host`, whereas Services
+had no Navigator config and previously ran the same image without that setting.
+Services now declares this transport option in its own root
+`ansible-navigator.yml`, without altering the FQDN inventory, hardcoding
+Kvin's IP, or modifying Maintenance. **The result is a source hypothesis
+pending a new native Services-context SSH test.** From Kvin, after pulling:
+
+```console
+./../sanctum-maintenance/.venv/bin/ansible-navigator exec \
+  --eei localhost/sanctum-maintenance-ee:2026.07 \
+  --exec-shell false -- getent ahostsv4 kvin.outer.sanctum
+```
+
+Verify the result is Kvin's reachable LAN address; then verify ordinary
+Ansible SSH from **this Services checkout** before running
+`ansible/apps.yml` again. The existing Maintenance EE is still a
+separately qualified temporary runtime, not yet the intended shared
+general-purpose application EE.
+
 ## First-boot contract and remaining qualifications (October 19)
 
 - The current pilot public name is `http://square.nexus.sanctum` without a
