@@ -1,5 +1,18 @@
 # Sanctum Services — Session Continuation
 
+## October 23 — controller cleanup ownership correction
+
+Nova authorized the Maintenance session to handle this bounded Services tooling
+command migration and qualification. The “3 Explore Nextcloud Together” chat is
+for exploring and learning the application; it is not an active GitHub project
+lead waiting on the message board. Do not invent an owner dependency on that tab.
+Services now documents the normal-user Navigator and selects its existing EE in
+project settings. The old Core2.19.14 environment recipe was unused and removed.
+Read-only `ansible/qualify-controller.yml` is the native consumer check; source
+exists, native acceptance is pending. Maintenance's environment removal remains
+gated on that check. This does not deploy or reconcile Nextcloud, and Joule's
+independent controller is outside this migration.
+
 This is a **short handoff for the next assistant**, not a second design authority, an automatic project-lead appointment, or required reading for human operators. Nova's actual request appoints the scope of each session.
 
 ## Active handoff — October 20 firewall ownership transfer

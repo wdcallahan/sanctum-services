@@ -5,6 +5,15 @@
 # address can be mistaken for native Kvin.
 # The managed-host inventory remains FQDN-based; do not pin an address.
 ansible-navigator:
+  mode: stdout
   execution-environment:
+    enabled: true
+    # Existing application-qualified runtime; new foundation EE remains separate.
+    image: localhost/sanctum-maintenance-ee:2026.07
+    pull:
+      policy: never
     container-options:
       - --net=host
+  playbook-artifact:
+    enable: true
+    save-as: artifacts/{playbook_name}-{time_stamp}.json

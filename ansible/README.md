@@ -57,7 +57,27 @@ playbook run may proceed; if not, its preflight stops before mutation.
 
 
 
-## Operator learning and execution model (not yet implemented)
+## Operator learning and execution model
+
+**October 23 controller update:** Maintenance installed and qualified normal-user
+Navigator on Kvin and Peanut. Use `~/.local/bin/ansible-navigator` from this
+Services checkout; no project-environment activation is required. This project's
+Navigator settings select the existing application-used EE, host networking and
+pull policy never. The obsolete Core2.19.14 controller requirements file has
+been removed; reconstruction of the shared tool installation belongs to
+Maintenance's master `controller_tooling` tag.
+
+The read-only `ansible/qualify-controller.yml` checks ordinary SSH/Python access
+through this inventory without running Nextcloud deployment or app management:
+
+```console
+~/.local/bin/ansible-navigator run ansible/qualify-controller.yml
+```
+
+The source change is prepared; native verification with the normal executable
+is still pending. Maintenance will run this check before and after retiring its
+old environment. New general-purpose EE co-building remains a separate activity
+with Nova participating.
 
 Nova's project objective includes hands-on, independent operating experience
 with **ansible-navigator and a containerized Ansible Execution Environment
@@ -121,7 +141,7 @@ Kvin's IP, or modifying Maintenance. **The result is a source hypothesis
 pending a new native Services-context SSH test.** From Kvin, after pulling:
 
 ```console
-./../sanctum-maintenance/.venv/bin/ansible-navigator exec \
+~/.local/bin/ansible-navigator exec \
   --eei localhost/sanctum-maintenance-ee:2026.07 \
   --exec-shell false -- getent ahostsv4 kvin.outer.sanctum
 ```

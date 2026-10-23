@@ -120,9 +120,12 @@ On October 18 Nova queried Kvin's APT metadata: neither
 `ansible-navigator` nor `ansible-builder` was found under those package
 names in its configured repositories. That is a **host-tool installation**
 question, not an EE dependency or evidence that every application requires
-a Python venv. We have not selected a replacement host-tool installation
-method; preserve and use the existing qualified Maintenance tools for
-inspection only until a shared installation owner/method is agreed.
+a Python venv. On October 23 Maintenance installed normal-user Navigator on
+both Debian controllers through its master playbook. Services now consumes
+`~/.local/bin/ansible-navigator` and explicitly selects the existing EE;
+the read-only `ansible/qualify-controller.yml` is the native migration check.
+That consumer check is pending; the old Maintenance environment remains
+until it passes. No application reconciliation is part of this cleanup.
 
 Nova provisionally selected **Sanctum Maintenance's existing controller-infrastructure workstream** to own shared Navigator/Builder tooling and a new general-purpose application EE. The decision can be revisited if it becomes a separate platform in its own right; this application repository will only consume its supported interface, not own controllers or their tooling. The accepted Maintenance EE must not be silently replaced or mutated.
 
@@ -167,7 +170,7 @@ has the corresponding proposed architecture.
 | Network/host facts | `sanctum` registry |
 | YXORP route and proxy | Existing reverse-proxy owner |
 | Shared PostgreSQL service, database provisioning and DB backup interface | Existing PostgreSQL owner |
-| Shared Navigator/Builder toolchain and future general-purpose application EE | [Sanctum Maintenance — controller infrastructure](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md), **provisionally agreed October 18**, not yet implemented; existing Maintenance-qualified image remains separate |
+| Shared Navigator/Builder toolchain and future general-purpose application EE | [Sanctum Maintenance — controller infrastructure](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md); normal-user tools installed October 23, Services consumer check pending. New foundation EE co-building remains separate. |
 | Nextcloud backup integration and documented restore | `sanctum-services` coordinated with database owner |
 | Later move to Void | Explicit future migration |
 

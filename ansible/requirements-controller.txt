@@ -1,2 +1,0 @@
-# Project-owned controller dependency; intentionally not Sanctum Maintenance's venv.
-ansible-core==2.19.14

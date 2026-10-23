@@ -6,3 +6,4 @@ ansible/.vault-password
 ansible/.vault-password.*
 *.env
 artifacts/
+ansible-navigator.log

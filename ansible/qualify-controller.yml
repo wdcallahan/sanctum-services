@@ -1,0 +1,16 @@
+---
+- name: Verify the ordinary Navigator EE path to the Services managed host
+  hosts: nextcloud
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Check ordinary Ansible SSH and managed-host Python
+      ansible.builtin.ping:
+      register: services_controller_ping
+
+    - name: Require the existing application EE Core and native SSH response
+      ansible.builtin.assert:
+        that:
+          - services_controller_ping.ping == 'pong'
+          - ansible_version.full == '2.21.2'
+        success_msg: The normal Navigator and existing EE reached the Services inventory host over SSH. No application reconciliation was requested.
