@@ -8,9 +8,10 @@ for exploring and learning the application; it is not an active GitHub project
 lead waiting on the message board. Do not invent an owner dependency on that tab.
 Services now documents the normal-user Navigator and selects its existing EE in
 project settings. The old Core2.19.14 environment recipe was unused and removed.
-Read-only `ansible/qualify-controller.yml` is the native consumer check; source
-exists, native acceptance is pending. Maintenance's environment removal remains
-gated on that check. This does not deploy or reconcile Nextcloud, and Joule's
+Read-only `ansible/qualify-controller.yml` is the native consumer check. It
+passed before and after Maintenance's environment
+removal on October 23. Both controllers completed retirement successfully; see
+[the native receipt](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/qualification/2026-10-23-controller-venv-retirement-native.md). This does not deploy or reconcile Nextcloud, and Joule's
 independent controller is outside this migration.
 
 This is a **short handoff for the next assistant**, not a second design authority, an automatic project-lead appointment, or required reading for human operators. Nova's actual request appoints the scope of each session.

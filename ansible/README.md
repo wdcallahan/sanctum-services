@@ -74,9 +74,9 @@ through this inventory without running Nextcloud deployment or app management:
 ~/.local/bin/ansible-navigator run ansible/qualify-controller.yml
 ```
 
-The source change is prepared; native verification with the normal executable
-is still pending. Maintenance will run this check before and after retiring its
-old environment. New general-purpose EE co-building remains a separate activity
+Native verification with the normal executable passed before and after
+Maintenance retired its old environment on both controllers. The October 23
+master run completed with exit0; [native receipt](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/qualification/2026-10-23-controller-venv-retirement-native.md). New general-purpose EE co-building remains a separate activity
 with Nova participating.
 
 Nova's project objective includes hands-on, independent operating experience

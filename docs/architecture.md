@@ -124,8 +124,8 @@ a Python venv. On October 23 Maintenance installed normal-user Navigator on
 both Debian controllers through its master playbook. Services now consumes
 `~/.local/bin/ansible-navigator` and explicitly selects the existing EE;
 the read-only `ansible/qualify-controller.yml` is the native migration check.
-That consumer check is pending; the old Maintenance environment remains
-until it passes. No application reconciliation is part of this cleanup.
+That consumer check passed before and after old Maintenance environment removal
+on October 23; both controller environments are retired. No application reconciliation is part of this cleanup.
 
 Nova provisionally selected **Sanctum Maintenance's existing controller-infrastructure workstream** to own shared Navigator/Builder tooling and a new general-purpose application EE. The decision can be revisited if it becomes a separate platform in its own right; this application repository will only consume its supported interface, not own controllers or their tooling. The accepted Maintenance EE must not be silently replaced or mutated.
 
@@ -170,7 +170,7 @@ has the corresponding proposed architecture.
 | Network/host facts | `sanctum` registry |
 | YXORP route and proxy | Existing reverse-proxy owner |
 | Shared PostgreSQL service, database provisioning and DB backup interface | Existing PostgreSQL owner |
-| Shared Navigator/Builder toolchain and future general-purpose application EE | [Sanctum Maintenance — controller infrastructure](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md); normal-user tools installed October 23, Services consumer check pending. New foundation EE co-building remains separate. |
+| Shared Navigator/Builder toolchain and future general-purpose application EE | [Sanctum Maintenance — controller infrastructure](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md); normal-user tools and Services consumer accepted October 23; old Maintenance environments retired. New foundation EE co-building remains separate. |
 | Nextcloud backup integration and documented restore | `sanctum-services` coordinated with database owner |
 | Later move to Void | Explicit future migration |
 
