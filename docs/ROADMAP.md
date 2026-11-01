@@ -1,5 +1,22 @@
 # Sanctum Services — Roadmap
 
+## Nova's available-week priority — November 1–8, 2026
+
+Nova has no class until **November 9**. His intended push before then is the
+planned **physical Inner/Outer network cutover** and beginning **Fedora 45
+migration on every eligible computer**, once the release is available and the
+host is ready. His expectation of release in a few days is not release evidence.
+These are existing roadmap outcomes, now prioritized for his available week.
+
+Each lead must give Nova its readiness assessment, concrete concerns and proposed
+dependency order **before the corresponding cutover or upgrade proceeds**. Nova
+will give each session a turn to weigh in. This prioritizes preparation; it does
+not grant blanket cutover/upgrade/reboot approval or pause independent authorized
+work. Services owns application, storage and database/address-consumer readiness and acceptance during the topology change; coordinate host/network prerequisites with Maintenance and Bunny.
+
+[Cross-project directive and coordination](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6561435565).
+
+
 **Status:** Native Calendar 6.6.2 install and unchanged application-only repeat passed on Kvin (October 21). Nextcloud Calendar opens in the browser; Nova observed an existing event in GNOME Calendar and explicitly confirmed **bidirectional Calendar access** between desktop and Nextcloud. The exact event-write/reload steps were not separately reported. Protected reverse-proxy login, full service recovery and fresh-instance reconstruction remain separate; the general-purpose EE/controller co-build is still open. Some lower sections retain dated infrastructure observations requiring separate verification.  
 **Updated:** 2026-10-21.  
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
