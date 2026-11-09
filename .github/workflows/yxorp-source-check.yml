@@ -20,6 +20,7 @@ on:
       - "tools/inspect-registry-candidates.py"
       - "data/container-image-candidates.yml"
       - "ansible/yxorp-qualify-image.yml"
+      - "ansible/yxorp-stage-probe.yml"
       - "ansible/yxorp-inspect-npm.yml"
       - "tests/test_yxorp_behavior_observer.py"
       - "tests/test_kuma_desired.py"
@@ -43,6 +44,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-stage-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-qualify-image.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-inspect-npm.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check

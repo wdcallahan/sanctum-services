@@ -77,6 +77,54 @@ real NPM comparison. Preview is **not** an Nginx parser test.
    login redirects, Nextcloud CalDAV and Prism WebSockets must be tested
    with their specific active routes, not inferred from these probes.
 
+### Scoped test after staging
+
+The code-supported read-only stage probe is
+`ansible/yxorp-stage-probe.yml`. Only run it after the loopback instance
+exists. It makes HTTP requests from Kvin to its own
+`127.0.0.1:18080`, checks the real YXORP health response and requires a
+non-error HTTP response for Host: `yarn.nexus.sanctum`. A backend 404/502
+or DNS/connection failure does **not** count as a successful proxy route.
+This is still not proof that a browser on the client's network can use
+Yarn or that Nextcloud/Prism sessions and WebSockets work.
+
+The stage Quadlet uses `[Install] WantedBy=multi-user.target` as the
+native generator-managed boot-start mechanism. The generated systemd unit
+is transient; do **not** invoke `systemctl enable` on it. Ansible starts
+the generated unit after its Quadlet and generated Nginx configuration
+are installed. The existing stage gate remains disabled until an
+explicit operator decision. Source tests check this contract.
+
+### Update and rollback policy — proposed, not enabled
+
+Podman's `AutoUpdate=registry` works with a **fully qualified mutable
+image tag**, not our current `@sha256:` image reference. Its native
+systemd restart rollback reacts to a failed unit startup; without a
+readiness signal/health integration it may miss an HTTP application
+failure after the service starts. We should **not** call that complete
+application recovery. The running image's digest should be observed
+and retained as the last-known-good rollback reference.
+
+For a stateless proxy with a cheap recovery path, a maintained
+`docker.io/library/nginx:stable-alpine` update channel, periodic Podman
+registry updates, and application/client acceptance may cost less than
+manually advancing an immutable digest for every patch. But the exact
+automatic-update schedule, readiness probe implementation and
+client-visible rollback path have **not** been selected or exercised
+on Kvin. No auto-update timer or policy is installed by these source
+notes. Keep the previously tested native ARM64 digest for *initial
+isolated staging* and as a recovery reference.
+
+The intended update mechanism must demonstrably detect wrong-host
+responses, bad routes and upgrade failures, record the running image,
+restore a known-good image when necessary, and verify the result from
+the consumer side. A version pin with no routine way to advance it
+is not an acceptable permanent maintenance policy. No one-size-fits-all
+rule is implied for stateful Kuma or Nextcloud.
+
+References: [Podman auto-update manual](https://docs.podman.io/en/latest/markdown/podman-auto-update.1.html),
+[Quadlet manual](https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html).
+
 ## Production change is separate and explicit
 
 Source defaults refuse `0.0.0.0:80` without

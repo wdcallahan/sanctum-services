@@ -96,6 +96,10 @@ class YxorpContractTests(unittest.TestCase):
         self.assertIn("proxy_set_header X-Forwarded-Scheme $scheme", nginx)
         self.assertIn("proxy_set_header Upgrade $http_upgrade", nginx)
         self.assertIn("return 444", nginx)
+        self.assertIn("WantedBy=multi-user.target", quadlet)
+        stage = next(t for t in self.tasks
+                     if t["name"] == "Start or reconcile YXORP using the system service manager")
+        self.assertNotIn("enabled", stage["ansible.builtin.systemd_service"])
 
 
 if __name__ == "__main__":

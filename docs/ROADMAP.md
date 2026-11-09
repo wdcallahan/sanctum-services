@@ -22,6 +22,23 @@ work. Services owns application, storage and database/address-consumer readiness
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
 **Current waypoint:** Calendar installation, idempotence and operator-confirmed bidirectional client access accepted → separately qualify protected service access, recoverability and the hands-on shared Navigator/EE milestone.
 
+## YXORP current gate — November 9, 2026
+
+The rootful Nginx ARM64 image was natively qualified on Kvin; the
+existing digest remains in source and `yxorp_stage_approved: false`
+still blocks installation. The source-only HTTP forwarding tests have passed.
+A new read-only `ansible/yxorp-stage-probe.yml` checks actual Kvin loopback
+health and real Yarn forwarding **after** a stage is approved and installed.
+The Quadlet install flow now uses the supported generated-unit behavior:
+`[Install]` for boot startup, not an invalid `systemctl enable`.
+
+**Next operator decision:** allow or decline a new Kvin-only loopback
+YXORP service on 127.0.0.1:18080. Approval is limited to staging and
+does not cover DNS, Kvar, external listener ports, production cutover or
+automatic update timer. The ordinary rolling-tag update/rollback lifecycle
+is still a design-and-acceptance task; the first stage uses the already
+qualified digest. See [YXORP runbook](runbooks/yxorp-reconstruction.md).
+
 ## Estate-wide reconstruction and future services — decisions November 8, 2026
 
 [Service estate / owner and disposition register](SERVICE-ESTATE.md) is the authoritative Services inventory across projects, including Project Joule's Prism and Maintenance's PostgreSQL rather than omitting containers not owned by this repository. Kvin was purchased years ago for the service-host role previously served by Kvar; the host transition is not a new strategic choice. Installation, data restore, proxy adoption, client acceptance and Kvar retirement still need actual qualification.

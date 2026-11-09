@@ -108,7 +108,8 @@
   ansible.builtin.systemd_service:
     name: "{{ yxorp_service_name }}"
     daemon_reload: "{{ yxorp_quadlet_publish.changed }}"
-    enabled: true
+    # Quadlet generator processes [Install] WantedBy=multi-user.target at
+    # reload/boot; enabling its generated transient service is not supported.
     state: "{{ 'restarted' if yxorp_quadlet_publish.changed else 'started' }}"
 
 - name: Reload running Nginx only for a validated config-only change
