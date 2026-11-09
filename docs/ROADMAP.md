@@ -201,3 +201,19 @@ When the implementation changes, update the relevant explanation and operational
 - [ ] Qualify a native loopback-only YXORP stage on Kvin, actual routes and
   WebSocket client behavior; only then consider separately authorized DNS
   and listener cutover. Existing Kvar NPM is untouched.
+
+### November 9 — current YXORP native evidence gate
+
+- [x] Nova ran the accepted November 8 generated-upstream report comparison:
+  **8** NPM hosts, **5** matching originally proposed current names with zero
+  upstream discrepancies; Pi-hole UI and legacy Yarn routes are now recorded.
+  See [the review](review/2026-11-09-yxorp-default-route-comparison.md).
+- [x] Source-only NPM behavior inspector added and [passed CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42677320762):
+  generated proxy-host metadata, extra location counts, headers/directive
+  names, access/redirect/TLS indicators, custom file presence and hashes.
+  Never print raw config/credentials. SSH uses Kvar TCP 10022; no live
+  changes. [Runbook](runbooks/yxorp-reconstruction.md).
+- [ ] **Current operator-dependent read-only step:** from the pulled Services
+  checkout, run `~/.local/bin/ansible-navigator run ansible/yxorp-inspect-npm.yml`;
+  inspect the actual Kvar report and decide whether any route behavior needs
+  further migration. This does not authorize the eventual cutover.

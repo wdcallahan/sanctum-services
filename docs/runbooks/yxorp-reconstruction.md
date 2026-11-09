@@ -166,7 +166,7 @@ rootful NPM generated config. It does not access the NPM API/database,
 modify files, reload a service, or change DNS or firewall.
 
 The observer emits bounded generated file names and SHA256 fingerprints,
-directive/header **names** (not values), simple safe location paths,
+directive/header **names** (not values), location counts (without printing their values),
 a count of unsupported paths/conditional lines, markers for access control,
 WebSockets/redirects/TLS, and only the name/checksum of nonempty custom
 snippet files. The literal bodies of NPM config, URL values, passwords,
@@ -175,6 +175,6 @@ tokens, Authorization header contents and advanced custom includes are
 effective NPM `nginx -T` parity. Any unexpected structure remains
 `unknown`; do not auto-enable a route that requires manual investigation.
 
-The check is built and tested in source but has **not been executed on Kvar**.
+The [source and syntax CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42677320762) passed. The check has **not been executed on Kvar**.
 If it fails due to the legacy SSH/privilege setup, do not quietly change
 router or server auth to make this inspector work.
