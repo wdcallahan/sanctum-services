@@ -3,7 +3,7 @@
 
 Never emit raw Nginx config, application headers, credentials, URLs, proxy
 variables, custom snippets or database state. Report only bounded filenames,
-content SHA256, directive *names*, safe location path names, and boolean flags.
+content SHA256, directive *names*, location counts, and boolean flags.
 This complements (does not repeat) Maintenance's upstream-name projection.
 """
 from __future__ import annotations
@@ -69,7 +69,8 @@ def inspect_proxy_config(data: bytes) -> dict:
     redirects = set()
     tls = set()
     timeout = set()
-    location_paths = set()
+    location_count = 0
+    nondefault_location_count = 0
     unnamed_location_count = 0
     custom_includes = 0
     include_count = 0
@@ -82,9 +83,10 @@ def inspect_proxy_config(data: bytes) -> dict:
         location = LOCATION.fullmatch(line)
         if location:
             raw_path = location.group(1)
-            if SAFE_PATH.fullmatch(raw_path):
-                location_paths.add(raw_path)
-            else:
+            location_count += 1
+            if raw_path != "/":
+                nondefault_location_count += 1
+            if not SAFE_PATH.fullmatch(raw_path):
                 unnamed_location_count += 1
             continue
         if clean.endswith("{"):
@@ -128,7 +130,8 @@ def inspect_proxy_config(data: bytes) -> dict:
         "directive_names": sorted(directives),
         "directive_counts": dict(sorted(directives.items())),
         "header_names_only": sorted(named_headers),
-        "locations_safe_path_names": sorted(location_paths),
+        "location_count": location_count,
+        "nondefault_location_count": nondefault_location_count,
         "locations_redacted_or_unsupported": unnamed_location_count,
         "conditional_or_unclassified_line_count": other_lines,
         "sensitive_policy_directive_names": sorted(sensitive),
@@ -140,7 +143,7 @@ def inspect_proxy_config(data: bytes) -> dict:
         "custom_include_count": custom_includes,
         "needs_manual_behavior_review": bool(
             unnamed_location_count or other_lines or sensitive or redirects or tls
-            or any(loc != "/" for loc in location_paths)),
+            or nondefault_location_count),
     }
 
 
@@ -183,7 +186,8 @@ def inspect_data_root(root: Path) -> dict:
             extra_dirs[dirname] = {"status": "absent", "file_count": 0}
             continue
         try:
-            names = _directory_files(p, MAX_HOST_FILES, HOST_FILE)
+            names = _directory_files(p, MAX_HOST_FILES,
+                re.compile(r"^[A-Za-z0-9_-]+\\.conf$"))
             extra_dirs[dirname] = {"status": "observed", "file_count": len(names)}
         except (OSError, ValueError):
             partial = True
@@ -214,6 +218,7 @@ def inspect_data_root(root: Path) -> dict:
         "proxy_hosts": proxy_hosts,
         "other_host_type_counts": extra_dirs,
         "nonempty_custom_config_files": custom_snippets,
+        "custom_behavior_review_required": bool(custom_snippets),
         "configuration_changed": False,
         "credential_values_included": False,
         "limitations": [
