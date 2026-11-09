@@ -196,7 +196,8 @@ When the implementation changes, update the relevant explanation and operational
   [local preview](../ansible/yxorp-preview.yml), and
   [rebuild runbook](runbooks/yxorp-reconstruction.md). Draft routes are
   **not** a verified full extraction from Kvar NPM.
-- [ ] Qualify source checks and an immutable ARM64 Nginx image digest.
+- [x] Source-only CI passed for YXORP and retained Kuma: route/monitor contracts, Ansible syntax, isolated controller render, read-only NPM report comparison tests and actual Nginx `-t` parser runs (minimal and all proposed routes, synthetic CI DNS). [Accepted run](https://github.com/wdcallahan/sanctum-services/actions/runs/42562957639). No native Kvin or application acceptance is implied.
+- [ ] Select and natively qualify immutable ARM64 Nginx and Kuma image digests; only then authorize any isolated service staging.
 - [ ] Qualify a native loopback-only YXORP stage on Kvin, actual routes and
   WebSocket client behavior; only then consider separately authorized DNS
   and listener cutover. Existing Kvar NPM is untouched.
