@@ -1,6 +1,16 @@
 # Sanctum Services — Architecture
 
-**Status:** Proposed Nextcloud arrangement, **not yet deployed or qualified** (2026-10-17). This page explains the intended pieces and who owns them. For acceptance gates, see the [roadmap](ROADMAP.md).
+**Status:** Dated Nextcloud architecture with updated **November 8, 2026** shared-service decisions. Nextcloud's Calendar integration is operating and accepted; full recovery and YXORP route/TLS qualification remain open. Some deployment observations below are historical rather than today's live runtime. For current decisions see the [estate register](SERVICE-ESTATE.md) and [roadmap](ROADMAP.md).
+
+## Automation and operating boundary — November 8, 2026
+
+**So let it be written, so let it be run.** Normal management is declarative Ansible and version-controlled data, with changes documented and independently reproducible; a manual fix is reconciled into declared state. This implements the preexisting [cross-project completion standard](https://github.com/wdcallahan/engineering-standards/blob/main/Operational-Project-Completion-Standard.md). Any current running container, NPM web UI, or local file is evidence, not independently sufficient reconstruction authority.
+
+**Service privilege is functional, not ideological.** Rootless Podman Quadlets remain the right fit for Nextcloud and other unprivileged application containers. **Rootful Podman is accepted for YXORP** because the selected listener publishes host ports 80 and 443; don't change global privileged-port thresholds or add forwarding tricks merely to label it rootless. Native services like SSH need not be moved into containers. Leave host security, routing and firewall policy with their existing owners; do not confuse application deployment with assuming network-security ownership.
+
+**YXORP design:** replace currently running Kvar Nginx Proxy Manager with **plain Nginx**, configured solely from Git-managed route data and Ansible templates. NPM's management UI, users, access lists and configuration database need not be reconstructed if they are not part of actual service requirements. Reproduce the actual HTTP upstream, proxy headers, WebSocket, and client routing semantics; safely validate generated Nginx configuration before reload. Build and qualify independently on Kvin before switching names or retiring Kvar. Existing NPM can remain running untouched during qualification. Source: [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2).
+
+**Private HTTPS gap:** Public CAs cannot issue for private `.sanctum` names. A local CA would require distributing and maintaining trust on all relevant browsers, OSes, applications and VPN-connected clients; cert/CA-key backup, issuance, renewal, and recovery would become operational requirements. A privately routed, publicly registered domain with public CA DNS validation might avoid local-root rollout, but would require an intentional namespace and DNS design decision. HTTPS is needed eventually; neither strategy is selected, and the proxy migration must not claim TLS acceptance prematurely.
 
 ## Why this architecture?
 
@@ -168,7 +178,7 @@ has the corresponding proposed architecture.
 | Nextcloud Quadlet, application persistent paths and configuration | `sanctum-services` |
 | Host operating-system maintenance | `sanctum-maintenance` |
 | Network/host facts | `sanctum` registry |
-| YXORP route and proxy | Existing reverse-proxy owner |
+| YXORP application, plain Nginx Quadlet and declared route configuration | `sanctum-services` under [issue #2](https://github.com/wdcallahan/sanctum-services/issues/2); coordinate actual live proxy handoff before touching NPM or its routes |
 | Shared PostgreSQL service, database provisioning and DB backup interface | Existing PostgreSQL owner |
 | Shared Navigator/Builder toolchain and future general-purpose application EE | [Sanctum Maintenance — controller infrastructure](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md); normal-user tools and Services consumer accepted October 23; old Maintenance environments retired. New foundation EE co-building remains separate. |
 | Nextcloud backup integration and documented restore | `sanctum-services` coordinated with database owner |
