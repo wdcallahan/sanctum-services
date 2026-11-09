@@ -13,6 +13,8 @@ on:
       - "ansible/roles/kuma/**"
       - "tests/test_kuma_role_contract.py"
       - "tests/test_yxorp_contract.py"
+      - "tests/test_yxorp_publication_review.py"
+      - "tools/review-yxorp-publication.py"
       - "tests/test_kuma_desired.py"
       - ".github/workflows/yxorp-source-check.yml"
   workflow_dispatch:
@@ -26,6 +28,7 @@ jobs:
       - name: Check desired-state contract
         run: |
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_publication_review.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
           python3 -m unittest discover -s tests -p 'test_kuma_role_contract.py'
       - name: Check Ansible playbook syntax

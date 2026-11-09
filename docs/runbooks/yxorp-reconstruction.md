@@ -108,3 +108,30 @@ upstream address requires a verified reload or deploy.
 
 Follow [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2)
 for the remaining reconstruction/qualification.
+
+## Comparing the real NPM publication report with proposed routes
+
+Maintenance already has a read-only observer:
+[`playbooks/inspect-cutover-service-publication.yml`](https://github.com/wdcallahan/sanctum-maintenance/blob/main/playbooks/inspect-cutover-service-publication.yml).
+It creates a private controller-side report,
+`reports/cutover-service-publications.json`, containing the selected
+Kvar rootful generated NPM default-upstream projection. The report has
+previously been run, but its **actual JSON content is not in Git**.
+Do not pretend that the notes are a full observed inventory.
+
+When that authentic report is available, compare without editing either
+repository:
+
+```bash
+python3 tools/review-yxorp-publication.py \
+  --report /path/to/sanctum-maintenance/reports/cutover-service-publications.json \
+  --declared data/yxorp-routes.yml
+```
+
+The tool reads both files and emits a bounded JSON comparison: actual
+observed name/HTTP scheme/upstream host/port, missing proposed and extra
+observed names, conflicting upstreams, and partial/unparseable NPM files.
+It refuses the wrong rootful host and never writes files or changes routers.
+Importantly, it **does not** claim to inspect custom NPM locations, headers,
+redirection, access lists or actual client behavior. These still require
+additional review before declaring route parity.
