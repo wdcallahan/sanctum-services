@@ -22,6 +22,12 @@ work. Services owns application, storage and database/address-consumer readiness
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
 **Current waypoint:** Calendar installation, idempotence and operator-confirmed bidirectional client access accepted → separately qualify protected service access, recoverability and the hands-on shared Navigator/EE milestone.
 
+## Estate-wide reconstruction and future services — decisions November 8, 2026
+
+[Service estate / owner and disposition register](SERVICE-ESTATE.md) is the authoritative Services inventory across projects, including Project Joule's Prism and Maintenance's PostgreSQL rather than omitting containers not owned by this repository. Kvin was purchased years ago for the service-host role previously served by Kvar; the host transition is not a new strategic choice. Installation, data restore, proxy adoption, client acceptance and Kvar retirement still need actual qualification.
+
+Decisions: **retain Pi-hole for ad blocking, not general/authoritative LAN DNS**; **retire OpenWebUI (replaced by Prism) and Endlessh**; preserve **no intended public inbound port exposure**. **Tailscale is a temporary VPN arrangement**, not the destination. A proper network VPN, **Luanti** and **Home Assistant** are explicitly planned Services work, with network and host boundaries coordinated and implementations yet to be selected. Source inventories or historical running containers do not confer permission to delete or migrate anything. The active recovery and YXORP route reconciliation work is [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2).
+
 ## Destination
 
 An independently maintainable service, **not just a running container**. Nova should be able to install, inspect, modify, update, back up, restore, move, and uninstall the service using understandable, documented procedures and the owning automation. The build itself is hands-on education relevant to his Red Hat instruction, professional experience, and CV.
@@ -84,7 +90,7 @@ These are *acceptance gates*, not calendar estimates. An unchecked gate has no a
 
 **Host firewall owner boundary (October 20):**
 - [x] Transfer the **Services source** from opening its own host port to only checking Kvin's `eth0`/`public` zone and `8085/tcp` in both runtime/permanent firewalld before changing Nextcloud resources. See [Services issue 1](https://github.com/wdcallahan/sanctum-services/issues/1). This is **source-only** pending native controller qualification.
-- [ ] Obtain Nova's separate approval and live acceptance for [Maintenance's ordinary published-service port correction](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/kvin-service-firewall.md); Maintenance owns its `8084/5432/8085` policy and exact old-rich-rule removal. The bounded native Maintenance/baseline previews passed with zero live changes.
+- [x] Maintenance's Kvin ordinary published-service port correction was **authorized and applied October 20**; independent peers qualified 5432/8084/8085 and Maintenance's preservation/repeat evidence passed. See [final owner receipt](https://github.com/wdcallahan/sanctum-maintenance/blob/24ea37e9c432841cc994381503736e84bceca637/docs/qualification/2026-10-20-kvin-firewall-complete.md). This does not discharge Services' separate Nextcloud application/proxy/restore tests.
 - [ ] Verify the Services role's prereq on the actual managed Kvin, then perform independent direct Nextcloud `/status.php` and proxy/browser acceptance. Host firewall convergence is not proof of a working Nextcloud login.
 
 - [ ] Review the existing `ansible/` candidate against the approved execution model; revise or replace mistaken assumptions at source instead of layering workarounds.
@@ -143,7 +149,9 @@ Provide a Nextcloud-compatible browser-based office editor (Collabora Online/COD
 ### Stage 6 — Later, explicitly separate work
 
 - [ ] Move persistent file storage toward **Void** when its storage service is ready; use the stable YXORP name, controlled data migration, rollback, and restoration checks. Do not make this a hidden condition for the Kvin pilot.
-- [ ] Consider **Home Assistant** as a separate application module, subject to its own actual storage/database requirements.
+- [ ] Deliver **Home Assistant** as a planned application, scoped and qualified separately with its storage, devices and security integrations.
+- [ ] Deliver **Luanti** as a planned Services application, with its server, data, update, backup and recovery contracts.
+- [ ] Plan and qualify a **proper Sanctum VPN** to replace temporary Tailscale, without opening unreviewed public ingress or interrupting clients. Coordinate topology, authentication, firewall, DNS and host responsibilities with owning projects.
 - [ ] Reuse the same established operator and documentation patterns without copying an unnecessary new EE or implementation for each service.
 
 These items are **future work**, not reasons to keep the completed Nextcloud pilot perpetually unfinished.
@@ -154,7 +162,7 @@ The normal managed-host connection is **smart/SSH**, including when the controll
 
 - `sanctum-services` owns application deployment, its lifecycle contract, and its operator documentation.
 - The **shared** Navigator/Builder toolchain and future application EE belong to [Sanctum Maintenance's controller-infrastructure workstream](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/maintenance-roadmap.md), provisionally agreed October 18. This application project consumes that qualified interface, not its private `.venv` or its existing Maintenance-qualified EE.
-- PostgreSQL provisioning/backups, proxy upstream management, DNS/network registration, and fleet OS maintenance are coordinated with their owners, not silently absorbed.
+- PostgreSQL provisioning/backups, DNS/network registration, and fleet OS maintenance are coordinated with their owners, not silently absorbed. **Services issue #2** establishes Services' proposed YXORP installation and desired-route reconciliation ownership; coordinate takeover of the currently operated proxy before live modification. Prism remains Project Joule-owned and must still appear in estate-wide reconstruction planning.
 - The broader review of other Sanctum projects against this educational/maintainability objective is a separate cross-project effort. This roadmap does not authorize mass refactoring.
 
 ## Evidence and documentation policy
