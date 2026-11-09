@@ -34,6 +34,7 @@ class SyntheticBackend(BaseHTTPRequestHandler):
             "identity": self.server.identity,
             "host": self.headers.get("Host"),
             "forwarded_proto": self.headers.get("X-Forwarded-Proto"),
+            "forwarded_scheme": self.headers.get("X-Forwarded-Scheme"),
             "forwarded_for": self.headers.get("X-Forwarded-For"),
         }).encode("utf-8")
         self.send_response(200)
@@ -144,6 +145,7 @@ def main(template_path):
             assert status == 200 and response["identity"] == "backend_one", response
             assert response["host"] == "example.nexus.sanctum", response
             assert response["forwarded_proto"] == "http", response
+            assert response["forwarded_scheme"] == "http", response
             assert response["forwarded_for"], response
             status, _ = request(listen, "socket.nexus.sanctum", upgrade=True)
             assert status == 101, status

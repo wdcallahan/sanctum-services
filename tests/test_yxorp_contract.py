@@ -82,6 +82,7 @@ class YxorpContractTests(unittest.TestCase):
         self.assertNotIn("443", quadlet)
         self.assertNotIn("ssl_certificate", nginx)
         self.assertIn("proxy_set_header Host $host", nginx)
+        self.assertIn("proxy_set_header X-Forwarded-Scheme $scheme", nginx)
         self.assertIn("proxy_set_header Upgrade $http_upgrade", nginx)
         self.assertIn("return 444", nginx)
 

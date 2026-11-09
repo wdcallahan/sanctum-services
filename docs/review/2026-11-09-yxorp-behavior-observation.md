@@ -32,6 +32,30 @@ non-default location**. No generated redirection-host, dead-host, default-host,
 or stream-host files were present (all observed counts zero). Global nonempty
 `/data/nginx/custom/*.conf` snippet count was **zero**.
 
+## Upstream NPM template cross-check (context, not live evidence)
+
+The [public NPM proxy-host template](https://github.com/NginxProxyManager/nginx-proxy-manager/blob/develop/backend/templates/proxy_host.conf)
+explicitly renders an **optional** `/data/nginx/custom/server_proxy[.]conf`
+include in every generated proxy server, and includes shared generated
+proxy and header handling. Its
+[HSTS map template](https://github.com/NginxProxyManager/nginx-proxy-manager/blob/develop/backend/templates/_hsts_map.conf)
+has `https` **map keys**, not separate mandatory HTTPS listener
+directives. This provides a plausible explanation for repeated
+`custom_include_count: 1`, literal `https` tokens, and unclassified
+mapping lines across all eight hosts, without any user-defined custom
+content. The local NPM version has not been matched by an image digest,
+so this is supporting template context rather than a proven exact
+file-level match.
+
+The published NPM
+[shared proxy include](https://github.com/NginxProxyManager/nginx-proxy-manager/blob/develop/docker/rootfs/etc/nginx/conf.d/include/proxy.conf)
+declares `X-Forwarded-Scheme`, `X-Forwarded-Proto`,
+`X-Forwarded-For`, `X-Real-IP`, and the upstream Host. The new
+YXORP candidate now explicitly sets `X-Forwarded-Scheme: $scheme`
+along with its already-managed forwarding headers. This avoids
+regressing a common forwarded-scheme contract in Nextcloud and other
+applications; actual app acceptance still controls cutover.
+
 Every file had `include_count: 2`,
 `custom_include_count: 1` and
 `conditional_or_unclassified_line_count: 2`. Consequently all eight had
