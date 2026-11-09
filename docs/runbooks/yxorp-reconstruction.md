@@ -178,3 +178,20 @@ effective NPM `nginx -T` parity. Any unexpected structure remains
 The [source and syntax CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42677320762) passed. The check has **not been executed on Kvar**.
 If it fails due to the legacy SSH/privilege setup, do not quietly change
 router or server auth to make this inspector work.
+
+## Source-only HTTP functional acceptance and next native gate
+
+The [isolated Nginx smoke test](../../tools/test-yxorp-http.py) uses two
+synthetic loopback Python upstreams, demonstrates successful HTTP headers
+including `X-Forwarded-Scheme`, WebSocket 101, unknown/disabled host denial,
+controlled route modification and explicit removal, and tears down its
+temporary Nginx master. This ran in [passing GitHub CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42691039448),
+not on Kvin or Kvar.
+
+Registry-only ARM64 image digests have also been resolved; see the
+[on-demand native qualification runbook](yxorp-image-qualification.md).
+**Next actual operator gate** is qualifying the official Nginx image inside
+a disposable network-disabled container on Kvin (optional pinned image
+cache pull); no persistent stage, app forwarding, firewall or DNS change
+is implied. The retained Kuma image/monitor and production reverse-proxy
+cutover remain separate owner-approved work.

@@ -232,3 +232,34 @@ When the implementation changes, update the relevant explanation and operational
   synthetic Nginx endpoints in isolated CI (no real Sanctum services).
 - [ ] Qualify the final generated shared-include semantics, real app client
   access and later Kvin native rootful staging, subject to selected image.
+
+### November 9 — NPM behavior adoption and native image gate
+
+- [x] Operator supplied read-only Kvar generated-host inspection:
+  eight hosts; one default location each; no extra generated redirect/stream
+  hosts or nonempty global custom snippets. Explicit Upgrade headers on
+  Square and Prism only; legacy Prism TLS certificate directives present.
+  The repeated custom include and `https` marker resemble NPM's public
+  generated template (optional include and HSTS map), **not proof of eight
+  special route configurations**. Preserve private HTTP decision.
+  [Review](review/2026-11-09-yxorp-behavior-observation.md).
+- [x] Source-only Nginx CI now proves actual HTTP routing, forwarded headers,
+  WebSocket 101, unknown-host denial, route change and explicitly selected
+  removal on loopback with synthetic backends. It also parses both draft
+  Yarn-only and all-proposed configurations. [Passing CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42690046860).
+- [x] Registry metadata identified published **ARM64-specific image digest
+  candidates** (official Nginx and Uptime Kuma 2.5.9). Source-only
+  [image lookup CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42690400649)
+  passed; no images downloaded onto Kvin.
+- [x] Prepared native [image-only qualification](../ansible/yxorp-qualify-image.yml)
+  and [runbook](runbooks/yxorp-image-qualification.md), source-validated in
+  [CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42691039448).
+  It never enables a proxy, opens a port or changes Kvar/DNS/firewall; an
+  operator-selected run can fill Kvin's rootful image cache.
+- [ ] **Current true blocker:** operator run of
+  `ansible/yxorp-qualify-image.yml` from the current Services checkout on
+  Kvin, after reviewing the image-cache download scope. The source-only
+  build is complete, but neither Kvin image nor app behavior is native accepted.
+- [ ] After image qualification, independently authorize a loopback-only
+  YXORP stage and real client routing acceptance; only later consider the
+  separate production cutover. Kvar NPM must remain untouched until then.
