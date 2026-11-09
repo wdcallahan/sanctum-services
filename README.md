@@ -2,7 +2,7 @@
 
 **Repeatable self-hosted applications, built to be understood and maintained.**
 
-Sanctum Services is the application-deployment project for the Sanctum home lab. Its intended, still-being-qualified workflow uses **Ansible Navigator, containerized Ansible execution environments, and rootless Podman Quadlets** to make services reproducible and operable without relying on a particular assistant or undocumented shell history.
+Sanctum Services is the application-deployment project for the Sanctum home lab. Its intended, still-being-qualified workflow uses **Ansible Navigator, containerized Ansible execution environments, and Podman Quadlets (rootless or rootful according to each service's actual needs)** to make services reproducible and operable without relying on a particular assistant or undocumented shell history.
 
 The first application is **Nextcloud**. The estate also includes the planned reconstruction of YXORP, LinkStack, Uptime Kuma and Pi-hole, and the future Sanctum VPN, Luanti and Home Assistant work. We build these systems for two outcomes: useful services **and** real hands-on engineering experience.
 
@@ -20,6 +20,14 @@ The first application is **Nextcloud**. The estate also includes the planned rec
 | Resume an interrupted assistant-led engineering session | [Short lead handoff](PROJECT_LEAD_INTRODUCTION.md) |
 
 As operations are developed and tested, the supported **installation, everyday operation, backup/restore, update, and uninstall runbooks** will be published under `docs/runbooks/`. No untested command should be represented as a supported operating procedure.
+
+## Sanctum's operating rule
+
+**So let it be written, so let it be run.** Source control and owning Ansible automation define repeatable configuration changes; manual UI/host edits are temporary interventions to reconcile into the durable declared source, not the normal administrative method. Fresh-host reconstruction must work from owning automation and declared persistent data/secrets, including across application and infrastructure owners. This project follows the [cross-project Operational Project Completion Standard](https://github.com/wdcallahan/engineering-standards/blob/main/Operational-Project-Completion-Standard.md), rather than creating another standard.
+
+**Right tool and privilege for the job.** Rootless containers are useful for unprivileged application workloads; rootful services are accepted when appropriate, including a reverse proxy binding host ports 80/443. SSH is a native host service and need not be containerized. Services is not taking over network/firewall policy; it coordinates with its owners rather than layering arbitrary proxy authentication or rootless workarounds onto the design.
+
+**Trusted HTTPS is unresolved, not optional forever.** Public certificate authorities will not issue for the private `.sanctum` names. An internal CA is possible but requires trust distribution to all relevant devices, including VPN users, and ongoing key/certificate lifecycle. A publicly trusted domain with private DNS/routing is another design avenue if naming changes are acceptable. Do not select a trust strategy, enable TLS, or alter client trust as a side effect of replacing YXORP; [track the HTTPS decision](docs/ROADMAP.md) separately.
 
 ## Our definition of useful software
 
