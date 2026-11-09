@@ -15,6 +15,9 @@ on:
       - "tests/test_yxorp_contract.py"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
+      - "tools/observe-yxorp-npm-behavior.py"
+      - "ansible/yxorp-inspect-npm.yml"
+      - "tests/test_yxorp_behavior_observer.py"
       - "tests/test_kuma_desired.py"
       - ".github/workflows/yxorp-source-check.yml"
   workflow_dispatch:
@@ -29,12 +32,14 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_publication_review.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_behavior_observer.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
           python3 -m unittest discover -s tests -p 'test_kuma_role_contract.py'
       - name: Check Ansible playbook syntax
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-inspect-npm.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check
           ansible-playbook -i 'localhost,' ansible/yxorp-preview.yml --syntax-check
       - name: Render on the CI runner without connecting to Sanctum

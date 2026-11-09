@@ -1,0 +1,23 @@
+---
+# Safe, bounded observation of the existing Kvar NPM generated config.
+# Requires the existing Maintenance-qualified SSH management path and sudo;
+# no live host change, service reload, database query, DNS, or access tokens.
+- name: Inspect legacy NPM route behavior without copying NPM configuration
+  hosts: npm_proxy_legacy
+  gather_facts: false
+  become: true
+  tasks:
+    - name: Require normal execution, not Ansible check-mode staging
+      ansible.builtin.assert:
+        that:
+          - not ansible_check_mode
+
+    - name: Project safe metadata from the generated rootful NPM configuration
+      ansible.builtin.script: "{{ playbook_dir }}/../tools/observe-yxorp-npm-behavior.py"
+      register: yxorp_behavior_inspect
+      changed_when: false
+      timeout: 120
+
+    - name: Report the redacted route-behavior inventory
+      ansible.builtin.debug:
+        msg: "{{ yxorp_behavior_inspect.stdout | from_json }}"

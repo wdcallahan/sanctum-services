@@ -146,3 +146,35 @@ upstreams. These have been added as **disabled** entries. The obsolete NPM
 administration UI remains excluded; `yarn.nexus.sanctum` remains a new
 requested route. The [bounded comparison review](../review/2026-11-09-yxorp-default-route-comparison.md)
 records the complete eight-name result and the remaining behavioral gaps.
+
+## Next observation — effective NPM behavior flags (read-only)
+
+The accepted generated-default-upstream comparison cannot say whether NPM
+configured extra locations, proxy headers, authentication, redirects,
+WebSockets, TLS or global custom snippets. NPM's public upstream templates
+include possible advanced config and custom includes in generated proxy hosts.
+A complementary **value-redacting** observer now exists:
+
+```bash
+~/.local/bin/ansible-navigator run ansible/yxorp-inspect-npm.yml
+```
+
+Run from the Services checkout on Kvin **only when an operator is available
+to review it**. It targets only the existing `kvar.outer.sanctum` management
+SSH entry on port **10022** and uses privileged read-only access to the
+rootful NPM generated config. It does not access the NPM API/database,
+modify files, reload a service, or change DNS or firewall.
+
+The observer emits bounded generated file names and SHA256 fingerprints,
+directive/header **names** (not values), simple safe location paths,
+a count of unsupported paths/conditional lines, markers for access control,
+WebSockets/redirects/TLS, and only the name/checksum of nonempty custom
+snippet files. The literal bodies of NPM config, URL values, passwords,
+tokens, Authorization header contents and advanced custom includes are
+**not printed**. Its output is for migration review, not a claim of full
+effective NPM `nginx -T` parity. Any unexpected structure remains
+`unknown`; do not auto-enable a route that requires manual investigation.
+
+The check is built and tested in source but has **not been executed on Kvar**.
+If it fails due to the legacy SSH/privilege setup, do not quietly change
+router or server auth to make this inspector work.
