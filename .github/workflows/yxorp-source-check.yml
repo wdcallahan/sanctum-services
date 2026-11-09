@@ -16,6 +16,7 @@ on:
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
       - "tools/observe-yxorp-npm-behavior.py"
+      - "tools/test-yxorp-http.py"
       - "ansible/yxorp-inspect-npm.yml"
       - "tests/test_yxorp_behavior_observer.py"
       - "tests/test_kuma_desired.py"
@@ -70,3 +71,6 @@ jobs:
               template.render(yxorp_routes=routes), encoding='utf8')
           PY
           sudo nginx -t -c /tmp/sanctum-yxorp-all-routes.conf
+      - name: Exercise loopback-only HTTP proxy behavior (synthetic backends)
+        run: |
+          python3 tools/test-yxorp-http.py ansible/roles/yxorp/templates/nginx.conf.j2
