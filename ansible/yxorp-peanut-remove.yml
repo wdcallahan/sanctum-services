@@ -6,8 +6,8 @@
   hosts: yxorp_test
   gather_facts: true
   become: true
-  vars_files:
-    - roles/yxorp/defaults/main.yml
+  # The Peanut group variables own its distinct test paths; loading the
+  # role default file as vars_files would override them and target Kvin paths.
   tasks:
     - name: Require a separately approved STAGE-only removal
       ansible.builtin.assert:
