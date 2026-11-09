@@ -1,14 +1,33 @@
 # YXORP — candidate image qualification
 
-**As of November 9, 2026: source prepared; native action NOT performed.**
+**Native qualification ACCEPTED on Kvin — November 9, 2026.**
+
+Nova executed `ansible/yxorp-qualify-image.yml` via the normal Navigator
+execution environment on Kvin. The play succeeded with `ok=11 changed=4
+unreachable=0 failed=0 skipped=0 rescued=0 ignored=0`:
+
+- Exact digest pulled into Kvin's rootful Podman image cache (`changed`).
+- Podman inspect reported Linux/ARM64; that architecture assertion passed.
+- Nginx `-t` succeeded in a disposable container with networking disabled.
+- Temporary directory created, config rendered and directory removed
+  (three remaining expected `changed` tasks).
+- The receipt expressly reported no persistent service started and no
+  DNS or firewall change. No new listener or Kvar mutation.
+
+This is a **qualified image** and configuration parser, not qualification of
+Kvin bridge-network reachability, live proxy forwarding, TLS/client behavior,
+or production cutover. The exact digest has now been promoted into
+`ansible/group_vars/yxorp.yml`, while **`yxorp_stage_approved: false`**
+continues to block lasting installation until a separate operator decision.
 
 The [registry metadata CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42690400649)
 located Linux ARM64-specific Nginx stable-alpine and Uptime Kuma 2.5.9
 image digests, preserved in
 [`data/container-image-candidates.yml`](../../data/container-image-candidates.yml).
-These are not native Kvin qualifications or permission to deploy.
+The Nginx candidate has since passed native Kvin qualification; Kuma's
+candidate remains registry-only. Neither authorizes deployment.
 
-The next explicitly selected test from Kvin's Services checkout is:
+The completed image-only test was performed with:
 
 ```bash
 cd ~/src/sanctum-services
@@ -26,7 +45,8 @@ installed, no lasting service started, no ports opened, no firewall or
 DNS changes, and Kvar's NPM is not contacted.
 
 This does not qualify actual proxy forwarding, networking or browser
-access on Kvin, and does not change the deliberately blank
-`yxorp_image` deployment variable. After accepting native image results,
-a separate operator decision is needed before loopback service staging.
+access on Kvin, and did not itself change the deployment source; the exact digest was
+subsequently promoted to the deployment variable in Git. Native image acceptance has been recorded. The staged proxy deployment
+still requires `yxorp_stage_approved: true` as an explicit operator-controlled
+source change. Its proposed loopback bind remains `127.0.0.1:18080`.
 Kuma's candidate is recorded but is not pulled or qualified here.

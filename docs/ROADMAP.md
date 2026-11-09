@@ -256,10 +256,17 @@ When the implementation changes, update the relevant explanation and operational
   [CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42691039448).
   It never enables a proxy, opens a port or changes Kvar/DNS/firewall; an
   operator-selected run can fill Kvin's rootful image cache.
-- [ ] **Current true blocker:** operator run of
-  `ansible/yxorp-qualify-image.yml` from the current Services checkout on
-  Kvin, after reviewing the image-cache download scope. The source-only
-  build is complete, but neither Kvin image nor app behavior is native accepted.
+- [x] Nova ran `ansible/yxorp-qualify-image.yml` on native Kvin:
+  **ok=11 changed=4 failed=0**. Pinned official Nginx image pulled into rootful
+  Podman cache, Linux ARM64 architecture confirmed, ephemeral offline
+  `nginx -t` accepted the generated Yarn-only configuration; temporary
+  config removed. No listener, service, Kvar, firewall or DNS modification.
+- [x] The exact natively qualified digest is now the `yxorp_image` source
+  value. Added `yxorp_stage_approved: false` as a deliberate hold before
+  the rootful Quadlet deployment; source change is not staging approval.
+- [ ] **Current operator-dependent gate:** authorize or decline installation
+  of the separate **loopback-only** Kvin YXORP stage. Even if authorized,
+  that is not production publication, DNS cutover, or application acceptance.
 - [ ] After image qualification, independently authorize a loopback-only
   YXORP stage and real client routing acceptance; only later consider the
   separate production cutover. Kvar NPM must remain untouched until then.
