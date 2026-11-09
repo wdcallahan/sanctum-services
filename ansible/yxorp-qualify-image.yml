@@ -1,0 +1,96 @@
+---
+# No persistent service, host listener, DNS or firewall mutation.
+# Podman image pull will populate Kvin's rootful image cache if absent.
+- name: Qualify isolated rootful YXORP image on native Kvin
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/container-image-candidates.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact host, architecture, digest and one test route
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['fqdn'] == inventory_hostname
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['architecture'] == 'aarch64'
+          - yxorp_nginx_candidate.status == 'registry_only'
+          - yxorp_nginx_candidate.image is match('^docker.io/library/nginx@sha256:[a-f0-9]{64}$')
+          - (yxorp_routes | selectattr('enabled') | list | length) == 1
+          - (yxorp_routes | selectattr('enabled') | first).hostname == 'yarn.nexus.sanctum'
+
+    - name: Check rootful candidate image cache
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ yxorp_nginx_candidate.image }}"]
+      register: yxorp_qualify_exists
+      changed_when: false
+      failed_when: yxorp_qualify_exists.rc not in [0, 1]
+      check_mode: false
+
+    - name: Pull the exact digest only if missing
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ yxorp_nginx_candidate.image }}"]
+      when: yxorp_qualify_exists.rc == 1
+      register: yxorp_qualify_pull
+      changed_when: yxorp_qualify_pull.rc == 0
+
+    - name: Read cached image architecture
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ yxorp_nginx_candidate.image }}"]
+      register: yxorp_qualify_image_info
+      changed_when: false
+
+    - name: Require actual Linux ARM64 image
+      ansible.builtin.assert:
+        that:
+          - (yxorp_qualify_image_info.stdout | from_json)[0].Architecture == 'arm64'
+          - (yxorp_qualify_image_info.stdout | from_json)[0].Os == 'linux'
+
+    - name: Create a disposable config directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: -yxorp-qualify
+      register: yxorp_qualify_temp
+
+    - name: Run native Nginx parser without networking or lasting services
+      block:
+        - name: Render Git-declared test route
+          ansible.builtin.template:
+            src: roles/yxorp/templates/nginx.conf.j2
+            dest: "{{ yxorp_qualify_temp.path }}/nginx.conf"
+            mode: "0644"
+
+        - name: Check Nginx syntax inside an ephemeral offline Podman container
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --rm
+              - --network
+              - none
+              - --add-host
+              - yarn.inner.sanctum:127.0.0.1
+              - --volume
+              - "{{ yxorp_qualify_temp.path }}/nginx.conf:/etc/nginx/nginx.conf:ro,Z"
+              - --entrypoint
+              - /usr/sbin/nginx
+              - "{{ yxorp_nginx_candidate.image }}"
+              - -t
+              - -c
+              - /etc/nginx/nginx.conf
+          changed_when: false
+
+        - name: Report bounded native success
+          ansible.builtin.debug:
+            msg:
+              native_image_parser_accepted: true
+              service_started: false
+              firewall_or_dns_changed: false
+              next_step: separately authorize isolated proxy staging
+      always:
+        - name: Remove only the disposable native configuration
+          ansible.builtin.file:
+            path: "{{ yxorp_qualify_temp.path }}"
+            state: absent
+          when: yxorp_qualify_temp.path is defined
