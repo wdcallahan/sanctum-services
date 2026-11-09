@@ -46,3 +46,22 @@ jobs:
             echo 'Unqualified Prism route must not be active in first preview' >&2
             exit 1
           fi
+      - name: Validate generated syntax with real Nginx (synthetic DNS only)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends nginx-core
+          echo '127.0.0.1 yarn.inner.sanctum kvin.outer.sanctum kvar.outer.sanctum' | sudo tee -a /etc/hosts
+          sudo nginx -t -c /tmp/sanctum-yxorp-proposed.conf
+          python3 - <<'PY'
+          from pathlib import Path
+          from jinja2 import Environment, FileSystemLoader, StrictUndefined
+          import yaml
+          routes = yaml.safe_load(Path('data/yxorp-routes.yml').read_text())['yxorp_routes']
+          for route in routes:
+              route['enabled'] = True
+          template = Environment(loader=FileSystemLoader('ansible/roles/yxorp/templates'),
+                                 undefined=StrictUndefined).get_template('nginx.conf.j2')
+          Path('/tmp/sanctum-yxorp-all-routes.conf').write_text(
+              template.render(yxorp_routes=routes), encoding='utf8')
+          PY
+          sudo nginx -t -c /tmp/sanctum-yxorp-all-routes.conf
