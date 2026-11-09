@@ -1,5 +1,10 @@
 # Sanctum Services — Session Continuation
 
+## Latest operator decisions — November 8, 2026
+
+**Start with the [Services service-estate/decision register](docs/SERVICE-ESTATE.md) and [issue #2](https://github.com/wdcallahan/sanctum-services/issues/2)** for active reconstructibility work; older Kvar/Pi-hole/Endlessh descriptions below and in Maintenance snapshots are historical. Kvin's Kvar-replacement role was the original reason for its purchase years ago, not a newly chosen destination. **Pi-hole stays for ad blocking** but is not the general/authoritative DNS infrastructure. **OpenWebUI is retired in favor of Project Joule's Prism; Endlessh is retired** because its old public-SSH tarpit purpose no longer exists. **Prism belongs in the all-containers inventory but its install/recovery owner is Project Joule.** Tailscale is temporary; a proper VPN is **future Sanctum Services scope**, as are **Luanti** and **Home Assistant**. No intended WAN/publicly exposed inbound service ports. None of these decisions authorizes immediate live deletion, migration, VPN cutover or router/firewall changes. Services maintains the canonical inventory and sends maintenance-only document corrections to Maintenance via the inter-Pixel board at [Maintenance issue #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20).
+
+
 ## October 23 — controller cleanup ownership correction
 
 Nova authorized the Maintenance session to handle this bounded Services tooling
