@@ -1,0 +1,9 @@
+---
+# Proposed rootless retained Kuma deployment on Kvin.
+# Explicit stage permission + pinned tested image are required before mutation.
+- name: Reconcile the retained Sanctum Uptime Kuma candidate
+  hosts: kuma
+  gather_facts: true
+  become: false
+  roles:
+    - kuma

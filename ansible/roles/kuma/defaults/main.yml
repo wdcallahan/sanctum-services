@@ -1,0 +1,5 @@
+---
+kuma_quadlet_dir: "{{ ansible_facts['env']['HOME'] }}/.config/containers/systemd"
+kuma_quadlet_file: "{{ kuma_quadlet_dir }}/sanctum-kuma.container"
+kuma_service_name: sanctum-kuma.service
+kuma_container_name: sanctum-kuma

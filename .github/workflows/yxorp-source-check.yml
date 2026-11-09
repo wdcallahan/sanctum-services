@@ -1,4 +1,4 @@
-name: YXORP and Kuma desired-state source checks
+name: Services source and recovery contracts
 on:
   push:
     paths:
@@ -8,6 +8,10 @@ on:
       - "ansible/inventory/hosts.yml"
       - "data/yxorp-routes.yml"
       - "data/kuma-monitors.yml"
+      - "ansible/kuma.yml"
+      - "ansible/group_vars/kuma.yml"
+      - "ansible/roles/kuma/**"
+      - "tests/test_kuma_role_contract.py"
       - "tests/test_yxorp_contract.py"
       - "tests/test_kuma_desired.py"
       - ".github/workflows/yxorp-source-check.yml"
@@ -23,10 +27,12 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
+          python3 -m unittest discover -s tests -p 'test_kuma_role_contract.py'
       - name: Check Ansible playbook syntax
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check
           ansible-playbook -i 'localhost,' ansible/yxorp-preview.yml --syntax-check
       - name: Render on the CI runner without connecting to Sanctum
         run: |

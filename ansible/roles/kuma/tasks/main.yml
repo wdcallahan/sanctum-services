@@ -1,0 +1,90 @@
+---
+# No filesystem, volume or service changes occur before these validations.
+- name: Require the exact Kvin target, approval and pinned Uptime Kuma image
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['fqdn'] == inventory_hostname
+      - inventory_hostname == 'kvin.outer.sanctum'
+      - kuma_stage_approved | bool
+      - kuma_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')
+      - kuma_bind_address == '127.0.0.1'
+      - kuma_host_port | int == 13001
+      - kuma_data_volume is match('^[a-z0-9][a-z0-9_.-]+$')
+      - kuma_data_volume == 'sanctum-kuma-data'
+    fail_msg: >-
+      This source is deliberately held: select an exact linux/arm64-tested
+      Kuma v2 image digest and separately approve a loopback-only candidate
+      on Kvin. Never change DNS, host firewall, incumbent Kvar Kuma or
+      existing monitor state as a side effect.
+
+- name: Observe whether the named rootless Kuma data volume exists
+  ansible.builtin.command:
+    argv: [podman, volume, exists, "{{ kuma_data_volume }}"]
+  register: kuma_volume_exists
+  changed_when: false
+  failed_when: kuma_volume_exists.rc not in [0, 1]
+  check_mode: false
+
+- name: Create the durable Kuma data volume when absent
+  ansible.builtin.command:
+    argv: [podman, volume, create, "{{ kuma_data_volume }}"]
+  when: kuma_volume_exists.rc == 1
+  register: kuma_volume_created
+  changed_when: kuma_volume_created.rc == 0
+
+- name: Observe whether the exact Kuma image exists
+  ansible.builtin.command:
+    argv: [podman, image, exists, "{{ kuma_image }}"]
+  register: kuma_image_exists
+  changed_when: false
+  failed_when: kuma_image_exists.rc not in [0, 1]
+  check_mode: false
+
+- name: Pull the exact pinned image if absent
+  ansible.builtin.command:
+    argv: [podman, pull, "{{ kuma_image }}"]
+  when: kuma_image_exists.rc == 1
+  register: kuma_image_pulled
+  changed_when: kuma_image_pulled.rc == 0
+
+- name: Create the rootless Quadlet directory
+  ansible.builtin.file:
+    path: "{{ kuma_quadlet_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Reconcile the retained Kuma rootless Quadlet
+  ansible.builtin.template:
+    src: kuma.container.j2
+    dest: "{{ kuma_quadlet_file }}"
+    mode: "0644"
+  register: kuma_quadlet_result
+
+- name: Start or update Kuma through the ordinary user service manager
+  ansible.builtin.systemd_service:
+    name: "{{ kuma_service_name }}"
+    scope: user
+    daemon_reload: "{{ kuma_quadlet_result.changed }}"
+    enabled: true
+    state: "{{ 'restarted' if kuma_quadlet_result.changed else 'started' }}"
+  environment:
+    XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+- name: Verify the candidate HTTP service responds on loopback
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ kuma_host_port }}/"
+    status_code: [200, 302]
+    timeout: 5
+    follow_redirects: none
+  register: kuma_web_response
+  retries: 20
+  delay: 3
+  until: kuma_web_response.status | default(0) in [200, 302]
+  changed_when: false
+
+- name: Describe what remains before this is a retained monitor
+  ansible.builtin.debug:
+    msg: >-
+      A loopback Kuma HTTP endpoint responded. This is NOT evidence that
+      the administrator, monitor database, backup/restore, named YXORP route,
+      Wicket Ollama monitor, or notification policy has been accepted.

@@ -1,0 +1,9 @@
+---
+# Select an actual linux/arm64 Uptime Kuma 2 image digest on Kvin.
+# Do not use a mutable upstream :2 tag as permanent desired state.
+kuma_image: ""
+# Explicit operator decision is required even for the isolated staged copy.
+kuma_stage_approved: false
+kuma_bind_address: "127.0.0.1"
+kuma_host_port: 13001
+kuma_data_volume: sanctum-kuma-data

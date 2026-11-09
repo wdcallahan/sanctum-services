@@ -1,0 +1,20 @@
+[Unit]
+Description=Sanctum retained Uptime Kuma (rootless Podman)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ kuma_image }}
+ContainerName={{ kuma_container_name }}
+# Rootless network choice follows the qualified Kvin Nextcloud pattern;
+# reachability from Kuma to Wicket must still pass independently.
+Network=slirp4netns
+PublishPort={{ kuma_bind_address }}:{{ kuma_host_port }}:3001/tcp
+Volume={{ kuma_data_volume }}:/app/data
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=default.target
