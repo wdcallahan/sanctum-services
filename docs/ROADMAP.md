@@ -28,6 +28,14 @@ work. Services owns application, storage and database/address-consumer readiness
 
 Decisions: **retain Pi-hole for ad blocking, not general/authoritative LAN DNS**; **retire OpenWebUI (replaced by Prism) and Endlessh**; preserve **no intended public inbound port exposure**. **Tailscale is a temporary VPN arrangement**, not the destination. A proper network VPN, **Luanti** and **Home Assistant** are explicitly planned Services work, with network and host boundaries coordinated and implementations yet to be selected. Retired Kvar containers do **not** each need uninstalling: once every wanted service has been restored and verified on Kvin and the actual handoff is approved, Kvar will be taken offline and reformatted. No partial migration, historical source observation or this plan authorizes early formatting. The active recovery and YXORP route reconciliation work is [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2).
 
+## Declarative operations and service privilege — November 8, 2026
+
+**"So let it be written, so let it be run."** All intended recurring service configuration and maintenance should be expressed through version-controlled Ansible/source and declared nonsecret configuration, then independently repeatable and restorable. This implements the existing [canonical Operational Project Completion Standard](https://github.com/wdcallahan/engineering-standards/blob/main/Operational-Project-Completion-Standard.md). Manual UI or host changes are temporary responses to reconcile into the owning source; a running service without an installer and declared recovery inputs fails the objective.
+
+**Rootless is a choice, not a requirement.** Use native privileged services where required (including normal host SSH); use rootless Podman for suitable app workloads and **rootful Podman Quadlet for the chosen YXORP listener on host ports 80/443**. Do not invent low-port tricks merely to avoid root. Services deploys workloads; existing network/firewall owners retain their responsibilities. The design selected for [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2) is **plain Nginx managed through Ansible-rendered configuration**, replacing Kvar Nginx Proxy Manager's UI and database—not automating the old admin interface.
+
+**Trusted HTTPS remains a real open workstream**, not a permanent HTTP-only acceptance. Public CAs cannot certify the private `.sanctum` names. A private CA would have to establish and maintain trust on all client platforms including VPN clients; alternative private routing of names in a publicly registered domain requires a deliberate naming policy. [Services issue #3](https://github.com/wdcallahan/sanctum-services/issues/3) owns that decision, distribution, renewal and native acceptance—not the current proxy installer.
+
 ## Destination
 
 An independently maintainable service, **not just a running container**. Nova should be able to install, inspect, modify, update, back up, restore, move, and uninstall the service using understandable, documented procedures and the owning automation. The build itself is hands-on education relevant to his Red Hat instruction, professional experience, and CV.
@@ -152,6 +160,7 @@ Provide a Nextcloud-compatible browser-based office editor (Collabora Online/COD
 - [ ] Deliver **Home Assistant** as a planned application, scoped and qualified separately with its storage, devices and security integrations.
 - [ ] Deliver **Luanti** as a planned Services application, with its server, data, update, backup and recovery contracts.
 - [ ] Plan and qualify a **proper Sanctum VPN** to replace temporary Tailscale, without opening unreviewed public ingress or interrupting clients. Coordinate topology, authentication, firewall, DNS and host responsibilities with owning projects.
+- [ ] Design and qualify **trusted HTTPS for all required private clients, including VPN clients**, with an automated certificate and trust lifecycle; see [issue #3](https://github.com/wdcallahan/sanctum-services/issues/3). Do not silently impose a private CA or rename existing sites before a design is accepted.
 - [ ] Reuse the same established operator and documentation patterns without copying an unnecessary new EE or implementation for each service.
 
 These items are **future work**, not reasons to keep the completed Nextcloud pilot perpetually unfinished.
