@@ -27,6 +27,34 @@
   dependency reconciliation (Maintenance DNS, proxy routes, client
   consumers, monitors, data retention) beyond removing a Quadlet.
 
+## Current decision — Peanut is the realistic HTTP:80 YXORP trial (Nov 9)
+
+Nova explicitly rejected the repeated localhost/18080 workaround. **The
+commissioned Kvin production YXORP is rootful Podman, HTTP over
+`0.0.0.0:80`, LAN-accessible via normal DNS after an approved cutover.**
+The non-production test goes to **Peanut**, with the **same rootful,
+all-interface port-80 architecture**, not an approximation on Kvin.
+This direction supersedes older notes asking permission to stage on
+Kvin loopback. No Kvar changes, DNS switch or production approval.
+
+Services source now includes a dedicated `yxorp_test` group targeting
+`peanut.arcane.sanctum`, `ansible/yxorp-peanut.yml` (first a read-only
+socket/firewall check then deployment), `ansible/yxorp-peanut-probe.yml`
+(actual Kvin network-client HTTP), and
+`ansible/yxorp-peanut-remove.yml` (scoped test rollback). Peanut's
+firewall is owned by Maintenance; the last accepted policy from
+October 22 did not establish port-80 admission. Do not touch Maintenance
+firewall policy from Services. The first **native** operator move after
+source CI is to run the Peanut test play from Kvin; a preflight denial
+must not be bypassed by weakening the firewall. See
+[the revised runbook](docs/runbooks/yxorp-reconstruction.md).
+
+The first Peanut trial uses multi-architecture Nginx
+`docker.io/library/nginx:stable-alpine` (normal maintained tag) and
+keeps Kvin's previously tested ARM64 digest as a known-good reference.
+Automatic updates, consumer-side acceptance and actual app rollback
+are not yet proven; never claim completion from `nginx -t` alone.
+
 ## Latest operator decisions — November 8, 2026
 
 **Binding prior security decision: no blanket HTTPS requirement.** By October 20, Nova had explicitly accepted ordinary HTTP for private `.sanctum` applications, potentially permanently. Project Joule independently implemented Nova's selected HTTP Prism browser origin on October 16; see [its accepted HTTP transition](https://github.com/wdcallahan/joule/blob/main/docs/runbooks/prism-http-transition-2026-10-16.md). The assistant has repeatedly reopened HTTPS/CA as a new idea despite this decision. It is **not** an active project or prerequisite to YXORP, Kvin or VPN. Threats of plaintext secrets/sessions remain understood; a private CA's worst-case client enrollment may be impossible for Android apps with system-only trust or hard pinning. New PKI work requires a concrete functional/security need outweighing full trust-distribution cost, not vague conventional best practice. `.sanctum` is an intentionally settled private namespace; Nova deliberately abandoned a hybrid public/private scheme despite owning many domains. [Issue #3](https://github.com/wdcallahan/sanctum-services/issues/3) is closed/not planned to prevent re-litigation by default.

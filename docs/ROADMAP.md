@@ -22,22 +22,26 @@ work. Services owns application, storage and database/address-consumer readiness
 **Scope:** Reproducible operation of self-hosted application services, beginning with Nextcloud.  
 **Current waypoint:** Calendar installation, idempotence and operator-confirmed bidirectional client access accepted → separately qualify protected service access, recoverability and the hands-on shared Navigator/EE milestone.
 
-## YXORP current gate — November 9, 2026
+## YXORP current gate — November 9, 2026 (Peanut trial corrected)
 
-The rootful Nginx ARM64 image was natively qualified on Kvin; the
-existing digest remains in source and `yxorp_stage_approved: false`
-still blocks installation. The source-only HTTP forwarding tests have passed.
-A new read-only `ansible/yxorp-stage-probe.yml` checks actual Kvin loopback
-health and real Yarn forwarding **after** a stage is approved and installed.
-The Quadlet install flow now uses the supported generated-unit behavior:
-`[Install]` for boot startup, not an invalid `systemctl enable`.
+Nova rejected localhost-only/high-port staging: test the **actual rootful
+HTTP:80, all-interface proxy on Peanut**, leaving **Kvin** as the production
+destination and **Kvar** NPM untouched. The source now defines an independent
+`yxorp_test` inventory group for `peanut.arcane.sanctum`,
+`ansible/yxorp-peanut.yml` with read-only port-80/firewall preflight,
+a real HTTP-client probe from Kvin, and a scoped Peanut-only remover.
+Kvin's declared listener is likewise normal `0.0.0.0:80`, but its
+production cutover gate remains false. There is **no** DNS or firewall
+mutation inside Services. Peanut's active firewalld is Maintenance-owned,
+so a missing port-80 policy requires cross-project coordination.
 
-**Next operator decision:** allow or decline a new Kvin-only loopback
-YXORP service on 127.0.0.1:18080. Approval is limited to staging and
-does not cover DNS, Kvar, external listener ports, production cutover or
-automatic update timer. The ordinary rolling-tag update/rollback lifecycle
-is still a design-and-acceptance task; the first stage uses the already
-qualified digest. See [YXORP runbook](runbooks/yxorp-reconstruction.md).
+**Native blocker:** run the ordinary Peanut play from Kvin, after source
+CI passes. Preflight must accept Peanut's real port and firewall policy
+*before* any files or service are changed. If its port-80 admission test
+fails, ask Maintenance to reconcile its own policy rather than quietly
+changing it in Services. [Trial and rollback runbook](runbooks/yxorp-reconstruction.md).
+The Peanut test tag follows a maintained Nginx channel but automatic
+updates/rollback remain a separately measured lifecycle decision.
 
 ## Estate-wide reconstruction and future services — decisions November 8, 2026
 
