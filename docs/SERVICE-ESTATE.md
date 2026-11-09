@@ -6,10 +6,11 @@
 
 - **Kvin's longstanding role:** Kvin was acquired years ago to take over Kvar's service-host duties. Moving the intended survivors is fulfillment of that existing design, not a new destination decision. The actual migration remains subject to evidence, restore testing, and independent operator authorization.
 - **Pi-hole: RETAIN for ad blocking.** It is **not** the general/authoritative Sanctum DNS service or the DHCP-advertised network resolver. It still serves ad filtering, including whatever DNS-filtering interface its clients use. Record current clients and the future host; do **not** reinterpret absence of general DNS duties as permission to retire Pi-hole. Peanut provides the verified general DHCP DNS path per Maintenance's current observations.
-- **OpenWebUI: RETIRED in favor of Prism.** **Endlessh: RETIRED.** Its former SSH-tarpit role was relevant when a host had a public-facing SSH entry point; that rationale no longer applies. Neither is in the intended reconstruction set. Some containers may still be running on Kvar: a retirement decision is **not** evidence they have been shut down and is **not** blanket authorization to remove data or services.
+- **OpenWebUI: RETIRED in favor of Prism.** **Endlessh: RETIRED.** Its former SSH-tarpit role was relevant when a host had a public-facing SSH entry point; that rationale no longer applies. Neither is in the intended reconstruction set. There is **no requirement to uninstall each retired container from Kvar**. Kvar remains unchanged until all wanted services are restored and accepted on Kvin; then Kvar is taken offline and reformatted as a separate approved host-retirement action.
 - **Access policy:** No intended publicly exposed inbound service ports. Tailscale is the current **stopgap** for private remote access. A properly integrated Sanctum VPN is a future **Services** project, coordinated with Bunny Factory/network routing, Maintenance/firewall/host work, DNS, and clients. Protocol, placement, trust policy, migration and client behavior have **not** yet been selected. Do not disable working Tailscale until a qualified replacement exists.
 - **Planned applications:** **Luanti** and **Home Assistant** are explicit future Services projects, alongside further applications Nova may nominate. Neither is implied to be currently deployed or ready for implementation.
 - **Cross-project inventory:** Include containers not installed by Services, prominently **Prism**, which is **owned by Project Joule**. A whole-estate rebuild inventory cannot exclude an application simply because its own project is the installer.
+- **Kvar exit criterion:** Restore and verify every wanted service, its state, name-based client access and necessary dependencies on Kvin (or the approved owning host). Once this is accepted, remove Kvar from service, **take it offline, and format/reimage it** under Maintenance's host-retirement procedure. Do not make per-container uninstallation, disabling retired services on Kvar, or historical-data housekeeping a prerequisite to this plan. Formatting is deliberate destructive work needing a separate operator-approved cutover/reimage, not authorized by this inventory.
 
 ## Intended / observed services
 
@@ -31,8 +32,8 @@ Status below combines the November 8 Maintenance [Kvar inventory](https://github
 
 | Container | Decision | Safety boundary |
 | --- | --- | --- |
-| **OpenWebUI** | **Retired**, superseded by Prism | Existing Kvar presence/backing is historical/residual evidence, not a reason to recreate it. No live deletion authorized by this document |
-| **Endlessh** | **Retired**, former SSH tarpit no longer required | No reconstruction. Distinguish abandoned tarpit port from legitimate host management SSH; do not alter exposure/firewall without approved owner change |
+| **OpenWebUI** | **Retired**, superseded by Prism | Leave legacy instance alone; do not rebuild it on Kvin. No per-container uninstall required before Kvar is retired and reformatted |
+| **Endlessh** | **Retired**, former SSH tarpit no longer required | No reconstruction and no per-container uninstall required on Kvar. Leave legitimate Kvar management SSH intact until decommissioning |
 | **Obsolete LinkStack rootful duplicate, AWX, Dashy, Wiki.js, Homarr** | Historical/failed/removed candidates according to Maintenance inventory; **not** inferred intended services | Reconcile evidence before treating any unknown current component as disposable |
 
 ## Future Services backlog (not deployed by this register)
@@ -50,4 +51,4 @@ For every intended service, record: real owner; current and intended host; playb
 
 **Immediate active work:** [Services #2](https://github.com/wdcallahan/sanctum-services/issues/2) owns YXORP reproducible deployment, route-list reconciliation (including `yarn.nexus.sanctum`), and the comprehensive audit. Maintenance's [Kvar inventory](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/handoffs/2026-11-08-kvar-retirement-inventory.md) is evidence of existing containers and mounts; its older unresolved Pi-hole/OpenWebUI/Endlessh wording is superseded by the operator decisions recorded here. Maintenance owns edits to that document; Services sends the correction through the board.
 
-No changes to live hosts, routers, firewall, DNS, client VPN, containers, credentials, or persistent data are authorized by this record.
+No changes to live hosts, routers, firewall, DNS, client VPN, containers, credentials, or persistent data are authorized by this record. Kvar offline/reformat is an agreed **end state**, not a command to do so before accepted Kvin recovery and a separate cutover authorization.
