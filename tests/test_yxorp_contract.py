@@ -16,6 +16,9 @@ class YxorpContractTests(unittest.TestCase):
         cls.defaults = yaml.safe_load(
             (ROOT / "ansible/group_vars/yxorp.yml").read_text(encoding="utf8")
         )
+        cls.peanut = yaml.safe_load(
+            (ROOT / "ansible/group_vars/yxorp_test.yml").read_text(encoding="utf8")
+        )
         cls.tasks = yaml.safe_load(
             (ROOT / "ansible/roles/yxorp/tasks/main.yml").read_text(encoding="utf8")
         )
@@ -62,29 +65,44 @@ class YxorpContractTests(unittest.TestCase):
         self.assertFalse(by_name["yarn.inner.sanctum"]["enabled"])
         self.assertNotIn("yxorp.nexus.sanctum", by_name)
 
-    def test_no_untested_production_listener_or_mutable_image(self):
-        self.assertEqual(self.defaults["yxorp_bind_address"], "127.0.0.1")
-        self.assertEqual(self.defaults["yxorp_host_port"], 18080)
+    def test_separate_real_http_80_peanut_and_production_contract(self):
+        self.assertEqual(self.defaults["yxorp_bind_address"], "0.0.0.0")
+        self.assertEqual(self.defaults["yxorp_host_port"], 80)
+        self.assertEqual(self.defaults["yxorp_deployment_scope"], "kvin_production")
         self.assertIs(self.defaults["yxorp_production_cutover_approved"], False)
-        self.assertEqual(self.defaults["yxorp_image"], "docker.io/library/nginx@sha256:564a09935b00f058ca1b28c742169ba817499baa0479807bf7f373fe2804fbf7")
-        self.assertIs(self.defaults["yxorp_stage_approved"], False)
-        self.assertIs(self.defaults["yxorp_stage_remove_approved"], False)
+        self.assertRegex(self.defaults["yxorp_image"],
+                         r"^docker.io/library/nginx@sha256:[a-f0-9]{64}$")
+        self.assertEqual(self.peanut["yxorp_deployment_scope"], "peanut_trial")
+        self.assertEqual(self.peanut["yxorp_bind_address"], "0.0.0.0")
+        self.assertEqual(self.peanut["yxorp_host_port"], 80)
+        self.assertTrue(self.peanut["yxorp_peanut_test_approved"])
+        self.assertEqual(self.peanut["yxorp_image"],
+                         "docker.io/library/nginx:stable-alpine")
+        self.assertEqual(self.peanut["yxorp_service_name"],
+                         "sanctum-yxorp-peanut-test.service")
+        self.assertIn("peanut.arcane.sanctum",
+                      yaml.safe_load((ROOT / "ansible/inventory/hosts.yml").read_text())
+                      ["all"]["children"]["yxorp_test"]["hosts"])
         task_text = (ROOT / "ansible/roles/yxorp/tasks/main.yml").read_text()
-        self.assertIn("yxorp_stage_approved | bool", task_text)
-        self.assertIn("yxorp_stage_approved | bool",
-                      self.tasks[0]["ansible.builtin.assert"]["that"])
-        mutation_names = [t["name"] for t in self.tasks]
-        self.assertEqual(mutation_names[0],
-            "Require exact target, pinned image, and bounded staged or authorized bind")
-        self.assertLess(
-            mutation_names.index("Require exact target, pinned image, and bounded staged or authorized bind"),
-            mutation_names.index("Create YXORP system configuration directory"),
-        )
+        self.assertIn("yxorp_peanut_test_approved", task_text)
         self.assertIn("yxorp_production_cutover_approved | bool", task_text)
-        self.assertIn("-t", task_text)
-        self.assertLess(task_text.index("Require Nginx configuration validation"),
-                        task_text.index("Publish validated Nginx configuration"))
+        self.assertLess(task_text.index("Require a specifically selected rootful HTTP 80"),
+                        task_text.index("Create YXORP system configuration directory"))
+        self.assertIn("- bridge", task_text)
         self.assertNotIn("firewall-cmd", task_text)
+
+    def test_peanut_preflight_requires_real_lan_http(self):
+        source = (ROOT / "ansible/yxorp-peanut-preflight.yml").read_text()
+        preflight = yaml.safe_load(source)[0]
+        self.assertEqual(preflight["hosts"], "yxorp_test")
+        self.assertTrue(preflight["become"])
+        names = [t["name"] for t in preflight["tasks"]]
+        self.assertIn("Refuse taking port 80 from another host service", names)
+        self.assertIn("Require public-LAN HTTP admission before installing a test listener",
+                      names)
+        self.assertNotIn("state: present", source)
+        self.assertNotIn("state: started", source)
+        self.assertNotIn("firewall-cmd --add", source)
 
     def test_quadlet_rootful_bridge_and_no_https(self):
         quadlet = (ROOT / "ansible/roles/yxorp/templates/yxorp.container.j2").read_text()

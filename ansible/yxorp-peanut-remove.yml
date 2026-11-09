@@ -1,9 +1,9 @@
 ---
-# The reverse operation for an explicitly approved Kvin loopback stage.
+# The reverse operation for an explicitly selected Peanut HTTP 80 trial.
 # This never removes the cached Nginx image, application data, Kvar's proxy,
 # DNS entries, firewalld rules or other service's units.
-- name: Remove only the bounded YXORP Kvin loopback staging instance
-  hosts: yxorp
+- name: Remove only the bounded YXORP Peanut HTTP 80 trial instance
+  hosts: yxorp_test
   gather_facts: true
   become: true
   vars_files:
@@ -13,14 +13,14 @@
       ansible.builtin.assert:
         that:
           - ansible_facts['fqdn'] == inventory_hostname
-          - inventory_hostname == 'kvin.outer.sanctum'
-          - yxorp_bind_address == '127.0.0.1'
-          - yxorp_host_port | int == 18080
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
           - not (yxorp_production_cutover_approved | bool)
-          - yxorp_stage_remove_approved | default(false) | bool
+          - yxorp_peanut_remove_approved | default(false) | bool
         fail_msg: >-
           Refusing removal: approval must be explicit, target must be
-          Kvin staging on 127.0.0.1:18080, and production must not be
+          Peanut rootful HTTP:80 trial, and production must not be
           authorized. Do not remove a production listener with this play.
 
     - name: Check whether a stage Quadlet is present
@@ -43,12 +43,12 @@
       when: yxorp_remove_quadlet.stat.exists
       register: yxorp_remove_quadlet_contents
 
-    - name: Refuse a changed or production-scope Quadlet
+    - name: Refuse a changed or unrelated Peanut Quadlet
       ansible.builtin.assert:
         that:
           - not yxorp_remove_quadlet.stat.islnk | default(false)
           - "'ContainerName=sanctum-yxorp' in quadlet_lines"
-          - "'PublishPort=127.0.0.1:18080:80/tcp' in quadlet_lines"
+          - "'PublishPort=127.0.0.1:80:80/tcp' in quadlet_lines"
           - quadlet_lines | select('match', '^PublishPort=') | list | length == 1
         fail_msg: >-
           Installed YXORP definition does not match the explicitly
@@ -126,7 +126,7 @@
     - name: Report stage removal scope and unresolved external ownership
       ansible.builtin.debug:
         msg:
-          stage_loopback_service_removed: true
+          peanut_http80_test_removed: true
           images_removed: false
           app_data_removed: false
           kvar_npm_changed: false

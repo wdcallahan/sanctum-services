@@ -1,0 +1,49 @@
+---
+# Observe real Peanut HTTP:80 from the separate Kvin controller/client.
+# This is a read-only network request; no DNS aliases or firewall mutations.
+- name: Verify Peanut YXORP as a network client on Kvin
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Request the Peanut proxy's built-in readiness response
+      ansible.builtin.uri:
+        url: http://peanut.arcane.sanctum/__yxorp_health
+        use_proxy: false
+        return_content: true
+        status_code: [200]
+        timeout: 7
+      register: peanut_http_health
+      changed_when: false
+
+    - name: Confirm the proxy readiness response actually came from Nginx
+      ansible.builtin.assert:
+        that:
+          - "'yxorp-ready' in peanut_http_health.content"
+
+    - name: Request declared Yarn route through Peanut using the actual Host
+      ansible.builtin.uri:
+        url: http://peanut.arcane.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200, 201, 202, 204, 301, 302, 303, 307, 308, 401, 403]
+        timeout: 12
+      register: peanut_http_yarn
+      changed_when: false
+
+    - name: Report observed network consumer behavior, not site acceptance
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          proxy_host: peanut.arcane.sanctum
+          proxy_http_port: 80
+          yarn_host_header: yarn.nexus.sanctum
+          observed_http_status: "{{ peanut_http_yarn.status }}"
+          read_only: true
+          limitation: >-
+            Confirms a bounded HTTP response from Yarn via Peanut from
+            Kvin. It does not validate browser UI, authentication, correct
+            application content, all network segments, or Prism WebSockets.
