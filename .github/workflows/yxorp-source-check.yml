@@ -17,6 +17,7 @@ on:
       - "tools/review-yxorp-publication.py"
       - "tools/observe-yxorp-npm-behavior.py"
       - "tools/test-yxorp-http.py"
+      - "tools/inspect-registry-candidates.py"
       - "ansible/yxorp-inspect-npm.yml"
       - "tests/test_yxorp_behavior_observer.py"
       - "tests/test_kuma_desired.py"
@@ -74,3 +75,6 @@ jobs:
       - name: Exercise loopback-only HTTP proxy behavior (synthetic backends)
         run: |
           python3 tools/test-yxorp-http.py ansible/roles/yxorp/templates/nginx.conf.j2
+      - name: Inspect upstream ARM64 image candidates (no pulls)
+        run: |
+          python3 tools/inspect-registry-candidates.py
