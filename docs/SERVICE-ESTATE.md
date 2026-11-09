@@ -86,3 +86,15 @@ records these eight observed upstreams and the limitations. Generated default
 routes alone **do not establish** custom headers, redirects, paths, WebSocket
 behavior or client acceptance. This is a source-only report reconciliation:
 no service listener, DNS or proxy was changed.
+
+## November 9 NPM generated-host behavior inspection
+
+Nova ran the Services read-only Kvar observer. Eight NPM proxy-host files
+were read without changes. The generated config explicitly declares
+WebSocket Upgrade/Connection headers for Square (Nextcloud) and Joule (Prism),
+Prism alone carries TLS certificate/listen directives, and all files have
+one location with no extra locations. No generated redirect/stream hosts or
+nonempty global custom snippets were observed. The recurring generated
+include references and unclassified lines remain unexpanded; no complete
+proxy behavior equivalence or client acceptance is claimed. Details:
+[2026-11-09 YXORP behavior observation](review/2026-11-09-yxorp-behavior-observation.md).

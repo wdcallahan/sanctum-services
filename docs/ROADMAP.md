@@ -217,3 +217,18 @@ When the implementation changes, update the relevant explanation and operational
   checkout, run `~/.local/bin/ansible-navigator run ansible/yxorp-inspect-npm.yml`;
   inspect the actual Kvar report and decide whether any route behavior needs
   further migration. This does not authorize the eventual cutover.
+
+### November 9 — NPM behavior inspection received (read-only)
+
+- [x] Kvar rootful NPM generated-host metadata examined using the accepted
+  value-redacting observer: **eight** host files, one location per host,
+  no non-default locations, no nonempty global custom files, no extra
+  redirect/stream host files. Explicit WebSocket headers on Nextcloud and
+  Prism; historical Prism config contains TLS certificate directives.
+  All files had two unclassified lines and one custom-include reference:
+  **no automatic assertion of per-host customization or full parity**.
+  [Behavior evidence record](review/2026-11-09-yxorp-behavior-observation.md).
+- [ ] Validate actual reverse proxy forwarding/Upgrade/host isolation with
+  synthetic Nginx endpoints in isolated CI (no real Sanctum services).
+- [ ] Qualify the final generated shared-include semantics, real app client
+  access and later Kvin native rootful staging, subject to selected image.
