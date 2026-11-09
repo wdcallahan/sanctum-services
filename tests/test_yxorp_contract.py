@@ -39,6 +39,29 @@ class YxorpContractTests(unittest.TestCase):
                          ("yarn.inner.sanctum", 80))
         self.assertNotEqual(yarn["hostname"], yarn["upstream_host"])
 
+    def test_imported_npm_default_routes_remain_disabled(self):
+        by_name = {r["hostname"]: r for r in self.routes}
+        self.assertEqual(len(by_name), 8)
+        self.assertEqual(set(by_name), {
+            "yarn.nexus.sanctum", "square.nexus.sanctum",
+            "joule.nexus.sanctum", "search.nexus.sanctum",
+            "dir.nexus.sanctum", "kuma.nexus.sanctum",
+            "pihole.nexus.sanctum", "yarn.inner.sanctum",
+        })
+        self.assertEqual(
+            (by_name["pihole.nexus.sanctum"]["upstream_host"],
+             by_name["pihole.nexus.sanctum"]["upstream_port"]),
+            ("kvar.outer.sanctum", 82),
+        )
+        self.assertEqual(
+            (by_name["yarn.inner.sanctum"]["upstream_host"],
+             by_name["yarn.inner.sanctum"]["upstream_port"]),
+            ("192.168.1.110", 80),
+        )
+        self.assertFalse(by_name["pihole.nexus.sanctum"]["enabled"])
+        self.assertFalse(by_name["yarn.inner.sanctum"]["enabled"])
+        self.assertNotIn("yxorp.nexus.sanctum", by_name)
+
     def test_no_untested_production_listener_or_mutable_image(self):
         self.assertEqual(self.defaults["yxorp_bind_address"], "127.0.0.1")
         self.assertEqual(self.defaults["yxorp_host_port"], 18080)

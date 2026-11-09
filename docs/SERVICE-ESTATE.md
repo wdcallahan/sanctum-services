@@ -68,3 +68,21 @@ The [initial YXORP staging source](../ansible/yxorp.yml) and
 [route data](../data/yxorp-routes.yml) have been committed, not deployed:
 only Yarn is currently enabled in the draft. Kvar NPM remains the incumbent.
 See the [YXORP reconstruction runbook](runbooks/yxorp-reconstruction.md).
+
+## November 9 YXORP default-route observation
+
+Nova ran the repository's read-only comparison using Maintenance's retained
+November 8 report from Kvin. **Eight** NPM generated default proxy hosts were
+observed; **six existing declared** YXORP hosts matched exactly, with no
+upstream disagreements. The previously unqualified `pihole.nexus.sanctum`
+UI default upstream is `http://kvar.outer.sanctum:82`; the already-running
+`yarn.inner.sanctum` NPM route points to `http://192.168.1.110:80`.
+The old NPM UI `yxorp.nexus.sanctum` points at Kvar port 81 and is
+**intentionally not rebuilt**. The new `yarn.nexus.sanctum` name remains a
+separately requested route not already served by NPM.
+
+The [full bounded route review](review/2026-11-09-yxorp-default-route-comparison.md)
+records these eight observed upstreams and the limitations. Generated default
+routes alone **do not establish** custom headers, redirects, paths, WebSocket
+behavior or client acceptance. This is a source-only report reconciliation:
+no service listener, DNS or proxy was changed.

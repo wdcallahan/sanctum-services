@@ -17,8 +17,9 @@ Maintenance's [Kvar evidence](https://github.com/wdcallahan/sanctum-maintenance/
 and Services' [Town Square runbook](town-square-yxorp-proxy.md) establish
 documented upstreams for Yarn, Square, Prism, Search, LinkStack and Kuma.
 The routes file intentionally includes **disabled proposed entries**; it is
-*not* a claim of current NPM parity. Pi-hole's UI upstream, custom NPM
-locations/headers and the old admin UI are not established. The legacy
+*not* a claim of current NPM parity. The Pi-hole UI default upstream has since been observed as
+`http://kvar.outer.sanctum:82`; custom NPM locations/headers remain
+unqualified, and the old NPM admin UI is intentionally excluded. The legacy
 `yarn.inner.sanctum` route and the requested `yarn.nexus.sanctum` route
 are different, even though their intended upstream may coincide.
 
@@ -135,3 +136,13 @@ It refuses the wrong rootful host and never writes files or changes routers.
 Importantly, it **does not** claim to inspect custom NPM locations, headers,
 redirection, access lists or actual client behavior. These still require
 additional review before declaring route parity.
+
+## November 9 default-upstream reconciliation
+
+The Kvin operator compared Maintenance's **actual retained** read-only
+report against the declared route manifest. All six original proposed
+upstreams matched NPM, and the report gave exact Pi-hole and legacy Yarn
+upstreams. These have been added as **disabled** entries. The obsolete NPM
+administration UI remains excluded; `yarn.nexus.sanctum` remains a new
+requested route. The [bounded comparison review](../review/2026-11-09-yxorp-default-route-comparison.md)
+records the complete eight-name result and the remaining behavioral gaps.
