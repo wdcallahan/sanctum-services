@@ -83,7 +83,7 @@ The code-supported read-only stage probe is
 `ansible/yxorp-stage-probe.yml`. Only run it after the loopback instance
 exists. It makes HTTP requests from Kvin to its own
 `127.0.0.1:18080`, checks the real YXORP health response and requires a
-non-error HTTP response for Host: `yarn.nexus.sanctum`. A backend 404/502
+bounded non-404/non-5xx HTTP response for Host: `yarn.nexus.sanctum`. A backend 404/502
 or DNS/connection failure does **not** count as a successful proxy route.
 This is still not proof that a browser on the client's network can use
 Yarn or that Nextcloud/Prism sessions and WebSockets work.
@@ -246,9 +246,10 @@ tokens, Authorization header contents and advanced custom includes are
 effective NPM `nginx -T` parity. Any unexpected structure remains
 `unknown`; do not auto-enable a route that requires manual investigation.
 
-The [source and syntax CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42677320762) passed. The check has **not been executed on Kvar**.
-If it fails due to the legacy SSH/privilege setup, do not quietly change
-router or server auth to make this inspector work.
+The observer **was subsequently executed successfully on Kvar** and the
+redacted observations were incorporated into
+[the accepted behavior record](../review/2026-11-09-yxorp-behavior-observation.md).
+Do not repeat that completed observation merely to demonstrate idempotence.
 
 ## Source-only HTTP functional acceptance and next native gate
 
@@ -259,10 +260,8 @@ controlled route modification and explicit removal, and tears down its
 temporary Nginx master. This ran in [passing GitHub CI](https://github.com/wdcallahan/sanctum-services/actions/runs/42691039448),
 not on Kvin or Kvar.
 
-Registry-only ARM64 image digests have also been resolved; see the
-[on-demand native qualification runbook](yxorp-image-qualification.md).
-**Next actual operator gate** is qualifying the official Nginx image inside
-a disposable network-disabled container on Kvin (optional pinned image
-cache pull); no persistent stage, app forwarding, firewall or DNS change
-is implied. The retained Kuma image/monitor and production reverse-proxy
-cutover remain separate owner-approved work.
+The official Nginx ARM64 image **was natively qualified on Kvin**, as
+recorded in the [image qualification runbook](yxorp-image-qualification.md).
+The next operator gate is whether to install the **loopback-only stage**.
+The retained Kuma image/monitor, moving-tag update policy, client
+acceptance and production cutover remain separate qualified work.

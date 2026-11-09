@@ -1,5 +1,32 @@
 # Sanctum Services — Session Continuation
 
+## November 9 current checkpoint — next actual operator decision
+
+- Kvar Nginx Proxy Manager default-upstream and redacted behavior reports
+  were run and accepted; **do not ask Nova to repeat them**.
+- The official Nginx ARM64 digest is native-qualified on Kvin, and synthetic
+  Nginx forwarding/WebSocket tests passed in CI. The exact known-good digest
+  is still the selected image for **the first loopback-only stage**, not a
+  sanctioned permanent image freeze.
+- Source-only work fixed the Quadlet generated-systemd startup error (do
+  **not** enable a generated transient service), prepared a read-only
+  Kvin `ansible/yxorp-stage-probe.yml` for real Yarn forwarding and an
+  explicit, guarded `ansible/yxorp-remove-stage.yml` removal path for
+  the local stage. Kvar, DNS, firewall and production traffic untouched.
+- **Pending Nova:** choose whether to authorize a *new persistent test*
+  YXORP container on **Kvin 127.0.0.1:18080**. Approval is not production
+  cutover or automatic updates. Source guard
+  `yxorp_stage_approved: false` must remain until this decision.
+- Image lifecycle requires the established two-sided cost calculation:
+  compare a moving Nginx stable tag with Podman registry auto-update,
+  readiness/actual client verification, rollback and observability against
+  manually promoting pinned digests. The image channel and update cadence
+  are not selected yet. Avoid pinning forever merely for reproducibility;
+  avoid auto-updating merely because Podman makes it easy.
+- The **full removal** of any production service eventually means
+  dependency reconciliation (Maintenance DNS, proxy routes, client
+  consumers, monitors, data retention) beyond removing a Quadlet.
+
 ## Latest operator decisions — November 8, 2026
 
 **Binding prior security decision: no blanket HTTPS requirement.** By October 20, Nova had explicitly accepted ordinary HTTP for private `.sanctum` applications, potentially permanently. Project Joule independently implemented Nova's selected HTTP Prism browser origin on October 16; see [its accepted HTTP transition](https://github.com/wdcallahan/joule/blob/main/docs/runbooks/prism-http-transition-2026-10-16.md). The assistant has repeatedly reopened HTTPS/CA as a new idea despite this decision. It is **not** an active project or prerequisite to YXORP, Kvin or VPN. Threats of plaintext secrets/sessions remain understood; a private CA's worst-case client enrollment may be impossible for Android apps with system-only trust or hard pinning. New PKI work requires a concrete functional/security need outweighing full trust-distribution cost, not vague conventional best practice. `.sanctum` is an intentionally settled private namespace; Nova deliberately abandoned a hybrid public/private scheme despite owning many domains. [Issue #3](https://github.com/wdcallahan/sanctum-services/issues/3) is closed/not planned to prevent re-litigation by default.

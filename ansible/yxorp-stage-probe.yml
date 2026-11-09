@@ -34,12 +34,12 @@
       register: stage_yarn
       changed_when: false
 
-    - name: Report scoped HTTP acceptance only
+    - name: Report scoped HTTP smoke only
       ansible.builtin.debug:
         msg:
           isolated_listener_healthy: true
           yarn_status: "{{ stage_yarn.status }}"
-          yarn_response_observed: true
+          yarn_http_response_observed: true
           limitation: >-
             This proves an HTTP response for the Yarn host from Kvin only.
             It does not prove browser UI, authentication, correct content,
