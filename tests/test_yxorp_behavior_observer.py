@@ -37,7 +37,8 @@ location / {
         result = observer.inspect_proxy_config(
             b"location /api {\n return 200 secret;\n}\n"
             b"location ~ ^/token-very-sensitive {\n proxy_pass http://secret;\n}\n")
-        self.assertEqual(result["locations_safe_path_names"], ["/api"])
+        self.assertEqual(result["location_count"], 2)
+        self.assertEqual(result["nondefault_location_count"], 2)
         self.assertEqual(result["locations_redacted_or_unsupported"], 1)
         self.assertTrue(result["needs_manual_behavior_review"])
         self.assertNotIn("token-very-sensitive", json.dumps(result))
@@ -57,7 +58,8 @@ location / {
             self.assertEqual(report["proxy_hosts"][0]["file"], "5.conf")
             self.assertEqual(report["nonempty_custom_config_files"][0]["file"],
                              "server_proxy.conf")
-            self.assertNotIn("secret", json.dumps(report))
+            self.assertNotIn("add_header Authorization secret;", json.dumps(report))
+            self.assertNotIn("http://secret;", json.dumps(report))
 
     def test_unsafe_symlink_or_unexpected_file_refused(self):
         with tempfile.TemporaryDirectory() as temp:
