@@ -4,15 +4,16 @@
 
 Sanctum Services is the application-deployment project for the Sanctum home lab. Its intended, still-being-qualified workflow uses **Ansible Navigator, containerized Ansible execution environments, and rootless Podman Quadlets** to make services reproducible and operable without relying on a particular assistant or undocumented shell history.
 
-The first service is **Nextcloud**. Home Assistant is a possible later addition. We build these systems for two outcomes: useful services **and** real hands-on engineering experience.
+The first application is **Nextcloud**. The estate also includes the planned reconstruction of YXORP, LinkStack, Uptime Kuma and Pi-hole, and the future Sanctum VPN, Luanti and Home Assistant work. We build these systems for two outcomes: useful services **and** real hands-on engineering experience.
 
-> **Current status — 2026-10-20:** The Nextcloud rootless container on Kvin answered HTTP 200 locally (`installed=false`). It is **not yet accepted**: the browser installer/login, direct peer path, recoverable backups and operational lifecycle remain unfinished. Maintenance's published-service firewall correction for TCP 8085 is previewed but **not authorized/applied**. Services no longer mutates Kvin's firewall; its early, read-only dual-state prerequisite waits for Maintenance. [Source and deployment order](ansible/README.md) · [Owner runbook](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/kvin-service-firewall.md).
+> **Current status — 2026-11-08:** Nextcloud's Calendar 6.6.2 is installed with accepted bidirectional GNOME Calendar access. Maintenance's Kvin TCP 8085 firewall correction was authorized, applied and independently verified October 20; any older pre-approval statements are historical. Nextcloud's complete backup/restore and lifecycle and protected proxy access remain to be qualified. [The authoritative service estate and settled keep/retire decisions](docs/SERVICE-ESTATE.md) cover both Services-owned containers and other project owners. [Services #2](https://github.com/wdcallahan/sanctum-services/issues/2) tracks reconstructible YXORP and the full container audit.
 
 ## Start here
 
 | If you want to… | Read… |
 | --- | --- |
 | Understand our destination and current milestone | [Project roadmap](docs/ROADMAP.md) |
+| See all intended, retired, externally owned and planned services | [Service estate / decision register](docs/SERVICE-ESTATE.md) |
 | Understand hosts, data paths, EEs, and component ownership | [Architecture](docs/architecture.md) |
 | Understand application automation and host-firewall prerequisites | [Ansible deployment and owner order](ansible/README.md) |
 | Review what changed and what actually happened | [Engineering log](docs/history/engineering-log.md) |
@@ -43,7 +44,7 @@ Those facts and decisions may evolve. The [roadmap](docs/ROADMAP.md) identifies 
 
 ## Project boundaries
 
-This repo owns applications and their supported lifecycle. The Sanctum registry owns canonical network facts; Sanctum Maintenance owns host/OS maintenance; existing infrastructure projects own PostgreSQL, YXORP and shared controller facilities. We consume their supported interfaces instead of silently replacing them.
+This repo owns applications and their supported lifecycle. The Sanctum registry owns canonical network facts; Sanctum Maintenance owns host/OS maintenance; Maintenance and the other infrastructure projects own PostgreSQL and shared controller facilities; Services now tracks reproducible YXORP installation and desired routes under [issue #2](https://github.com/wdcallahan/sanctum-services/issues/2), with any incumbent proxy operations coordinated before mutation. We consume their supported interfaces instead of silently replacing them.
 
 The source is developed on linear `main`, with no default branch/PR workflow. The original project material is licensed under the **GNU General Public License, version 3 or later**; see [LICENSE](LICENSE).
 
