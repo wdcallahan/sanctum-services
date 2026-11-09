@@ -1,0 +1,39 @@
+name: YXORP and Kuma desired-state source checks
+on:
+  push:
+    paths:
+      - "ansible/roles/yxorp/**"
+      - "ansible/yxorp*.yml"
+      - "ansible/group_vars/yxorp.yml"
+      - "ansible/inventory/hosts.yml"
+      - "data/yxorp-routes.yml"
+      - "data/kuma-monitors.yml"
+      - "tests/test_yxorp_contract.py"
+      - "tests/test_kuma_desired.py"
+      - ".github/workflows/yxorp-source-check.yml"
+  workflow_dispatch:
+jobs:
+  source-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install validation dependencies
+        run: python3 -m pip install --user PyYAML Jinja2 'ansible-core>=2.17,<2.23'
+      - name: Check desired-state contract
+        run: |
+          python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
+          python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
+      - name: Check Ansible playbook syntax
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
+          ansible-playbook -i 'localhost,' ansible/yxorp-preview.yml --syntax-check
+      - name: Render on the CI runner without connecting to Sanctum
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          ansible-playbook -i 'localhost,' ansible/yxorp-preview.yml
+          grep -q 'server_name yarn.nexus.sanctum;' /tmp/sanctum-yxorp-proposed.conf
+          if grep -q 'server_name joule.nexus.sanctum;' /tmp/sanctum-yxorp-proposed.conf; then
+            echo 'Unqualified Prism route must not be active in first preview' >&2
+            exit 1
+          fi

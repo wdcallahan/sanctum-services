@@ -54,3 +54,17 @@ For every intended service, record: real owner; current and intended host; playb
 **Immediate active work:** [Services #2](https://github.com/wdcallahan/sanctum-services/issues/2) owns plain-Nginx YXORP reproducible deployment, route-list reconciliation (including `yarn.nexus.sanctum`), and the comprehensive audit. Maintenance's [Kvar inventory](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/handoffs/2026-11-08-kvar-retirement-inventory.md) is evidence of existing containers and mounts; its older unresolved Pi-hole/OpenWebUI/Endlessh wording is superseded by the operator decisions recorded here. Maintenance owns edits to that document; Services sends the correction through the board.
 
 No changes to live hosts, routers, firewall, DNS, client VPN, containers, credentials, or persistent data are authorized by this record. Kvar offline/reformat is an agreed **end state**, not a command to do so before accepted Kvin recovery and a separate cutover authorization.
+
+## Newly received service handoff — Wicket Ollama monitoring
+
+Project Joule requested a retained Kuma HTTP monitor named **Wicket Ollama**,
+URL `http://wicket.arcane.sanctum:11435/healthz`; the accepted monitor must
+show **Up** in the chosen managed Kuma instance. The exact desired record is
+in [`data/kuma-monitors.yml`](../data/kuma-monitors.yml), with installation
+and idempotent reconciliation held until Kvin Kuma is accepted; see
+[Services #4](https://github.com/wdcallahan/sanctum-services/issues/4).
+
+The [initial YXORP staging source](../ansible/yxorp.yml) and
+[route data](../data/yxorp-routes.yml) have been committed, not deployed:
+only Yarn is currently enabled in the draft. Kvar NPM remains the incumbent.
+See the [YXORP reconstruction runbook](runbooks/yxorp-reconstruction.md).

@@ -68,3 +68,25 @@ third-party app has been deployed through it yet. The normal site playbook
 reconciles approved apps only after the web installer completes. Unlisted apps
 are preserved, not silently uninstalled. No current test uploads are treated
 as irreplaceable data; eventual data recovery is a separate qualification.
+
+## YXORP staging and monitoring requests (source-only, November 8)
+
+- [YXORP replacement runbook](docs/runbooks/yxorp-reconstruction.md) and
+  [Ansible role](ansible/roles/yxorp/tasks/main.yml): rootful plain Nginx
+  with a loopback-only staging default (`127.0.0.1:18080`), route
+  declarations in [`data/yxorp-routes.yml`](data/yxorp-routes.yml),
+  candidate `nginx -t` validation and Quadlet reconciliation. **Not
+  deployed or yet source-qualified on Kvin.** The image digest remains
+  intentionally unset, and existing NPM route parity remains to be verified.
+  Kvar, DNS and the live host firewall have not been changed.
+- [Declared Kuma monitors](data/kuma-monitors.yml) and
+  [Kuma monitoring runbook](docs/runbooks/kuma-monitoring.md) preserve
+  Project Joule's exact **Wicket Ollama**
+  `http://wicket.arcane.sanctum:11435/healthz` monitor request,
+  [issue #4](https://github.com/wdcallahan/sanctum-services/issues/4).
+  Only the retained and properly managed Kuma instance may receive it;
+  the actual **Up** state remains to be verified.
+
+See [YXORP and Kuma source checks](.github/workflows/yxorp-source-check.yml)
+for syntax, data-contract and controller-only rendering tests. These checks
+are not substitutes for native Podman, live endpoint or recovery acceptance.

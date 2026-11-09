@@ -184,3 +184,19 @@ The normal managed-host connection is **smart/SSH**, including when the controll
 - **[Lead handoff](../PROJECT_LEAD_INTRODUCTION.md):** concise continuity for another assistant; not a prerequisite for human operators.
 
 When the implementation changes, update the relevant explanation and operational procedure **with the same change**. Do not promise to document it after deployment. Record substantial outcomes separately in the engineering log.
+
+### Source checkpoint — November 8 (unqualified, no live changes)
+
+- [x] Record Project Joule's required Wicket Ollama Kuma probe as
+  [desired monitor source](../data/kuma-monitors.yml) with
+  [retained-instance acceptance issue #4](https://github.com/wdcallahan/sanctum-services/issues/4).
+  **Monitor installation and Up acceptance remain unchecked.**
+- [x] Add initial plain Nginx [route manifest](../data/yxorp-routes.yml),
+  [rootful Quadlet/Ansible role](../ansible/yxorp.yml),
+  [local preview](../ansible/yxorp-preview.yml), and
+  [rebuild runbook](runbooks/yxorp-reconstruction.md). Draft routes are
+  **not** a verified full extraction from Kvar NPM.
+- [ ] Qualify source checks and an immutable ARM64 Nginx image digest.
+- [ ] Qualify a native loopback-only YXORP stage on Kvin, actual routes and
+  WebSocket client behavior; only then consider separately authorized DNS
+  and listener cutover. Existing Kvar NPM is untouched.
