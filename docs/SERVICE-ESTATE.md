@@ -73,7 +73,7 @@ See the [YXORP reconstruction runbook](runbooks/yxorp-reconstruction.md).
 
 Nova ran the repository's read-only comparison using Maintenance's retained
 November 8 report from Kvin. **Eight** NPM generated default proxy hosts were
-observed; **six existing declared** YXORP hosts matched exactly, with no
+observed; **five existing declared** YXORP hosts matched exactly, with no
 upstream disagreements. The previously unqualified `pihole.nexus.sanctum`
 UI default upstream is `http://kvar.outer.sanctum:82`; the already-running
 `yarn.inner.sanctum` NPM route points to `http://192.168.1.110:80`.

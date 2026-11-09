@@ -5,7 +5,7 @@ generated proxy-host default upstreams with proposed YXORP routes on Kvin.
 Operator executed `tools/review-yxorp-publication.py` on Kvin using
 `sanctum-maintenance/artifacts/maintenance-discovery.njEtjLMN/reports/cutover-service-publications.json`.
 The report contains eight projected hosts, none marked partial or unsupported,
-and six of the six initial YXORP proposals matched their observed default
+and five of the six initial YXORP proposals matched their observed default
 upstreams exactly. This establishes **default-upstream agreement only**,
 not header, WebSocket, custom-location, redirect or client equivalence.
 

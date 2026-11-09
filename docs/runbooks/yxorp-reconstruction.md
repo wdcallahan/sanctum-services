@@ -140,7 +140,7 @@ additional review before declaring route parity.
 ## November 9 default-upstream reconciliation
 
 The Kvin operator compared Maintenance's **actual retained** read-only
-report against the declared route manifest. All six original proposed
+report against the declared route manifest. All five previously observed proposed
 upstreams matched NPM, and the report gave exact Pi-hole and legacy Yarn
 upstreams. These have been added as **disabled** entries. The obsolete NPM
 administration UI remains excluded; `yarn.nexus.sanctum` remains a new
