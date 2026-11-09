@@ -1,0 +1,13 @@
+---
+# User-selected realistic test host: Peanut, rootful Podman, full LAN HTTP:80.
+# Kvar keeps production; Kvin remains its eventual replacement.
+- import_playbook: yxorp-peanut-preflight.yml
+
+- name: Install the Peanut HTTP 80 YXORP test from the ordinary Services role
+  hosts: yxorp_test
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/yxorp-routes.yml
+  roles:
+    - yxorp

@@ -1,15 +1,10 @@
 ---
-# Native Kvin qualified this exact linux/arm64 OCI image on 2026-11-09.
-# Unlike the moving tag stable-alpine, the digest identifies immutable content.
-# Qualification: image pull, Podman linux/arm64 inspect, offline nginx -t.
+# Kvin is the eventual full-LAN production listener. No loopback/special port.
+# The ARM64 image below was tested natively on Kvin on 2026-11-09.
+# It is a known-good initial/recovery reference, not a permanent update policy.
+yxorp_deployment_scope: kvin_production
 yxorp_image: "docker.io/library/nginx@sha256:564a09935b00f058ca1b28c742169ba817499baa0479807bf7f373fe2804fbf7"
-# Deployment remains held: native image qualification is NOT authorization to
-# install a system Quadlet, start a service or change network publication.
-yxorp_stage_approved: false
-# Removal of a Kvin loopback stage also needs its own approval.
-yxorp_stage_remove_approved: false
-# Isolated staged listener. This never replaces Kvar production DNS or proxy.
-yxorp_bind_address: "127.0.0.1"
-yxorp_host_port: 18080
-# Explicit, separately approved production transition is required for 0.0.0.0:80.
+yxorp_bind_address: "0.0.0.0"
+yxorp_host_port: 80
+# Nobody authorized replacing Kvar's currently operating proxy or DNS route.
 yxorp_production_cutover_approved: false

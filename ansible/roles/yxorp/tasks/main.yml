@@ -1,24 +1,19 @@
 ---
 # Input validation deliberately precedes all host file and service mutations.
-- name: Require exact target, pinned image, and bounded staged or authorized bind
+- name: Require a specifically selected rootful HTTP 80 deployment target
   ansible.builtin.assert:
     that:
       - ansible_facts['fqdn'] == inventory_hostname
-      - inventory_hostname == 'kvin.outer.sanctum'
-      - yxorp_stage_approved | bool
-      - yxorp_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')
-      - yxorp_host_port | int >= 1
-      - yxorp_host_port | int <= 65535
-      - yxorp_bind_address in ['127.0.0.1', '0.0.0.0']
-      - (yxorp_bind_address == '127.0.0.1' and yxorp_host_port | int == 18080) or (yxorp_bind_address == '0.0.0.0' and yxorp_host_port | int == 80 and yxorp_production_cutover_approved | bool)
+      - yxorp_bind_address == '0.0.0.0'
+      - yxorp_host_port | int == 80
+      - (yxorp_deployment_scope == 'peanut_trial' and inventory_hostname == 'peanut.arcane.sanctum' and yxorp_peanut_test_approved | default(false) | bool and yxorp_image == 'docker.io/library/nginx:stable-alpine') or (yxorp_deployment_scope == 'kvin_production' and inventory_hostname == 'kvin.outer.sanctum' and yxorp_production_cutover_approved | bool and yxorp_image is match('^docker.io/library/nginx@sha256:[a-f0-9]{64}$'))
       - yxorp_routes | length > 0
       - (yxorp_routes | map(attribute='hostname') | list | unique | length) == (yxorp_routes | length)
     fail_msg: >-
-      This rootful YXORP deployment remains held until Nova explicitly
-      approves a staging instance (yxorp_stage_approved=true), even on
-      127.0.0.1:18080. The exact Kvin and pinned image must match.
-      Production 0.0.0.0:80 additionally requires a separate cutover
-      authorization. Services never changes DNS or host firewalls.
+      YXORP may be installed only on Nova's explicitly selected
+      Peanut HTTP:80 trial or separately approved Kvin HTTP:80 production.
+      Neither uses localhost or an unusual port; firewall and DNS are
+      independently owned.
 
 - name: Reject unsafe Nginx route tokens and invalid data
   ansible.builtin.assert:
@@ -33,8 +28,9 @@
     fail_msg: "Unsafe or incomplete route: {{ item.hostname | default('unknown') }}"
   loop: "{{ yxorp_routes }}"
 
-# Host firewalld and DNS publication belong to Maintenance. The default
-# 127.0.0.1:18080 staging listener requires no LAN firewall rule.
+# Host firewalld and DNS publication belong to Maintenance. Peanut's
+# existing HTTP 80 service/port admission is checked by the read-only
+# preflight, not created by this role.
 - name: Create YXORP system configuration directory
   ansible.builtin.file:
     path: "{{ yxorp_config_dir }}"
@@ -71,7 +67,7 @@
       - run
       - --rm
       - --network
-      - host
+      - bridge
       - --volume
       - "{{ yxorp_candidate_config }}:/etc/nginx/nginx.conf:ro,Z"
       - --entrypoint
@@ -128,7 +124,7 @@
 
 - name: Check the selected local-only management health endpoint
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ yxorp_host_port }}/__yxorp_health"
+    url: "http://127.0.0.1:80/__yxorp_health"
     return_content: true
     status_code: 200
     timeout: 5
@@ -141,7 +137,8 @@
 - name: Report stage scope and unresolved application acceptance
   ansible.builtin.debug:
     msg: >-
-      YXORP server accepted its generated config on {{ yxorp_bind_address }}:{{
-      yxorp_host_port }}. This proves the local health endpoint only. Real
-      proxy routes, application sessions/WebSockets, image restore, Kvar
-      handoff and DNS cutover remain separately unqualified.
+      YXORP {{ yxorp_deployment_scope }} accepted its generated config
+      on {{ yxorp_bind_address }}:80. The local endpoint proves only
+      Nginx health. A separate client probe must establish real forwarding;
+      application sessions, WebSockets, fallback, DNS, and cutover are
+      not established by this result.

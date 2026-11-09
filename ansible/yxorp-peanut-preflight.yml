@@ -1,0 +1,99 @@
+---
+# Read-only: no service, DNS or firewall changes. Peanut's active firewall is
+# Maintenance-owned. Do not install a new rootful port 80 service if policy
+# or an existing listener would prevent acceptance.
+- name: Verify Peanut is prepared for a normal LAN HTTP port 80 proxy
+  hosts: yxorp_test
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Require exactly the intended Peanut test identity and port
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - yxorp_deployment_scope == 'peanut_trial'
+          - yxorp_peanut_test_approved | bool
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Observe sockets listening on the standard HTTP port
+      ansible.builtin.command:
+        argv: [ss, -H, -ltn, "sport = :80"]
+      changed_when: false
+      register: peanut_http_sockets
+
+    - name: Observe whether the named trial unit is already active
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: peanut_existing_test
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse taking port 80 from another host service
+      ansible.builtin.assert:
+        that:
+          - (peanut_http_sockets.stdout_lines | length == 0) or (peanut_existing_test.rc == 0)
+        fail_msg: >-
+          Peanut's HTTP:80 already has a listener unrelated to a known
+          running test unit. Inspect ownership; never displace it.
+
+    - name: Observe the currently active firewall daemon
+      ansible.builtin.command:
+        argv: [firewall-cmd, --state]
+      register: peanut_firewall_active
+      changed_when: false
+      failed_when: false
+
+    - name: Require the existing Maintenance-managed firewall
+      ansible.builtin.assert:
+        that:
+          - peanut_firewall_active.rc == 0
+          - peanut_firewall_active.stdout == 'running'
+        fail_msg: >-
+          Peanut's established firewall is not in the expected active state.
+          Coordinate with Maintenance; do not change or disable filtering.
+
+    - name: Read the zone of Peanut's managed LAN interface
+      ansible.builtin.command:
+        argv: [firewall-cmd, --get-zone-of-interface=eth0]
+      register: peanut_http_zone
+      changed_when: false
+
+    - name: Check whether the LAN zone accepts the HTTP service
+      ansible.builtin.command:
+        argv: [firewall-cmd, "--zone={{ peanut_http_zone.stdout }}", --query-service=http]
+      register: peanut_http_service_allowed
+      changed_when: false
+      failed_when: false
+
+    - name: Check whether the LAN zone accepts TCP port 80
+      ansible.builtin.command:
+        argv: [firewall-cmd, "--zone={{ peanut_http_zone.stdout }}", --query-port=80/tcp]
+      register: peanut_http_port_allowed
+      changed_when: false
+      failed_when: false
+
+    - name: Report the actual unmodified LAN test prerequisites
+      ansible.builtin.debug:
+        msg:
+          target: "{{ inventory_hostname }}"
+          intended_http_listener: 0.0.0.0:80
+          current_port_80_listeners: "{{ peanut_http_sockets.stdout_lines }}"
+          existing_trial_active: "{{ peanut_existing_test.rc == 0 }}"
+          firewall_running: "{{ peanut_firewall_active.stdout == 'running' }}"
+          lan_zone: "{{ peanut_http_zone.stdout }}"
+          http_service_allowed: "{{ peanut_http_service_allowed.rc == 0 }}"
+          tcp80_port_allowed: "{{ peanut_http_port_allowed.rc == 0 }}"
+          changed: false
+
+    - name: Require public-LAN HTTP admission before installing a test listener
+      ansible.builtin.assert:
+        that:
+          - (peanut_http_service_allowed.rc == 0) or (peanut_http_port_allowed.rc == 0)
+        fail_msg: >-
+          Peanut's active managed LAN firewall does not currently admit
+          HTTP/80 through either standard service or port configuration.
+          Request a reviewed port-80 policy addition from Maintenance and
+          retry; do not install an inaccessible trial or edit firewall here.

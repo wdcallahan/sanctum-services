@@ -3,7 +3,7 @@
 # The eight observed NPM names are accounted for in enabled/disabled route
 # entries or explicitly excluded as the old NPM administration UI.
 # This is NOT yet complete behavioral equivalence (headers/custom locations).
-# Only yarn is initially enabled for isolated Kvin validation.
+# Only Yarn is enabled for the initial rootful Peanut HTTP:80 trial.
 # Disabled routes require downstream restoration and behavioral qualification
 # before activation. Never enable everything merely to make NPM names match.
 yxorp_routes:

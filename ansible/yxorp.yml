@@ -1,7 +1,8 @@
 ---
-# Rootful YXORP on Kvin; stage first on 127.0.0.1:18080.
-# This play never changes the host firewall, DNS or Kvar's incumbent NPM.
-- name: Reconcile Sanctum YXORP on the selected service host
+# Eventual production YXORP on Kvin, rootful HTTP:80 on all interfaces.
+# Not authorized until the separate Kvar cutover gate is deliberately accepted.
+# This never changes host firewall, DNS, or Kvar NPM itself.
+- name: Reconcile production Sanctum YXORP on Kvin
   hosts: yxorp
   gather_facts: true
   become: true

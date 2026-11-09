@@ -1,0 +1,20 @@
+---
+# Nova explicitly selected a realistic rootful HTTP:80 test ON PEANUT,
+# not a Kvin-local loopback or unusual-port substitute (2026-11-09).
+yxorp_deployment_scope: peanut_trial
+yxorp_peanut_test_approved: true
+# A normal maintained multi-architecture Nginx release channel.
+# Trial pull/recovery/update behavior must be exercised before any permanent
+# Kvin update policy is selected. This is NOT a permanent image freeze.
+yxorp_image: docker.io/library/nginx:stable-alpine
+yxorp_bind_address: "0.0.0.0"
+yxorp_host_port: 80
+yxorp_config_dir: /etc/sanctum-services/yxorp-peanut-test
+yxorp_candidate_config: "{{ yxorp_config_dir }}/nginx.conf.candidate"
+yxorp_active_config: "{{ yxorp_config_dir }}/nginx.conf"
+yxorp_quadlet_dir: /etc/containers/systemd
+yxorp_quadlet_file: "{{ yxorp_quadlet_dir }}/sanctum-yxorp-peanut-test.container"
+yxorp_service_name: sanctum-yxorp-peanut-test.service
+yxorp_container_name: sanctum-yxorp-peanut-test
+yxorp_peanut_remove_approved: true
+yxorp_production_cutover_approved: false
