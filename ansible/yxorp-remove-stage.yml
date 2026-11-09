@@ -29,6 +29,14 @@
         follow: false
       register: yxorp_remove_quadlet
 
+    - name: Reject a symlinked or unreadable stage Quadlet before inspection
+      ansible.builtin.assert:
+        that:
+          - yxorp_remove_quadlet.stat.isreg | default(false)
+          - not yxorp_remove_quadlet.stat.islnk | default(false)
+        fail_msg: The stage Quadlet path is not a regular file; refuse.
+      when: yxorp_remove_quadlet.stat.exists
+
     - name: Inspect installed stage Quadlet without modifying it
       ansible.builtin.slurp:
         src: "{{ yxorp_quadlet_file }}"
@@ -66,6 +74,8 @@
       ansible.builtin.find:
         paths: "{{ yxorp_config_dir }}"
         recurse: true
+        hidden: true
+        follow: false
         file_type: any
       when: yxorp_remove_config_dir.stat.exists
       register: yxorp_remove_contents
