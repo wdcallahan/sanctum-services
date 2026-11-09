@@ -9,7 +9,7 @@
   # The Peanut group variables own its distinct test paths; loading the
   # role default file as vars_files would override them and target Kvin paths.
   tasks:
-    - name: Require a separately approved STAGE-only removal
+    - name: Require removal only of the selected Peanut HTTP:80 trial
       ansible.builtin.assert:
         that:
           - ansible_facts['fqdn'] == inventory_hostname
@@ -47,12 +47,12 @@
       ansible.builtin.assert:
         that:
           - not yxorp_remove_quadlet.stat.islnk | default(false)
-          - "'ContainerName=sanctum-yxorp' in quadlet_lines"
-          - "'PublishPort=127.0.0.1:80:80/tcp' in quadlet_lines"
+          - "'ContainerName=sanctum-yxorp-peanut-test' in quadlet_lines"
+          - "'PublishPort=0.0.0.0:80:80/tcp' in quadlet_lines"
           - quadlet_lines | select('match', '^PublishPort=') | list | length == 1
         fail_msg: >-
           Installed YXORP definition does not match the explicitly
-          approved staging-only port. Investigate; do not remove.
+          selected Peanut HTTP:80 test. Investigate; do not remove.
       vars:
         quadlet_lines: "{{ (yxorp_remove_quadlet_contents.content | b64decode).splitlines() }}"
       when: yxorp_remove_quadlet.stat.exists
