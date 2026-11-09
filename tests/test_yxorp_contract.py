@@ -68,6 +68,7 @@ class YxorpContractTests(unittest.TestCase):
         self.assertIs(self.defaults["yxorp_production_cutover_approved"], False)
         self.assertEqual(self.defaults["yxorp_image"], "docker.io/library/nginx@sha256:564a09935b00f058ca1b28c742169ba817499baa0479807bf7f373fe2804fbf7")
         self.assertIs(self.defaults["yxorp_stage_approved"], False)
+        self.assertIs(self.defaults["yxorp_stage_remove_approved"], False)
         task_text = (ROOT / "ansible/roles/yxorp/tasks/main.yml").read_text()
         self.assertIn("yxorp_stage_approved | bool", task_text)
         self.assertIn("yxorp_stage_approved | bool",

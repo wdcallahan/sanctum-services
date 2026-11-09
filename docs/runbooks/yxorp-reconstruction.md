@@ -95,6 +95,24 @@ the generated unit after its Quadlet and generated Nginx configuration
 are installed. The existing stage gate remains disabled until an
 explicit operator decision. Source tests check this contract.
 
+### Stage removal (reverse operation, explicitly approved)
+
+`ansible/yxorp-remove-stage.yml` is the bounded reverse of the
+127.0.0.1:18080 Kvin test deployment. It is blocked by default with
+`yxorp_stage_remove_approved: false`. Only with explicit separate
+approval may it stop the known stage service, remove the known Quadlet,
+reload systemd and remove the managed Nginx configuration directory.
+Before any mutation it verifies the actual installed Quadlet has exactly
+one loopback-only stage port and the config directory contains no
+unexpected files/subdirectories. A mismatch refuses removal rather than
+deleting a possible production service or somebody else's data.
+
+It does **not** remove images from the cache, contact Kvar, or change
+DNS, firewalls, application data, upstreams, monitors or clients.
+Removing a future *production* YXORP listener requires a separate
+cross-owner dependency cleanup; deleting a container is not the full
+reversal of its publication.
+
 ### Update and rollback policy — proposed, not enabled
 
 Podman's `AutoUpdate=registry` works with a **fully qualified mutable

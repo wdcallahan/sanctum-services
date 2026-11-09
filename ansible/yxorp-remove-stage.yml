@@ -1,0 +1,128 @@
+---
+# The reverse operation for an explicitly approved Kvin loopback stage.
+# This never removes the cached Nginx image, application data, Kvar's proxy,
+# DNS entries, firewalld rules or other service's units.
+- name: Remove only the bounded YXORP Kvin loopback staging instance
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  vars_files:
+    - roles/yxorp/defaults/main.yml
+  tasks:
+    - name: Require a separately approved STAGE-only removal
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['fqdn'] == inventory_hostname
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_bind_address == '127.0.0.1'
+          - yxorp_host_port | int == 18080
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_stage_remove_approved | default(false) | bool
+        fail_msg: >-
+          Refusing removal: approval must be explicit, target must be
+          Kvin staging on 127.0.0.1:18080, and production must not be
+          authorized. Do not remove a production listener with this play.
+
+    - name: Check whether a stage Quadlet is present
+      ansible.builtin.stat:
+        path: "{{ yxorp_quadlet_file }}"
+        follow: false
+      register: yxorp_remove_quadlet
+
+    - name: Inspect installed stage Quadlet without modifying it
+      ansible.builtin.slurp:
+        src: "{{ yxorp_quadlet_file }}"
+      when: yxorp_remove_quadlet.stat.exists
+      register: yxorp_remove_quadlet_contents
+
+    - name: Refuse a changed or production-scope Quadlet
+      ansible.builtin.assert:
+        that:
+          - not yxorp_remove_quadlet.stat.islnk | default(false)
+          - "'ContainerName=sanctum-yxorp' in quadlet_lines"
+          - "'PublishPort=127.0.0.1:18080:80/tcp' in quadlet_lines"
+          - quadlet_lines | select('match', '^PublishPort=') | list | length == 1
+        fail_msg: >-
+          Installed YXORP definition does not match the explicitly
+          approved staging-only port. Investigate; do not remove.
+      vars:
+        quadlet_lines: "{{ (yxorp_remove_quadlet_contents.content | b64decode).splitlines() }}"
+      when: yxorp_remove_quadlet.stat.exists
+
+    - name: Check stage configuration directory
+      ansible.builtin.stat:
+        path: "{{ yxorp_config_dir }}"
+        follow: false
+      register: yxorp_remove_config_dir
+
+    - name: Refuse a symlinked or non-directory stage config path
+      ansible.builtin.assert:
+        that:
+          - yxorp_remove_config_dir.stat.isdir | default(false)
+          - not yxorp_remove_config_dir.stat.islnk | default(false)
+      when: yxorp_remove_config_dir.stat.exists
+
+    - name: Inventory only the stage directory's owned contents
+      ansible.builtin.find:
+        paths: "{{ yxorp_config_dir }}"
+        recurse: true
+        file_type: any
+      when: yxorp_remove_config_dir.stat.exists
+      register: yxorp_remove_contents
+
+    - name: Refuse removing directories with any unknown contents
+      ansible.builtin.assert:
+        that:
+          - item.path in [yxorp_candidate_config, yxorp_active_config]
+          - item.isdir | default(false) == false
+        fail_msg: >-
+          Refusing to erase an unexpected file or subdirectory.
+          Stage directory is no longer solely owned by the known YXORP role.
+      loop: "{{ yxorp_remove_contents.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Check whether generated stage service is active
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: yxorp_remove_active
+      changed_when: false
+      failed_when: false
+
+    - name: Stop the existing stage service, if active
+      ansible.builtin.systemd_service:
+        name: "{{ yxorp_service_name }}"
+        state: stopped
+      when: yxorp_remove_active.rc == 0
+
+    - name: Remove the verified stage-only Quadlet
+      ansible.builtin.file:
+        path: "{{ yxorp_quadlet_file }}"
+        state: absent
+      when: yxorp_remove_quadlet.stat.exists
+      register: yxorp_removed_quadlet
+
+    - name: Reload systemd to forget the generated stage service
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+      when: yxorp_removed_quadlet.changed | default(false)
+
+    - name: Remove only the inspected YXORP-owned config directory
+      ansible.builtin.file:
+        path: "{{ yxorp_config_dir }}"
+        state: absent
+      when: yxorp_remove_config_dir.stat.exists
+
+    - name: Report stage removal scope and unresolved external ownership
+      ansible.builtin.debug:
+        msg:
+          stage_loopback_service_removed: true
+          images_removed: false
+          app_data_removed: false
+          kvar_npm_changed: false
+          dns_or_firewall_changed: false
+          external_cleanup: >-
+            This removes an isolated stage only. A production service
+            removal additionally requires DNS, proxy-route, monitoring,
+            client/dependent inventory and data-retention reconciliation
+            with their actual owners; none of those were changed here.

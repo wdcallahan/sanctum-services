@@ -13,6 +13,7 @@ on:
       - "ansible/roles/kuma/**"
       - "tests/test_kuma_role_contract.py"
       - "tests/test_yxorp_contract.py"
+      - "tests/test_yxorp_stage_removal.py"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
       - "tools/observe-yxorp-npm-behavior.py"
@@ -21,6 +22,7 @@ on:
       - "data/container-image-candidates.yml"
       - "ansible/yxorp-qualify-image.yml"
       - "ansible/yxorp-stage-probe.yml"
+      - "ansible/yxorp-remove-stage.yml"
       - "ansible/yxorp-inspect-npm.yml"
       - "tests/test_yxorp_behavior_observer.py"
       - "tests/test_kuma_desired.py"
@@ -36,6 +38,7 @@ jobs:
       - name: Check desired-state contract
         run: |
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_publication_review.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_behavior_observer.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
@@ -45,6 +48,7 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-stage-probe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-remove-stage.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-qualify-image.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-inspect-npm.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check

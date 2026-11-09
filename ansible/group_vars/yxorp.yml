@@ -6,6 +6,8 @@ yxorp_image: "docker.io/library/nginx@sha256:564a09935b00f058ca1b28c742169ba8174
 # Deployment remains held: native image qualification is NOT authorization to
 # install a system Quadlet, start a service or change network publication.
 yxorp_stage_approved: false
+# Removal of a Kvin loopback stage also needs its own approval.
+yxorp_stage_remove_approved: false
 # Isolated staged listener. This never replaces Kvar production DNS or proxy.
 yxorp_bind_address: "127.0.0.1"
 yxorp_host_port: 18080
