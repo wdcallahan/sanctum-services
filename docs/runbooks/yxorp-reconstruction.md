@@ -37,20 +37,23 @@ server blocks; only the explicitly `enabled: true` Yarn route is selected
 initially. The other route records document intended behavior pending
 real NPM comparison. Preview is **not** an Nginx parser test.
 
-## Native isolated staging — not yet approved or performed
+## Native isolated staging — image qualified, service not approved or performed
 
-1. Obtain the **real linux/arm64 tested Nginx image manifest digest** using
-   the host's trusted container supply path, then set `yxorp_image` in
-   `ansible/group_vars/yxorp.yml`. An empty digest intentionally blocks
-   deployment. Do not substitute a mutable `:latest` tag.
+1. **Completed November 9:** Kvin pulled the exact image digest and accepted
+   the native ARM64 `nginx -t` candidate test. The qualified digest is now
+   declared as `yxorp_image` in `ansible/group_vars/yxorp.yml`. The rootful
+   service remains **blocked by `yxorp_stage_approved: false`**. Do not set
+   this true until the operator explicitly authorizes loopback staging.
 2. Reconcile all intended NPM proxy hostnames and upstreams against the
    maintained production report. Include nondefault paths, redirects,
    custom headers, WebSockets and current accepted client URLs.
 3. Confirm Kvin is otherwise ready to run a system-level Quadlet. An
    independent host/Podman prerequisite remains Maintenance-owned; this role
    does not bootstrap a replacement computer.
-4. With Kvar's production listener untouched, separately select the isolated
-   stage run:
+4. The **operator must first approve** a persistent but loopback-only
+   system Quadlet on Kvin. Only after approval, change the source gate
+   `yxorp_stage_approved` to `true` and separately select the stage run,
+   keeping Kvar's production listener untouched:
 
    ```bash
    ~/.local/bin/ansible-navigator run ansible/yxorp.yml
@@ -103,9 +106,11 @@ upstream address requires a verified reload or deploy.
   the source-owned Quadlet and configuration only after a separately approved
   change. Do **not** remove unrelated Podman volumes, host networking or
   app-owned databases.
-- **Evidence still missing:** actual NPM route parity, ARM64 pinned image,
-  client-by-client acceptance, idempotent native repeat, approved rollback
-  and production cutover. None is implied by this source commit.
+- **Evidence accepted:** NPM default-upstream and bounded behavior metadata,
+  ARM64 image and native parser, CI synthetic forwarding behavior.
+- **Evidence still missing:** actual Kvin bridge-network routing and DNS,
+  application client acceptance, recovery, stage rollback, approved
+  production cutover. None is implied by a source-only commit.
 
 Follow [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2)
 for the remaining reconstruction/qualification.

@@ -31,12 +31,12 @@ The completed image-only test was performed with:
 
 ```bash
 cd ~/src/sanctum-services
-git pull --ff-only
+git pull
 ~/.local/bin/ansible-navigator run ansible/yxorp-qualify-image.yml
 ```
 
-This will **pull the pinned Nginx image into the rootful Podman image
-cache if missing** (the only intended persistent change). It asserts Kvin's
+This qualified the image and would populate Kvin's rootful Podman cache
+if the exact digest were missing; the initial run did pull it. It asserts Kvin's
 identity and AArch64 platform, inspects the downloaded image's architecture,
 renders a disposable Nginx configuration, and runs `nginx -t` inside an
 ephemeral container with **network disabled** and a synthetic Yarn hosts
@@ -45,8 +45,7 @@ installed, no lasting service started, no ports opened, no firewall or
 DNS changes, and Kvar's NPM is not contacted.
 
 This does not qualify actual proxy forwarding, networking or browser
-access on Kvin, and did not itself change the deployment source; the exact digest was
-subsequently promoted to the deployment variable in Git. Native image acceptance has been recorded. The staged proxy deployment
-still requires `yxorp_stage_approved: true` as an explicit operator-controlled
-source change. Its proposed loopback bind remains `127.0.0.1:18080`.
+access on Kvin. The image test did not itself change deployment source;
+the exact digest was subsequently promoted in Git. The stage still requires
+`yxorp_stage_approved: true`, selected explicitly by the operator. Its proposed loopback bind remains `127.0.0.1:18080`.
 Kuma's candidate is recorded but is not pulled or qualified here.

@@ -264,6 +264,9 @@ When the implementation changes, update the relevant explanation and operational
 - [x] The exact natively qualified digest is now the `yxorp_image` source
   value. Added `yxorp_stage_approved: false` as a deliberate hold before
   the rootful Quadlet deployment; source change is not staging approval.
+- [x] Promoted the native-tested Nginx digest to the YXORP deployment vars
+  and enforced a pre-mutation `yxorp_stage_approved: false` gate; source
+  checks guard the gate and exact digest.
 - [ ] **Current operator-dependent gate:** authorize or decline installation
   of the separate **loopback-only** Kvin YXORP stage. Even if authorized,
   that is not production publication, DNS cutover, or application acceptance.

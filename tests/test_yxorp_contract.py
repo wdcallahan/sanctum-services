@@ -70,6 +70,15 @@ class YxorpContractTests(unittest.TestCase):
         self.assertIs(self.defaults["yxorp_stage_approved"], False)
         task_text = (ROOT / "ansible/roles/yxorp/tasks/main.yml").read_text()
         self.assertIn("yxorp_stage_approved | bool", task_text)
+        self.assertIn("yxorp_stage_approved | bool",
+                      self.tasks[0]["ansible.builtin.assert"]["that"])
+        mutation_names = [t["name"] for t in self.tasks]
+        self.assertEqual(mutation_names[0],
+            "Require exact target, pinned image, and bounded staged or authorized bind")
+        self.assertLess(
+            mutation_names.index("Require exact target, pinned image, and bounded staged or authorized bind"),
+            mutation_names.index("Create YXORP system configuration directory"),
+        )
         self.assertIn("yxorp_production_cutover_approved | bool", task_text)
         self.assertIn("-t", task_text)
         self.assertLess(task_text.index("Require Nginx configuration validation"),
