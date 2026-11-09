@@ -1,0 +1,60 @@
+# Generated from data/yxorp-routes.yml by Sanctum Services Ansible.
+# Do not edit on the host. Production route equivalence is NOT yet proven.
+worker_processes auto;
+pid /tmp/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    server_tokens off;
+    access_log /dev/stdout combined;
+    error_log /dev/stderr warn;
+    sendfile on;
+    client_max_body_size 0;
+
+    map $http_upgrade $yxorp_upgrade {
+        default upgrade;
+        '' close;
+    }
+
+    # Isolated operational probe. Unmatched hosts are never proxied.
+    server {
+        listen 80 default_server;
+        server_name _;
+        location = /__yxorp_health {
+            access_log off;
+            default_type text/plain;
+            return 200 "yxorp-ready\n";
+        }
+        location / { return 444; }
+    }
+{% for route in yxorp_routes if route.enabled %}
+    server {
+        listen 80;
+        server_name {{ route.hostname }};
+        location / {
+            proxy_pass {{ route.upstream_scheme }}://{{ route.upstream_host }}:{{ route.upstream_port }};
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Host $host;
+            proxy_set_header X-Forwarded-Proto $scheme;
+{% if route.websocket %}
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection $yxorp_upgrade;
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
+            proxy_buffering off;
+{% else %}
+            proxy_set_header Connection "";
+            proxy_read_timeout 60s;
+            proxy_send_timeout 60s;
+{% endif %}
+        }
+    }
+{% endfor %}

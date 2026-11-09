@@ -1,0 +1,9 @@
+---
+# Deliberately nondeployable without a real linux/arm64 Nginx image digest.
+# Select the tested registry manifest digest on the native Kvin host.
+yxorp_image: ""
+# Isolated staged listener. This never replaces Kvar production DNS or proxy.
+yxorp_bind_address: "127.0.0.1"
+yxorp_host_port: 18080
+# Explicit, separately approved production transition is required for 0.0.0.0:80.
+yxorp_production_cutover_approved: false

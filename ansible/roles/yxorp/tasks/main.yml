@@ -1,0 +1,144 @@
+---
+# Input validation deliberately precedes all host file and service mutations.
+- name: Require exact target, pinned image, and bounded staged or authorized bind
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['fqdn'] == inventory_hostname
+      - inventory_hostname == 'kvin.outer.sanctum'
+      - yxorp_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')
+      - yxorp_host_port | int >= 1
+      - yxorp_host_port | int <= 65535
+      - yxorp_bind_address in ['127.0.0.1', '0.0.0.0']
+      - (yxorp_bind_address == '127.0.0.1' and yxorp_host_port | int == 18080) or (yxorp_bind_address == '0.0.0.0' and yxorp_host_port | int == 80 and yxorp_production_cutover_approved | bool)
+      - yxorp_routes | length > 0
+      - (yxorp_routes | map(attribute='hostname') | list | unique | length) == (yxorp_routes | length)
+    fail_msg: >-
+      Select the exact Kvin host, native linux/arm64 tested Nginx image
+      manifest digest, and the loopback staging listener. A public 0.0.0.0:80
+      binding requires independent operator cutover approval; this role
+      never changes DNS or host firewalls.
+
+- name: Reject unsafe Nginx route tokens and invalid data
+  ansible.builtin.assert:
+    that:
+      - item.hostname is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+      - item.upstream_host is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+      - item.upstream_scheme == 'http'
+      - item.upstream_port | int >= 1
+      - item.upstream_port | int <= 65535
+      - item.enabled is boolean
+      - item.websocket is boolean
+    fail_msg: "Unsafe or incomplete route: {{ item.hostname | default('unknown') }}"
+  loop: "{{ yxorp_routes }}"
+
+# Host firewalld and DNS publication belong to Maintenance. The default
+# 127.0.0.1:18080 staging listener requires no LAN firewall rule.
+- name: Create YXORP system configuration directory
+  ansible.builtin.file:
+    path: "{{ yxorp_config_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Render proposed Nginx configuration to a candidate, not the live file
+  ansible.builtin.template:
+    src: nginx.conf.j2
+    dest: "{{ yxorp_candidate_config }}"
+    mode: "0644"
+
+- name: Check whether the declared image digest exists locally
+  ansible.builtin.command:
+    argv: [podman, image, exists, "{{ yxorp_image }}"]
+  register: yxorp_image_present
+  changed_when: false
+  failed_when: yxorp_image_present.rc not in [0, 1]
+  check_mode: false
+
+- name: Retrieve the exact pinned image if absent
+  ansible.builtin.command:
+    argv: [podman, pull, "{{ yxorp_image }}"]
+  when: yxorp_image_present.rc == 1
+  register: yxorp_image_pulled
+  changed_when: yxorp_image_pulled.rc == 0
+
+# Run Nginx's own parser against the candidate before copying it into
+# the service's mounted live path. No production socket is bound here.
+- name: Require Nginx configuration validation in a disposable container
+  ansible.builtin.command:
+    argv:
+      - podman
+      - run
+      - --rm
+      - --network
+      - host
+      - --volume
+      - "{{ yxorp_candidate_config }}:/etc/nginx/nginx.conf:ro,Z"
+      - --entrypoint
+      - /usr/sbin/nginx
+      - "{{ yxorp_image }}"
+      - -t
+      - -c
+      - /etc/nginx/nginx.conf
+  register: yxorp_nginx_validation
+  changed_when: false
+
+- name: Publish validated Nginx configuration
+  ansible.builtin.copy:
+    src: "{{ yxorp_candidate_config }}"
+    dest: "{{ yxorp_active_config }}"
+    remote_src: true
+    mode: "0644"
+  register: yxorp_config_publish
+
+- name: Ensure system rootful Quadlet directory exists
+  ansible.builtin.file:
+    path: "{{ yxorp_quadlet_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Install rootful YXORP Quadlet
+  ansible.builtin.template:
+    src: yxorp.container.j2
+    dest: "{{ yxorp_quadlet_file }}"
+    mode: "0644"
+  register: yxorp_quadlet_publish
+
+- name: Start or reconcile YXORP using the system service manager
+  ansible.builtin.systemd_service:
+    name: "{{ yxorp_service_name }}"
+    daemon_reload: "{{ yxorp_quadlet_publish.changed }}"
+    enabled: true
+    state: "{{ 'restarted' if yxorp_quadlet_publish.changed else 'started' }}"
+
+- name: Reload running Nginx only for a validated config-only change
+  ansible.builtin.command:
+    argv:
+      - podman
+      - exec
+      - "{{ yxorp_container_name }}"
+      - /usr/sbin/nginx
+      - -s
+      - reload
+  when:
+    - yxorp_config_publish.changed
+    - not yxorp_quadlet_publish.changed
+  changed_when: true
+
+- name: Check the selected local-only management health endpoint
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ yxorp_host_port }}/__yxorp_health"
+    return_content: true
+    status_code: 200
+    timeout: 5
+  register: yxorp_health
+  retries: 10
+  delay: 2
+  until: yxorp_health.status | default(0) == 200 and 'yxorp-ready' in (yxorp_health.content | default(''))
+  changed_when: false
+
+- name: Report stage scope and unresolved application acceptance
+  ansible.builtin.debug:
+    msg: >-
+      YXORP server accepted its generated config on {{ yxorp_bind_address }}:{{
+      yxorp_host_port }}. This proves the local health endpoint only. Real
+      proxy routes, application sessions/WebSockets, image restore, Kvar
+      handoff and DNS cutover remain separately unqualified.

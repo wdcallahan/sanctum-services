@@ -1,0 +1,62 @@
+---
+# Proposed desired YXORP routes, NOT a captured full NPM configuration.
+# Only yarn is initially enabled for isolated Kvin validation.
+# Disable or reconcile other entries after live NPM metadata comparison.
+yxorp_routes:
+  - hostname: yarn.nexus.sanctum
+    upstream_scheme: http
+    upstream_host: yarn.inner.sanctum
+    upstream_port: 80
+    websocket: false
+    enabled: true
+    provenance: requested_november_8; distinguish_existing_yarn_inner_route
+
+  - hostname: square.nexus.sanctum
+    upstream_scheme: http
+    upstream_host: kvin.outer.sanctum
+    upstream_port: 8085
+    websocket: true
+    enabled: false
+    provenance: nextcloud_services_runbook; verify_live_headers_and_clients
+
+  - hostname: joule.nexus.sanctum
+    upstream_scheme: http
+    upstream_host: kvin.outer.sanctum
+    upstream_port: 8084
+    websocket: true
+    enabled: false
+    provenance: project_joule_prism_browser_origin; websocket_required
+
+  - hostname: search.nexus.sanctum
+    upstream_scheme: http
+    upstream_host: kvin.outer.sanctum
+    upstream_port: 8083
+    websocket: false
+    enabled: false
+    provenance: maintenance_kvar_observed_proxy_to_kvin
+
+  - hostname: dir.nexus.sanctum
+    upstream_scheme: http
+    upstream_host: kvar.outer.sanctum
+    upstream_port: 8081
+    websocket: false
+    enabled: false
+    provenance: legacy_linkstack_on_kvar; change_after_kvin_restore
+
+  - hostname: kuma.nexus.sanctum
+    upstream_scheme: http
+    upstream_host: kvar.outer.sanctum
+    upstream_port: 3001
+    websocket: true
+    enabled: false
+    provenance: legacy_kuma_on_kvar; change_after_retained_kvin_acceptance
+
+# Intentionally not rendered until their effective upstream and semantics
+# are independently established. NPM's management UI is not being rebuilt.
+yxorp_unresolved_routes:
+  - hostname: pihole.nexus.sanctum
+    reason: live_UI_upstream_port_and_paths_not_qualified
+  - hostname: yxorp.nexus.sanctum
+    reason: old_NPM_admin_UI_not_part_of_plain_nginx_replacement
+  - hostname: yarn.inner.sanctum
+    reason: observed_old_NPM_route_is_distinct_from_requested_yarn_nexus

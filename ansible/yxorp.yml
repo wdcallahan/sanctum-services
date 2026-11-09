@@ -1,0 +1,11 @@
+---
+# Rootful YXORP on Kvin; stage first on 127.0.0.1:18080.
+# This play never changes the host firewall, DNS or Kvar's incumbent NPM.
+- name: Reconcile Sanctum YXORP on the selected service host
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/yxorp-routes.yml
+  roles:
+    - yxorp

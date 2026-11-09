@@ -1,0 +1,16 @@
+---
+# Desired monitors, not proof of active Uptime Kuma configuration.
+# Reconcile only after a single long-term Kuma instance is accepted on Kvin.
+kuma_monitors:
+  - key: wicket_ollama
+    name: Wicket Ollama
+    type: http
+    url: http://wicket.arcane.sanctum:11435/healthz
+    method: GET
+    accepted_status_codes:
+      - 200-299
+    interval_seconds: 60
+    intended_state: active_after_retained_kuma_acceptance
+    service_owner: Project Joule
+    reconciliation_owner: Sanctum Services
+    source_issue: https://github.com/wdcallahan/sanctum-services/issues/4

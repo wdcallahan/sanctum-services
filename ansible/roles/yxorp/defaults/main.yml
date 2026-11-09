@@ -1,0 +1,8 @@
+---
+yxorp_config_dir: /etc/sanctum-services/yxorp
+yxorp_candidate_config: "{{ yxorp_config_dir }}/nginx.conf.candidate"
+yxorp_active_config: "{{ yxorp_config_dir }}/nginx.conf"
+yxorp_quadlet_dir: /etc/containers/systemd
+yxorp_quadlet_file: "{{ yxorp_quadlet_dir }}/sanctum-yxorp.container"
+yxorp_service_name: sanctum-yxorp.service
+yxorp_container_name: sanctum-yxorp

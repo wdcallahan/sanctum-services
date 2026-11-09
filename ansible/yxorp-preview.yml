@@ -1,0 +1,33 @@
+---
+# Source-only route preview on the controller. No router, Kvin, Kvar or
+# production service is contacted. Inspect the generated file before staging.
+- name: Render a local YXORP proposal without deploying it
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require unique declared hostnames
+      ansible.builtin.assert:
+        that:
+          - yxorp_routes | length > 0
+          - (yxorp_routes | map(attribute='hostname') | list | unique | length) == (yxorp_routes | length)
+
+    - name: Require safe route fields before interpolation into Nginx
+      ansible.builtin.assert:
+        that:
+          - item.hostname is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+          - item.upstream_host is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+          - item.upstream_scheme == 'http'
+          - item.upstream_port | int >= 1
+          - item.upstream_port | int <= 65535
+          - item.enabled is boolean
+          - item.websocket is boolean
+      loop: "{{ yxorp_routes }}"
+
+    - name: Render the proposed Nginx file on this controller only
+      ansible.builtin.template:
+        src: roles/yxorp/templates/nginx.conf.j2
+        dest: "{{ '/tmp/sanctum-yxorp-proposed.conf' }}"
+        mode: "0600"

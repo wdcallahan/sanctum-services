@@ -1,0 +1,18 @@
+[Unit]
+Description=Sanctum YXORP (rootful Nginx reverse proxy)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image={{ yxorp_image }}
+ContainerName={{ yxorp_container_name }}
+Network=bridge
+PublishPort={{ yxorp_bind_address }}:{{ yxorp_host_port }}:80/tcp
+Volume={{ yxorp_active_config }}:/etc/nginx/nginx.conf:ro,Z
+
+[Service]
+Restart=always
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
