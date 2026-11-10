@@ -1,5 +1,56 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvar legacy Yarn timeout isolated; host versus NPM namespace next
+
+Nova executed `ansible/yxorp-discrepancies-observe.yml` on Kvin:
+`ok=7 changed=0 failed=0`. Kuma at `/` and Pi-hole at
+`/admin/` both returned 302 directly and through incumbent
+Kvar NPM; Location URLs were **absolute HTTP** with the same
+**declared backend hostname** and matching paths/queries, yet
+whole values differed. This may be a backend-port rewrite:
+the remaining authority/fragment components were not previously
+measured. Do **not** assert a broken redirect from this alone.
+
+Kvar NPM's legacy `yarn.inner.sanctum` route from Kvin
+**timed out**, curl exit **28** and HTTP **000** after a bounded
+seven-second request. It was not a deliberate empty reply.
+Kvin's earlier direct GET of Yarn's `192.168.1.110:80` returned
+200; this says nothing yet about Kvar host or NPM-container
+reachability. No change to the incumbent NPM is approved.
+
+**Current source-complete next native step:**
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-npm-path-diagnose.yml
+```
+Two read-only plays: (1) on Kvin, compare only port/authority,
+fragment and explicit-userinfo equality for Kuma/Pi-hole
+redirects without disclosing sensitive Location values;
+(2) on Kvar via its already qualified inventory SSH10022,
+probe the Yarn HTTP origin from the Kvar host, then
+from **inside the existing rootful nginx-proxman container**
+using the container's Node HTTP runtime, without new software,
+stopping or editing it. Reports only safe HTTP status and
+timeout/connection categories; if container Node is unavailable
+do **not** infer a network failure. The Node source is
+syntax-checked; the actual Ansible URL split filters are
+executed with synthetic examples in CI. The two plays change
+no host, container, firewall, DNS, proxy, route or application
+configuration.
+
+**Completed** Kvin source backend status, whole seven-route
+NPM parity and narrow redirect/no-response inspections must
+not be repeated. The separate original Peanut Yarn trial
+passed byte-identical content and was cleaned up.
+**Remaining owner gates:** Kvin 80/tcp in both firewalld stores
+awaits Maintenance #20 source/authorization on Thursday;
+Bunny Inner rule20 asymmetric return path awaits Maintenance #36.
+Kvar NPM / wildcard DNS untouched, Kvin production and
+Peanut standby still not commissioned. No special host routes,
+new private CA, or nonstandard local proxy stage are authorized.
+
+
 ## CURRENT — November 10: incumbent parity measured; narrow redirect/no-response diagnosis is next
 
 Nova ran the native Kvin read-only `ansible/yxorp-incumbent-parity.yml`:
