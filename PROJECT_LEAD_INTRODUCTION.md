@@ -1,5 +1,37 @@
 # Sanctum Services — Session Continuation
 
+## Most recent blocker — Mace→Peanut transport is pre-existing Maintenance #36
+
+**November 9 native client evidence** supersedes any following note
+implying that HTTP 200 from Kvin completes whole-LAN YXORP acceptance.
+Kvin→Peanut rootful host-network Nginx health and Yarn forwarding
+**passed HTTP 200**. But Mace (new `192.168.1.103`) can establish
+TCP with Peanut (`192.168.3.3:80`), send `GET /__yxorp_health`,
+and then times out after eight seconds with **zero HTTP response
+bytes**. An independent proxied Yarn request does the same. Mace's
+`ssh peanut` also hung until interrupted after ~25 seconds; no
+verbose SSH connection stage was recorded.
+
+This matches the already-open **[Maintenance issue #36](https://github.com/wdcallahan/sanctum-maintenance/issues/36#issuecomment-6756207921)**,
+originally opened November 8 for failed Mace→Peanut SSH while Kvin
+can use Peanut. Evidence was posted there, not filed as a duplicate.
+On November 6, Mace SSH to Peanut had worked from its previous
+`192.168.0.103` source address; now Mace uses `192.168.1.103`.
+The Inner/Outer renumber and altered return path, firewall, routing
+or NAT are credible suspects **but no culprit is proven**.
+
+**Boundary:** Services owns working YXORP configuration and cross-host
+Kvin acceptance, not general routing/firewall changes between Inner and
+Arcane. Maintenance/Bunny should diagnose the common transport path
+under their already tracked #36, using bounded route observations and
+a correlated packet capture if needed. Do not rewrite YXORP, open
+additional firewall holes or rerun already accepted Kvin checks without
+new evidence. Full LAN/browser and hot-standby/failover acceptance remain
+pending. The Peanut port80 ad hoc runtime firewall allowance is still
+subject to its four-hour expiry; remove the test with
+`ansible/yxorp-peanut-remove.yml` when testing concludes.
+
+
 ## Latest native acceptance — Peanut YXORP cross-host HTTP 200, Nov 9 ~19:10 CST
 
 **Supersedes the "client probe pending" and "next run host-network deployment"
