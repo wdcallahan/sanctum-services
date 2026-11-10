@@ -1,0 +1,162 @@
+---
+# Reverse only the independently authorized Kvin HTTP:80 stage.
+# This never deletes a production Quadlet/config, image, host firewall
+# policy, application data, Kvar NPM settings or authoritative DNS.
+- name: Remove only verified Kvin YXORP stage resources
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  vars_files:
+    - roles/yxorp/defaults/main.yml
+    - vars/yxorp-kvin-stage.yml
+  tasks:
+    - name: Require explicit scoped stage-removal authorization
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_remove_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - not ansible_check_mode
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - yxorp_config_dir == '/etc/sanctum-services/yxorp-kvin-stage'
+          - yxorp_quadlet_file == '/etc/containers/systemd/sanctum-yxorp-kvin-stage.container'
+          - yxorp_service_name == 'sanctum-yxorp-kvin-stage.service'
+          - yxorp_container_name == 'sanctum-yxorp-kvin-stage'
+        fail_msg: >-
+          Refusing removal of anything other than the explicitly approved,
+          isolated Kvin YXORP stage; production remains a different scope.
+
+    - name: Observe stage Quadlet without following symlinks
+      ansible.builtin.stat:
+        path: "{{ yxorp_quadlet_file }}"
+        follow: false
+      register: kvin_stage_remove_quadlet
+
+    - name: Reject a symlinked or nonregular stage Quadlet
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_remove_quadlet.stat.isreg | default(false)
+          - not (kvin_stage_remove_quadlet.stat.islnk | default(false))
+      when: kvin_stage_remove_quadlet.stat.exists
+
+    - name: Read installed stage Quadlet before any removal
+      ansible.builtin.slurp:
+        src: "{{ yxorp_quadlet_file }}"
+      when: kvin_stage_remove_quadlet.stat.exists
+      register: kvin_stage_remove_quadlet_text
+
+    - name: Confirm stage Quadlet owns only its declared container and mount
+      ansible.builtin.assert:
+        that:
+          - "'ContainerName=sanctum-yxorp-kvin-stage' in quadlet_lines"
+          - "'Network=host' in quadlet_lines"
+          - "quadlet_lines | select('match', '^Network=') | list | length == 1"
+          - "quadlet_lines | select('match', '^PublishPort=') | list | length == 0"
+          - "('Volume=' ~ yxorp_active_config ~ ':/etc/nginx/nginx.conf:ro,Z') in quadlet_lines"
+        fail_msg: Stage Quadlet differs from owned test; refuse deletion.
+      vars:
+        quadlet_lines: "{{ (kvin_stage_remove_quadlet_text.content | b64decode).splitlines() }}"
+      when: kvin_stage_remove_quadlet.stat.exists
+
+    - name: Observe stage configuration directory without following symlinks
+      ansible.builtin.stat:
+        path: "{{ yxorp_config_dir }}"
+        follow: false
+      register: kvin_stage_remove_dir
+
+    - name: Refuse symlinked or non-directory configuration storage
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_remove_dir.stat.isdir | default(false)
+          - not (kvin_stage_remove_dir.stat.islnk | default(false))
+      when: kvin_stage_remove_dir.stat.exists
+
+    - name: Inventory all stage directory entries including hidden files
+      ansible.builtin.find:
+        paths: "{{ yxorp_config_dir }}"
+        recurse: true
+        hidden: true
+        follow: false
+        file_type: any
+      register: kvin_stage_remove_files
+      when: kvin_stage_remove_dir.stat.exists
+
+    - name: Refuse deleting anything except the two owned Nginx configs
+      ansible.builtin.assert:
+        that:
+          - item.path in [yxorp_candidate_config, yxorp_active_config]
+          - not (item.isdir | default(false))
+          - not (item.islnk | default(false))
+        fail_msg: Unrecognized stage directory content; do not delete.
+      loop: "{{ kvin_stage_remove_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Inspect exact stage unit activation without changing it
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: kvin_stage_remove_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse stopping an active unit lacking an inspected Quadlet
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_remove_unit.rc != 0 or (kvin_stage_remove_quadlet.stat.isreg | default(false))
+        fail_msg: Running stage-named unit is not backed by a verified Quadlet.
+
+    - name: Stop only the verified stage service when active
+      ansible.builtin.systemd_service:
+        name: "{{ yxorp_service_name }}"
+        state: stopped
+      when: kvin_stage_remove_unit.rc == 0
+
+    - name: Remove only the verified stage Quadlet
+      ansible.builtin.file:
+        path: "{{ yxorp_quadlet_file }}"
+        state: absent
+      when: kvin_stage_remove_quadlet.stat.exists
+      register: kvin_stage_removed_quadlet
+
+    - name: Reload systemd after removal of the stage generator input
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+      when: kvin_stage_removed_quadlet.changed | default(false)
+
+    - name: Remove only inspected and owned stage configuration
+      ansible.builtin.file:
+        path: "{{ yxorp_config_dir }}"
+        state: absent
+      when: kvin_stage_remove_dir.stat.exists
+
+    - name: Verify stage-only unit is no longer active
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: kvin_stage_remove_inactive
+      changed_when: false
+      failed_when: false
+
+    - name: Require no stage service still running
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_remove_inactive.rc != 0
+
+    - name: Report explicitly limited stage reversal
+      ansible.builtin.debug:
+        msg:
+          stage_removed_or_already_absent: true
+          target: "{{ inventory_hostname }}"
+          production_quadlet_changed: false
+          production_config_changed: false
+          kvar_npm_changed: false
+          dns_changed: false
+          host_firewall_changed: false
+          image_removed: false
+          app_data_removed: false
+          note: >-
+            This only removes the independently named Kvin test Quadlet
+            and its two validated config files. It is not a production
+            rollback or an authorization to remove Kvar.
