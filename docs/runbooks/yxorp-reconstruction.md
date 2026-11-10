@@ -4,7 +4,7 @@
 full-port, full-LAN trial host. Kvin remains the intended production host.
 Kvar's incumbent Nginx Proxy Manager (NPM) remains online until a separate
 accepted cutover. Peanut is **Kvin's intended service peer and standby**:
-once Xyorp is accepted and its persistent standby publication is deliberately
+once YXORP is accepted and its persistent standby publication is deliberately
 commissioned, Peanut can assume the reverse-proxy role if Kvin fails.
 This ad hoc test is not yet that failover mechanism. Source CI is not a
 native Peanut deployment receipt.
