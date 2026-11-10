@@ -1,5 +1,40 @@
 # Sanctum Services — Session Continuation
 
+## Most recent accepted native result — Peanut YXORP running, Nov 9 18:59 CST
+
+**THIS OVERRIDES HISTORICAL STAGING/PERMISSION/DNS-BLOCKER NOTES BELOW.**
+Nova successfully ran the normal `ansible/yxorp-peanut.yml` from Kvin.
+Full recap: **Peanut ok=40 changed=3 unreachable=0 failed=0
+skipped=5**. The trial's temporary HTTP/80 permission was still active
+(`public` zone), and was **not re-added/refreshed** in this run.
+Disposable rootful Nginx config validation in host networking passed;
+the validated config was published, the dedicated rootful Quadlet was
+installed, systemd started its generated service, and local
+`http://127.0.0.1:80/__yxorp_health` returned successful readiness.
+**Peanut has a running YXORP test service on real LAN HTTP/80.**
+
+**Next operator step:** Kvin network-client acceptance, using
+`~/.local/bin/ansible-navigator run ansible/yxorp-peanut-probe.yml`
+from the usual `~/src/sanctum-services` checkout. This actually
+requests Peanut's health route and Yarn with the correct HTTP Host header
+from Kvin; it has **not yet been executed**. Browser/app acceptance and
+all legacy proxy routes remain separate. There is no DNS cutover, Kvar
+NPM change, or Kvin production deployment authorization.
+
+**Test cleanup:** `ansible/yxorp-peanut-remove.yml` stops/removes
+the exact trial, validates ownership and cleans any remaining owned
+runtime-only firewalld port exception. That permission expires **four
+hours after its original addition** even if the container persists;
+do not misdiagnose expired firewall admission as application failure.
+Kvin and Peanut are actual service-host twins with intended redundancy;
+this limited trial is not yet working reverse-proxy failover.
+
+**Unrelated user request recorded:** all eligible machines should have
+the `fortune` command via the normal Maintenance software baseline;
+[Maintenance issue #21 comment](https://github.com/wdcallahan/sanctum-maintenance/issues/21#issuecomment-6755832483).
+Kvin was installed manually by Nova; fleet-wide deployment is not yet done.
+
+
 ## November 9 current checkpoint — next actual operator decision
 
 - Kvar Nginx Proxy Manager default-upstream and redacted behavior reports

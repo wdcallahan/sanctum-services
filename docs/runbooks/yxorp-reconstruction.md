@@ -6,8 +6,17 @@ Kvar's incumbent Nginx Proxy Manager (NPM) remains online until a separate
 accepted cutover. Peanut is **Kvin's intended service peer and standby**:
 once YXORP is accepted and its persistent standby publication is deliberately
 commissioned, Peanut can assume the reverse-proxy role if Kvin fails.
-This ad hoc test is not yet that failover mechanism. Source CI is not a
-native Peanut deployment receipt.
+This ad hoc test is not yet that failover mechanism. **Native Peanut
+test installation has now passed**: Nova's complete November 9,
+18:59 CST Ansible run returned `ok=40 changed=3 failed=0`.
+The disposable Nginx parser test passed with host networking, the
+validated config and rootful Quadlet were installed, systemd started
+the trial service, and its local health endpoint returned 200.
+The temporary firewall port remained admitted from its earlier
+time-limited addition; this successful run did **not** refresh the
+four-hour expiration. [Runtime acceptance record](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6755844881).
+**Client-side Yarn acceptance from Kvin is the next real boundary**;
+do not declare full service success from the local health check.
 
 ## Same service architecture in trial and production
 
