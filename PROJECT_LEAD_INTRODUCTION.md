@@ -1,5 +1,35 @@
 # Sanctum Services — Session Continuation
 
+## Latest native acceptance — Peanut YXORP cross-host HTTP 200, Nov 9 ~19:10 CST
+
+**Supersedes the "client probe pending" and "next run host-network deployment"
+instructions below.** Nova actually ran `ansible/yxorp-peanut-probe.yml`
+from Kvin. Native recap: **Kvin ok=4 changed=0 failed=0**.
+Kvin contacted the *actual network listener* on
+`http://peanut.arcane.sanctum:80`, confirmed the YXORP health response,
+then sent `Host: yarn.nexus.sanctum` through Peanut and received
+**HTTP 200**. The rootful host-network Peanut Quadlet is installed and
+working to this level, and Kvar NPM and DNS were not cut over.
+[Accepted runtime evidence](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6755992476).
+
+**Next test only if worthwhile before cleanup:** confirm actual Yarn
+page content from a normal client (Mace) via a request-only DNS
+override, without editing authoritative DNS:
+`curl --noproxy '*' --resolve yarn.nexus.sanctum:80:192.168.3.3 -i http://yarn.nexus.sanctum/`.
+Do not claim full app/browser, all VLANs, login, Prism WebSocket or
+failover acceptance from the 200 alone. No needless repeat of the
+already accepted Kvin/Peanut HTTP probe.
+
+**Next cleanup after trial checks:** run
+`~/.local/bin/ansible-navigator run ansible/yxorp-peanut-remove.yml`
+from the Services checkout on Kvin. It targets only the temporary
+Peanut Quadlet/config and the marked runtime firewall exception; the
+latter also expires four hours after the **original** add, not
+the time of the most recent playbook. Persistent standby and eventual
+Kvin production are separate pending lifecycle decisions. No Kvar or
+authoritative DNS changes are authorized.
+
+
 ## Most recent accepted native result — Peanut YXORP running, Nov 9 18:59 CST
 
 **THIS OVERRIDES HISTORICAL STAGING/PERMISSION/DNS-BLOCKER NOTES BELOW.**
