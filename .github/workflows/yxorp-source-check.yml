@@ -23,6 +23,7 @@ on:
       - "ansible/yxorp-qualify-image.yml"
       - "ansible/yxorp-peanut.yml"
       - "ansible/yxorp-peanut-preflight.yml"
+      - "ansible/yxorp-peanut-dns-observe.yml"
       - "ansible/yxorp-peanut-trial-firewall.yml"
       - "ansible/yxorp-peanut-probe.yml"
       - "ansible/yxorp-peanut-remove.yml"
@@ -52,6 +53,7 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-preflight.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-dns-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-trial-firewall.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-probe.yml --syntax-check

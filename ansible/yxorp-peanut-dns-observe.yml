@@ -1,0 +1,111 @@
+---
+# The previous Peanut HTTP:80 test stopped at Nginx -t because an upstream
+# name could not resolve INSIDE the rootful Podman bridge. This is a scoped
+# observation only. No firewall, DNS, Nginx or Quadlet changes.
+- name: Compare Peanut host DNS with rootful Podman bridge DNS for Yarn
+  hosts: yxorp_test
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Require exact known Peanut and currently selected trial image
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - yxorp_deployment_scope == 'peanut_trial'
+          - yxorp_image == 'docker.io/library/nginx:stable-alpine'
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Observe Yarn IPv4 through Peanut host NSS
+      ansible.builtin.command:
+        argv: [getent, ahostsv4, yarn.inner.sanctum]
+      register: yxorp_host_yarn
+      changed_when: false
+      failed_when: false
+
+    - name: Observe Peanut resolver file without making changes
+      ansible.builtin.command:
+        argv: [cat, /etc/resolv.conf]
+      register: yxorp_host_resolver
+      changed_when: false
+
+    - name: Probe unchanged rootful Podman bridge name resolution
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - bridge
+          - --entrypoint
+          - /bin/busybox
+          - "{{ yxorp_image }}"
+          - nslookup
+          - yarn.inner.sanctum
+      register: yxorp_bridge_default
+      changed_when: false
+      failed_when: false
+
+    - name: Probe rootful bridge with Peanut's declared authoritative DNS address
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - bridge
+          - --dns
+          - 192.168.3.3
+          - --entrypoint
+          - /bin/busybox
+          - "{{ yxorp_image }}"
+          - nslookup
+          - yarn.inner.sanctum
+      register: yxorp_bridge_peanut_dns
+      changed_when: false
+      failed_when: false
+
+    - name: Probe rootful bridge with Kvin peer's documented DNS address
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - bridge
+          - --dns
+          - 192.168.1.192
+          - --entrypoint
+          - /bin/busybox
+          - "{{ yxorp_image }}"
+          - nslookup
+          - yarn.inner.sanctum
+      register: yxorp_bridge_kvin_dns
+      changed_when: false
+      failed_when: false
+
+    - name: Report the small read-only resolver comparison
+      ansible.builtin.debug:
+        msg:
+          host: peanut.arcane.sanctum
+          target: yarn.inner.sanctum
+          host_getent_rc: "{{ yxorp_host_yarn.rc }}"
+          host_getent_first_line: "{{ yxorp_host_yarn.stdout_lines | first | default('') }}"
+          host_resolv_conf: "{{ yxorp_host_resolver.stdout_lines }}"
+          podman_default_rc: "{{ yxorp_bridge_default.rc }}"
+          podman_default_stdout: "{{ yxorp_bridge_default.stdout_lines | default([]) }}"
+          podman_default_stderr: "{{ yxorp_bridge_default.stderr_lines | default([]) }}"
+          podman_with_peanut_dns_rc: "{{ yxorp_bridge_peanut_dns.rc }}"
+          podman_with_peanut_dns_stdout: "{{ yxorp_bridge_peanut_dns.stdout_lines | default([]) }}"
+          podman_with_peanut_dns_stderr: "{{ yxorp_bridge_peanut_dns.stderr_lines | default([]) }}"
+          podman_with_kvin_dns_rc: "{{ yxorp_bridge_kvin_dns.rc }}"
+          podman_with_kvin_dns_stdout: "{{ yxorp_bridge_kvin_dns.stdout_lines | default([]) }}"
+          podman_with_kvin_dns_stderr: "{{ yxorp_bridge_kvin_dns.stderr_lines | default([]) }}"
+          runtime_firewall_modified: false
+          service_started: false
+          note: >-
+            Do not infer failure cause only from getent. These Podman
+            queries exercise actual bridge reachability to the DNS peers.
+            Nginx config, deployed service and routing remain unchanged.
