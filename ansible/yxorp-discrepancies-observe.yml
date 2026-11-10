@@ -1,0 +1,137 @@
+---
+# Narrow, read-only explanation of two differing redirects and one failed
+# incumbent NPM request. Never reveal Location URLs, bodies, cookies or
+# raw connection errors: only controlled status/shape/category fields.
+- name: Explain two incumbent redirect differences and old Yarn no-response
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - ../data/yxorp-routes.yml
+  vars:
+    yxorp_redirect_targets: >-
+      {{ yxorp_routes
+         | selectattr('hostname', 'in', ['kuma.nexus.sanctum', 'pihole.nexus.sanctum'])
+         | list }}
+  tasks:
+    - name: Require original Kvin observer, exact targets and a closed cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_redirect_targets | length == 2
+          - (yxorp_redirect_targets | map(attribute='hostname') | list | sort) == ['kuma.nexus.sanctum', 'pihole.nexus.sanctum']
+          - (yxorp_redirect_targets | selectattr('enabled', 'equalto', true) | list | length) == 0
+
+    - name: Observe real direct backend redirects on their selected paths
+      ansible.builtin.uri:
+        url: "http://{{ item.upstream_host }}:{{ item.upstream_port }}{{ '/admin/' if item.hostname == 'pihole.nexus.sanctum' else '/' }}"
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        follow_redirects: none
+        use_proxy: false
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      loop: "{{ yxorp_redirect_targets }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_direct_redirects
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Observe current Kvar NPM redirects with identical Host and path
+      ansible.builtin.uri:
+        url: "http://kvar.outer.sanctum{{ '/admin/' if item.hostname == 'pihole.nexus.sanctum' else '/' }}"
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        follow_redirects: none
+        use_proxy: false
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      loop: "{{ yxorp_redirect_targets }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_npm_redirects
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Report redirect shapes and equalities without URL values
+      ansible.builtin.debug:
+        msg:
+          route: "{{ item.0.item.hostname }}"
+          path_tested: "{{ '/admin/' if item.0.item.hostname == 'pihole.nexus.sanctum' else '/' }}"
+          direct_status: "{{ item.0.status | default(-1) }}"
+          incumbent_status: "{{ item.1.status | default(-1) }}"
+          direct_redirect_present: "{{ direct_location | length > 0 }}"
+          incumbent_redirect_present: "{{ incumbent_location | length > 0 }}"
+          redirect_values_equal: "{{ direct_location == incumbent_location }}"
+          direct_form: "{{ 'absent' if direct_location == '' else ('absolute' if '://' in direct_location else 'relative') }}"
+          incumbent_form: "{{ 'absent' if incumbent_location == '' else ('absolute' if '://' in incumbent_location else 'relative') }}"
+          direct_scheme: "{{ (direct_location | urlsplit('scheme')) | default('relative_or_absent', true) }}"
+          incumbent_scheme: "{{ (incumbent_location | urlsplit('scheme')) | default('relative_or_absent', true) }}"
+          direct_host_class: "{{ 'frontend' if direct_host == item.0.item.hostname else ('declared_backend' if direct_host == item.0.item.upstream_host else ('none' if direct_host == '' else 'other')) }}"
+          incumbent_host_class: "{{ 'frontend' if incumbent_host == item.0.item.hostname else ('declared_backend' if incumbent_host == item.0.item.upstream_host else ('none' if incumbent_host == '' else 'other')) }}"
+          redirect_paths_equal: "{{ (direct_location | urlsplit('path')) == (incumbent_location | urlsplit('path')) }}"
+          redirect_queries_equal: "{{ (direct_location | urlsplit('query')) == (incumbent_location | urlsplit('query')) }}"
+          note: Location contents, hostnames outside the declared allowlist, path values and query values are suppressed
+      vars:
+        direct_location: "{{ item.0.location | default('') }}"
+        incumbent_location: "{{ item.1.location | default('') }}"
+        direct_host: "{{ (direct_location | urlsplit('hostname')) | default('', true) }}"
+        incumbent_host: "{{ (incumbent_location | urlsplit('hostname')) | default('', true) }}"
+      loop: "{{ yxorp_direct_redirects.results | zip(yxorp_npm_redirects.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item.hostname }}"
+
+    - name: Identify old Yarn NPM connection outcome without recording raw errors
+      ansible.builtin.command:
+        argv:
+          - curl
+          - --http1.1
+          - --noproxy
+          - '*'
+          - --silent
+          - --show-error
+          - --output
+          - /dev/null
+          - --write-out
+          - '%{http_code}'
+          - --connect-timeout
+          - '3'
+          - --max-time
+          - '7'
+          - --header
+          - 'Host: yarn.inner.sanctum'
+          - http://kvar.outer.sanctum/
+      register: yxorp_old_yarn_curl
+      no_log: true
+      failed_when: false
+      changed_when: false
+
+    - name: Report only curl's safe numeric outcome for incumbent old Yarn route
+      ansible.builtin.debug:
+        msg:
+          route: yarn.inner.sanctum
+          incumbent_proxy: kvar.outer.sanctum
+          curl_exit_code: "{{ yxorp_old_yarn_curl.rc }}"
+          curl_http_status: "{{ yxorp_old_yarn_curl.stdout if yxorp_old_yarn_curl.stdout is match('^[0-9]{3}$') else 'unavailable' }}"
+          curl_outcome: "{{ {0: 'http_response', 7: 'connect_failure', 18: 'partial_transfer', 28: 'timeout', 35: 'tls_failure', 52: 'empty_reply', 56: 'receive_failure', 60: 'certificate_failure'}.get(yxorp_old_yarn_curl.rc | int, 'other') }}"
+          raw_http_content_or_error_printed: false
+          note: An empty HTTP reply may be an intentional proxy close; investigate before calling the route broken
+
+    - name: Preserve the original no-change decision
+      ansible.builtin.debug:
+        msg:
+          actual_client: "{{ inventory_hostname }}"
+          raw_redirects_or_cookies_exposed: false
+          any_service_changed: false
+          dns_or_firewall_changed: false
+          production_yxorp_started: false
+          scope: Two known redirect differences and one incumbent Yarn no-response only
