@@ -2,6 +2,7 @@
 from pathlib import Path
 import unittest
 
+from jinja2 import Environment, StrictUndefined
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -32,6 +33,19 @@ class YxorpIncumbentParityContract(unittest.TestCase):
         guard = self.play["tasks"][0]["ansible.builtin.assert"]["that"]
         self.assertIn("inventory_hostname == 'kvin.outer.sanctum'", guard)
         self.assertIn("not (yxorp_production_cutover_approved | bool)", guard)
+
+    def test_actual_jinja_selection_covers_exactly_the_old_hosts(self):
+        # Evaluate the real expression instead of only examining its text:
+        # Ansible syntax checks cannot detect a wrong runtime filter result.
+        source = self.play["vars"]["yxorp_legacy_routes"]
+        expression = source.removeprefix("{{").removesuffix("}}").strip()
+        result = Environment(undefined=StrictUndefined).compile_expression(
+            expression)(yxorp_routes=self.routes)
+        self.assertEqual(len(result), 7)
+        self.assertTrue(all(not route["enabled"] for route in result))
+        self.assertNotIn("yarn.nexus.sanctum",
+                         {route["hostname"] for route in result})
+        self.assertEqual(len({route["hostname"] for route in result}), 7)
 
     def test_four_bounded_anonymous_gets_no_logs(self):
         calls = [t for t in self.play["tasks"] if "ansible.builtin.uri" in t]
