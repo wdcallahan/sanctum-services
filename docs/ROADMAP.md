@@ -1,59 +1,50 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: 3/8 initial HTTP routes passed; Search next
+## Current YXORP milestone — November 10: 4/8 initial HTTP routes accepted; LinkStack compatibility next
 
-**Rootful new Kvin stage is now locally HTTP-tested
-for three of eight candidate routes: all three
-passed their bounded first test.** Yarn
-returned HTTP200 with direct backend
-content equality. Square/Nextcloud
-returned HTTP302 with identical Kvar
-NPM redirect and MIME metadata. Prism
-returned HTTP200 through direct backend
-`kvin.outer.sanctum:8084`, Kvar NPM
-and Kvin stage, with identical status
-and MIME metadata. The native Prism
-stage reconciliation passed `ok=38
-changed=3 failed=0`, and the nonfatal
-anonymous Prism comparison returned
-`ok=4 changed=0 failed=0` with
-explicit all-three HTTP200 and
-status/content-type parity flags.
-Prism WebSocket/streaming remains
-unqualified, as do browser sessions,
-Nextcloud Calendar/WebDAV and remote
-LAN access.
+Native Kvin rootful YXORP stage is now accepted for **four
+of eight declared route names at the bounded anonymous HTTP
+level**: Yarn (HTTP200/content parity); Square (HTTP302 and
+Kvar redirect/MIME parity); Prism (HTTP200 status/MIME parity);
+and **Search** (HTTP200 through direct Kvin :8083,
+Kvar incumbent NPM and new Kvin stage, same status/MIME).
+Search stage run: `ok=40 changed=3 failed=0`;
+read-only Search comparison `ok=4 changed=0 failed=0`
+with all three response and parity flags true.
+Real searches, Prism WebSockets/streaming and Nextcloud
+sessions/Calendar on the new proxy remain to be qualified.
 
-**Fourth candidate staged separately:**
-Search `search.nexus.sanctum` →
-`kvin.outer.sanctum:8083`. Its
-new default-off
-`yxorp_stage_search_approved`
-selection requires the existing
-Square and Prism stage selections
-and enables **only Search as fourth
-Kvin stage route**. No source
-manifest, production, Kvar NPM,
-DNS or Maintenance firewalld mutation.
-A new bounded anonymous three-path
-Search HTTP observer reports
-status/content-type and optional
-redirect parity without logging
-raw application content.
+**Do not conflate reverse-proxy compatibility with
+service migration.** LinkStack, Kuma and Pi-hole's
+declared backends still run on **Kvar**. Their
+persistent state, application installation,
+restore and client behavior must be independently
+migrated/accepted on Kvin before Kvar's planned
+retirement. The old `yarn.inner.sanctum`
+route still requires a separate consumer/retirement
+decision following its known timeout from Kvar.
 
-**[Source CI #42918662531 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/42918662531)**
-source contracts, four real-Ansible
-stage-selection fixtures, synthetic
-Search report, playbook syntax,
-Nginx parser and proxy tests.
-Next action is the Kvin-stage
-reconciliation and Search probe
-with explicit opt-in as documented
-in the [YXORP runbook](runbooks/yxorp-reconstruction.md).
-Nova need send **only both play recap
-lines and the Search report `msg`**;
-never full logs for accepted runs.
-Production cutover remains closed.
+The next default-off `yxorp_stage_dir_approved`
+canary temporarily enables only
+`dir.nexus.sanctum` → `kvar.outer.sanctum:8081`
+alongside the four previously tested Kvin stage
+routes. Its new bounded three-path anonymous
+HTTP probe can qualify **interim LinkStack proxy
+parity**, not the eventual Kvin application restore.
+Ansible source is CI-qualified and retains
+distinct stage authorization, intact Yarn-only
+production manifest, unchanged Kvar NPM, wildcard
+DNS, firewalld and production cutover gates.
+
+**Next operator action:** Run the two chained
+LinkStack stage and probe plays documented in
+the [YXORP runbook](runbooks/yxorp-reconstruction.md).
+Provide **only** both single-line play recaps
+and the `msg` dictionary from
+“Report only LinkStack HTTP status and
+compatibility metadata”; no full logs unless
+the specific failed task is needed.
+
 
 ## Nova's available-week priority — November 1–8, 2026
 
