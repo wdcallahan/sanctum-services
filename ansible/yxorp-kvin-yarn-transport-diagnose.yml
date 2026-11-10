@@ -104,6 +104,6 @@
         ip: "{{ kvin_yarn_diag_responses.results[3] }}"
         dns_addresses: >-
           {{ (kvin_yarn_diag_dns.stdout_lines | default([])
-               | map('regex_search', '^[0-9]+(?:\\.[0-9]+){3}')
+               | map('regex_search', '^[0-9]+(?:\.[0-9]+){3}')
                | reject('equalto', None) | unique | list)
              if kvin_yarn_diag_dns.rc == 0 else [] }}
