@@ -169,6 +169,34 @@
         yxorp_routes: "{{ [yxorp_routes[0], (yxorp_routes[1] | combine({'enabled': true}))] + yxorp_routes[2:] }}"
       when: yxorp_stage_square_approved | default(false) | bool
 
+    # Prism is the next isolated canary after Square's accepted anonymous
+    # redirect. Keep both previously tested vhosts in the stage during the
+    # next trial; no changes to the production manifest or its disabled flags.
+    - name: Require approved Prism staging on top of Yarn and Square only
+      ansible.builtin.assert:
+        that:
+          - yxorp_stage_square_approved | bool
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[1].hostname == 'square.nexus.sanctum'
+          - yxorp_routes[2].hostname == 'joule.nexus.sanctum'
+          - not (yxorp_routes[2].enabled | bool)
+          - yxorp_routes[2].upstream_scheme == 'http'
+          - yxorp_routes[2].upstream_host == 'kvin.outer.sanctum'
+          - yxorp_routes[2].upstream_port | int == 8084
+          - yxorp_routes[2].websocket | bool
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum', 'square.nexus.sanctum']
+        fail_msg: >-
+          Prism may be enabled only as a Kvin stage trial after selecting
+          the accepted Yarn and Square hosts. No production route or other
+          legacy host can be enabled through this opt-in.
+      when: yxorp_stage_prism_approved | default(false) | bool
+
+    - name: Enable only Prism in addition to accepted Yarn and Square on Kvin
+      ansible.builtin.set_fact:
+        yxorp_routes: "{{ yxorp_routes[:2] + [(yxorp_routes[2] | combine({'enabled': true}))] + yxorp_routes[3:] }}"
+      when: yxorp_stage_prism_approved | default(false) | bool
+
     # Host firewalld is intentionally not a deployment prerequisite:
     # its LAN admission is independently owned by Maintenance. A local
     # HTTP:80 stage can bind and be accepted on Kvin without opening
