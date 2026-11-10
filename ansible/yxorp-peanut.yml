@@ -1,6 +1,9 @@
 ---
 # User-selected realistic test host: Peanut, rootful Podman, full LAN HTTP:80.
 # Kvar keeps production; Kvin remains its eventual replacement.
+# The operator explicitly allowed a temporary runtime-only port-80 exception;
+# this does not replace the owning Maintenance permanent firewall policy.
+- import_playbook: yxorp-peanut-trial-firewall.yml
 - import_playbook: yxorp-peanut-preflight.yml
 
 - name: Install the Peanut HTTP 80 YXORP test from the ordinary Services role

@@ -1,0 +1,154 @@
+---
+# Nova-authorized ad hoc TEST exemption, 2026-11-09. No permanent firewall policy.
+# The rule expires automatically in four hours (and on daemon reload/reboot).
+# The owner marker allows exact post-test restoration without touching
+# unrelated or permanent Maintenance-managed rules.
+- name: Add bounded runtime HTTP admission for Peanut's YXORP test only
+  hosts: yxorp_test
+  gather_facts: true
+  become: true
+  vars:
+    peanut_yxorp_http_trial_marker: /run/sanctum-yxorp-peanut-http80-trial-owned
+    peanut_yxorp_http_trial_receipt: "peanut.arcane.sanctum public 80/tcp runtime 4h yxorp\n"
+  tasks:
+    - name: Require Nova's actual Peanut HTTP 80 trial and no production transition
+      ansible.builtin.assert:
+        that:
+          - not ansible_check_mode
+          - ansible_facts['fqdn'] == inventory_hostname
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - yxorp_deployment_scope == 'peanut_trial'
+          - yxorp_peanut_test_approved | bool
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Observe Peanut TCP port 80 before changing admission
+      ansible.builtin.command:
+        argv: [ss, -H, -ltn, "sport = :80"]
+      register: peanut_yxorp_trial_listeners
+      changed_when: false
+
+    - name: Check whether the existing test service owns port 80
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: peanut_yxorp_trial_unit
+      failed_when: false
+      changed_when: false
+
+    - name: Never open admission to another service's HTTP listener
+      ansible.builtin.assert:
+        that:
+          - (peanut_yxorp_trial_listeners.stdout_lines | length == 0) or (peanut_yxorp_trial_unit.rc == 0)
+        fail_msg: >-
+          Peanut's TCP/80 is occupied by an unrecognized listener.
+          Do not modify admission for another service.
+
+    - name: Check existing firewall state
+      ansible.builtin.command:
+        argv: [firewall-cmd, --state]
+      register: peanut_yxorp_trial_fw_state
+      changed_when: false
+      failed_when: false
+
+    - name: Read current zone on Peanut's LAN interface
+      ansible.builtin.command:
+        argv: [firewall-cmd, --get-zone-of-interface=eth0]
+      when: peanut_yxorp_trial_fw_state.rc == 0
+      register: peanut_yxorp_trial_fw_zone
+      changed_when: false
+
+    - name: Require the established active public LAN firewall
+      ansible.builtin.assert:
+        that:
+          - peanut_yxorp_trial_fw_state.rc == 0
+          - peanut_yxorp_trial_fw_state.stdout == 'running'
+          - peanut_yxorp_trial_fw_zone.stdout | default('') == 'public'
+        fail_msg: >-
+          Peanut's firewalld policy is not the observed baseline
+          (running/public on eth0). Refuse to edit another zone.
+
+    - name: Check whether http is already allowed by a service rule
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-service=http]
+      changed_when: false
+      failed_when: false
+      register: peanut_yxorp_trial_service
+
+    - name: Check whether a runtime HTTP port exception already exists
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
+      changed_when: false
+      failed_when: false
+      register: peanut_yxorp_trial_port
+
+    - name: Inspect marker from any earlier interrupted trial
+      ansible.builtin.stat:
+        path: "{{ peanut_yxorp_http_trial_marker }}"
+        follow: false
+      register: peanut_yxorp_trial_marker_stat
+
+    - name: Refuse to take over an unrelated marker
+      ansible.builtin.assert:
+        that:
+          - peanut_yxorp_trial_marker_stat.stat.isreg | default(false)
+          - not peanut_yxorp_trial_marker_stat.stat.islnk | default(false)
+        fail_msg: Unrecognized or symlinked HTTP trial marker; refuse.
+      when: peanut_yxorp_trial_marker_stat.stat.exists
+
+    - name: Read marker content if it already exists
+      ansible.builtin.slurp:
+        src: "{{ peanut_yxorp_http_trial_marker }}"
+      register: peanut_yxorp_trial_existing_receipt
+      when: peanut_yxorp_trial_marker_stat.stat.exists
+
+    - name: Verify any existing marker belongs to this exact trial
+      ansible.builtin.assert:
+        that:
+          - (peanut_yxorp_trial_existing_receipt.content | b64decode) == peanut_yxorp_http_trial_receipt
+        fail_msg: Marker contents do not match the approved HTTP trial.
+      when: peanut_yxorp_trial_marker_stat.stat.exists
+
+    - name: Record and apply only the missing runtime HTTP trial exception
+      when:
+        - peanut_yxorp_trial_service.rc != 0
+        - peanut_yxorp_trial_port.rc != 0
+      block:
+        - name: Create exact root-owned cleanup marker before adding the port
+          ansible.builtin.copy:
+            dest: "{{ peanut_yxorp_http_trial_marker }}"
+            content: "{{ peanut_yxorp_http_trial_receipt }}"
+            owner: root
+            group: root
+            mode: "0600"
+
+        - name: Admit HTTP temporarily in runtime state only, expiring in four hours
+          ansible.builtin.command:
+            argv: [firewall-cmd, --zone=public, --add-port=80/tcp, --timeout=4h]
+          changed_when: true
+
+        - name: Confirm the temporary exception actually took effect
+          ansible.builtin.command:
+            argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
+          changed_when: false
+      rescue:
+        - name: Remove only the trial's newly created owner marker
+          ansible.builtin.file:
+            path: "{{ peanut_yxorp_http_trial_marker }}"
+            state: absent
+        - name: Declare that temporary firewall admission was not accepted
+          ansible.builtin.fail:
+            msg: >-
+              Peanut's ad hoc HTTP admission failed. An existing runtime
+              rule may need review, but no permanent rule was changed.
+
+    - name: Summarize limited firewall ownership
+      ansible.builtin.debug:
+        msg:
+          test_host: peanut.arcane.sanctum
+          listener: 0.0.0.0:80
+          runtime_only: true
+          runtime_rule_expires_after: 4h
+          permanent_policy_modified: false
+          cleanup: ansible/yxorp-peanut-remove.yml
+          next_step: Normal Peanut preflight and HTTP 80 rootful trial
