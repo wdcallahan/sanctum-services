@@ -1,0 +1,81 @@
+---
+# Read-only anonymous discovery of the real declared YXORP upstreams.
+# Observes application listener availability before turning on proxy routes.
+# Kvar NPM, wildcard DNS, Kvin firewall, Quadlets, and enabled flags untouched.
+- name: Observe all declared YXORP upstreams from Kvin without publishing any route
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact Kvin client and still-closed production cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length > 0
+
+    - name: Validate every selected route before sending client requests
+      ansible.builtin.assert:
+        that:
+          - item.hostname is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+          - item.upstream_host is match('^[a-z0-9][a-z0-9.-]*[a-z0-9]$')
+          - item.upstream_scheme == 'http'
+          - item.upstream_port | int >= 1
+          - item.upstream_port | int <= 65535
+          - item.enabled is boolean
+        fail_msg: >-
+          Invalid declarative YXORP route. Refusing to probe.
+      loop: "{{ yxorp_routes }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+
+    - name: Send bounded anonymous GET to each declared backend with its frontend Host
+      ansible.builtin.uri:
+        url: "http://{{ item.upstream_host }}:{{ item.upstream_port }}/"
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      loop: "{{ yxorp_routes }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_upstream_probe
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Report sanitized HTTP result for each route, including those still disabled
+      ansible.builtin.debug:
+        msg:
+          hostname: "{{ item.item.hostname }}"
+          proposed_upstream: "{{ item.item.upstream_host }}"
+          port: "{{ item.item.upstream_port }}"
+          enabled_in_desired_source: "{{ item.item.enabled }}"
+          observed_http_status: "{{ item.status | default(-1) }}"
+          http_response_received: "{{ (item.status | default(-1) | int) >= 100 }}"
+          status_not_an_application_acceptance: true
+      loop: "{{ yxorp_upstream_probe.results }}"
+      loop_control:
+        label: "{{ item.item.hostname }}"
+
+    - name: State the actual boundary without changing any route
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          observed_routes: "{{ yxorp_upstream_probe.results | length }}"
+          configuration_changed: false
+          dns_cutover: false
+          application_credentials_used: false
+          qualification: >-
+            An HTTP response shows that the backend answered anonymously from
+            Kvin with the declared Host header. A non-200 may be expected,
+            especially for authenticated applications. No result proves
+            login, session, WebSockets, correct content, restore or proxy
+            readiness, and a failed GET is not proof a service is absent.
