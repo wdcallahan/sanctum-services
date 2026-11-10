@@ -37,8 +37,38 @@ class YxorpUpdateLifecycle(unittest.TestCase):
         self.assertEqual(unit["daemon_reload"], "{{ yxorp_quadlet_publish.changed }}")
         self.assertEqual(
             unit["state"],
-            "{{ 'restarted' if (yxorp_quadlet_publish.changed or yxorp_config_publish.changed) else 'started' }}",
+            "{{ 'restarted' if (yxorp_quadlet_publish.changed or yxorp_config_publish.changed or yxorp_mount_stale | bool) else 'started' }}",
         )
+
+    def test_stale_mount_reconciliation_precedes_service_decision(self):
+        names = [t["name"] for t in self.tasks]
+        published = names.index("Publish validated Nginx configuration")
+        slurp = names.index(
+            "Read the published YXORP config before choosing service reconciliation")
+        inspect = names.index(
+            "Observe the existing container mount before service reconciliation")
+        decide = names.index(
+            "Detect an obsolete mounted Nginx file even when host files are unchanged")
+        restart = names.index("Start or reconcile YXORP using the system service manager")
+        self.assertLess(published, slurp)
+        self.assertLess(slurp, inspect)
+        self.assertLess(inspect, decide)
+        self.assertLess(decide, restart)
+        check = self.tasks[inspect]
+        self.assertIs(check["failed_when"], False)
+        self.assertIs(check["changed_when"], False)
+        self.assertIs(check["ansible.builtin.command"]["strip_empty_ends"], False)
+        self.assertTrue(check["no_log"])
+        fact = self.tasks[decide]
+        self.assertIn(
+            "yxorp_prestart_container_config.rc == 0",
+            fact["ansible.builtin.set_fact"]["yxorp_mount_stale"],
+        )
+        self.assertIn(
+            "hash('sha256')",
+            fact["ansible.builtin.set_fact"]["yxorp_mount_stale"],
+        )
+        self.assertTrue(fact["no_log"])
 
     def test_verify_current_file_is_actually_mounted_before_health_acceptance(self):
         names = [task["name"] for task in self.tasks]
