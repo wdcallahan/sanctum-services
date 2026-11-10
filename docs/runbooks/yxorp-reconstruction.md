@@ -304,6 +304,61 @@ The previously authorized Peanut-only Yarn trial cleanup succeeded
 `ok=26 changed=5 failed=0`. Do **not** rerun that removal or
 reopen Peanut as a prerequisite to observing backend availability.
 
+## Incumbent Kvar NPM behavior parity before enabling replacement routes — November 10
+
+Nova's native read-only `ansible/yxorp-upstreams-observe.yml`
+successfully received an anonymous HTTP response from **all eight**
+declared backend URLs on Kvin, with `changed=0 failed=0`.
+
+| Desired route | Anonymous direct backend GET / |
+| --- | --- |
+| `yarn.nexus.sanctum` | 200 |
+| `square.nexus.sanctum` | 302 |
+| `joule.nexus.sanctum` | 200 |
+| `search.nexus.sanctum` | 200 |
+| `dir.nexus.sanctum` | 200 |
+| `kuma.nexus.sanctum` | 302 |
+| `pihole.nexus.sanctum` | 404 |
+| `yarn.inner.sanctum` | 200 |
+
+An HTTP response proves a listener answered, not that the application
+route is correct. **Do not call Pi-hole down because GET / returned
+404.** Kuma and Nextcloud returning 302 may be normal redirects.
+LinkStack, Kuma and Pi-hole are still hosted on Kvar in the proposed
+backend inventory; reachability alone does not move them to Kvin.
+
+Next read-only migration check:
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-incumbent-parity.yml
+```
+
+This queries the seven **existing** NPM application names through
+`kvar.outer.sanctum:80`, using each name's Host header, and
+independently requests the corresponding direct origin from Kvin.
+The new `yarn.nexus.sanctum` name is intentionally excluded because
+it never belonged to the incumbent NPM. Both HTTP requests are
+anonymous, stop before redirects, have six-second timeouts, and
+suppress unredacted response details with `no_log`.
+
+The visible report contains **only** HTTP statuses, whether redirect
+headers are present and whether their unprinted values match. It also
+compares `/admin/` on Pi-hole's declared upstream
+`kvar.outer.sanctum:82` with `/admin/` via the old Kvar NPM
+proxy, so its root-path 404 can be interpreted in context. Status
+parity is not the same as application authentication, cookies, static
+assets, content or WebSocket parity. Unexpected results should drive
+a narrowly scoped app-specific follow-up, **not** blind activation of
+all routes.
+
+Kvin still lacks Maintenance-owned runtime and permanent HTTP/80
+admission. Do not deploy the production service or change wildcard DNS
+until the owner corrects that precondition and the actual client
+migration requirements are qualified. No assumption of a new
+unapproved private HTTPS initiative, alternate 18080 listener or
+client-specific route workaround is needed.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
