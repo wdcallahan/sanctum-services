@@ -1,5 +1,73 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Native Kuma result — redirect host and port mismatch; read-only follow-up (November 10)
+
+**Kvin stage:** `ansible/yxorp-kvin-stage.yml`
+with six separately approved stage route flags
+completed `ok=44 changed=3 failed=0
+skipped=1`, including configuration validation
+and post-reconciliation mounted-config
+equality. The subsequent read-only
+`ansible/yxorp-kvin-stage-kuma-probe.yml`
+completed `ok=4 changed=0 failed=0`.
+
+The Kuma anonymous root GET yielded **HTTP302**
+from direct Kvar Kuma `:3001`, incumbent Kvar
+NPM `:80` and staged Kvin YXORP
+`127.0.0.1:80`. Candidate/incumbent status
+and MIME type match, and redirect path/scheme
+match. **Full redirect parity FAILED**:
+candidate and incumbent hostnames differ.
+Candidate redirected with an **explicit
+port other than backend 3001**, whereas
+incumbent had **no explicit port**.
+This is not enough to identify the
+candidate host or port, and status302
+alone does not qualify a browser route.
+
+**Accounting:** 6/8 YXORP route names now
+attempted on Kvin; five have passed
+the scoped initial HTTP check (Yarn,
+Square, Prism, Search, LinkStack).
+Kuma is **pending correction/acceptance**;
+Pi-hole and the legacy Yarn route are
+untested. Kvar NPM and wildcard DNS still
+serve production. LinkStack and Kuma
+still run on Kvar, not migrated to Kvin.
+
+**Next targeted read-only diagnosis:**
+`ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml`.
+Reissue just the three bounded Kuma
+HTTP root requests from the same Kvin
+observer and classify only their
+redirect authority. It reports safe
+hostname classes (frontend, Kvar,
+Kvin, loopback, relative, absent,
+other) and port classes (80, 3001,
+none, other, absent). It compares
+host, path, query, fragment and full
+redirect equality with incumbent
+but hides raw Location strings,
+unexpected hostname values, query
+contents, cookies, bodies, error
+strings and credentials. All
+network operations are read-only
+and no route re-deployment happens.
+
+**Next Kvin operator command:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+**Return only** one `PLAY RECAP`
+line and the `msg` dictionary from
+**“Report only Kuma redirect host classes
+and explicit port classes”**. If a task
+fails, send just that failed task and
+error; do not paste full logs or
+repeat earlier accepted route checks.
+Keep Kvar, DNS, Maintenance firewalld
+and production cutover closed.
+
 ## Current Kvin stage — LinkStack interim HTTP passed; Kuma sixth canary (November 10)
 
 **Local anonymous Kvin HTTP stage progress: 5 of 8
