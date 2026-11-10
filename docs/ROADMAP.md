@@ -1,68 +1,66 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: Yarn accepted on Kvin; Square stage canary next
+## Current YXORP milestone — November 10: Square stage config published; no HTTP response
 
-**Native Kvin stage result:** Kvin's rootful host-network
-`0.0.0.0:80` Nginx stage was installed by
-`ansible/yxorp-kvin-stage.yml`: `ok=22 changed=5
-failed=0`. The later independent native
-`ansible/yxorp-kvin-yarn-transport-diagnose.yml`
-returned `ok=6 changed=0 failed=0` with
-stage healthy, HTTP200 through the Yarn
-virtual host and both direct Yarn paths,
-DNS matching the known backend IP,
-and **equal bodies for both direct/proxy
-comparisons**. Local Yarn forwarding is
-accepted; earlier direct-origin timeout
-did not recur and its cause is unknown.
-Kvar NPM remains the production proxy;
-wildcard DNS is unchanged. The former
-Peanut test was accepted and removed.
+The separately named **rootful YXORP Nginx stage remains
+installed on Kvin port80**, with local health and
+Yarn response/body equality already accepted.
+**Kvar's Nginx Proxy Manager and wildcard DNS
+remain production**. Maintenance owns separate
+Kvin LAN HTTP80 firewall publication, still
+unmodified; production cutover remains closed.
 
-**Source-complete next step:** A separate
-`yxorp_stage_square_approved: false`
-flag permits a **stage-only** in-memory
-promotion of `square.nexus.sanctum`
-to Kvin's Nextcloud port 8085 alongside
-the already accepted Yarn route. The
-checked-in route manifest stays
-**Yarn-only**; the other legacy routes
-stay disabled. A separate read-only
-Square comparison checks anonymous
-Nextcloud root responses and redirect
-equality among Kvin direct backend,
-incumbent Kvar NPM and the newly
-staged Kvin port80 virtual host.
-No credentials or raw redirect values
-are logged. [Actions #42903575273](https://github.com/wdcallahan/sanctum-services/actions/runs/42903575273)
-**PASSED** real-Ansible synthetic
-opt-in/default selection and report
-validation, source contracts,
-syntax and existing Nginx tests.
-See [YXORP runbook](runbooks/yxorp-reconstruction.md).
+Native `ansible/yxorp-kvin-stage.yml` with
+Square-only opt-in passed `ok=31 changed=3
+failed=0 skipped=1`. The in-memory stage
+manifest enabled **only Yarn and Square**,
+the candidate parsed, host config was
+published, and running Nginx was **reloaded**.
+The subsequent three-way Square test
+returned direct Nextcloud backend HTTP302
+and Kvar NPM HTTP302, but **Kvin stage
+`127.0.0.1:80` returned no HTTP response
+(`candidate_status=-1`)**. The nonfatal
+comparison recap itself was `ok=4 changed=0
+failed=0`, which is **not** application
+acceptance.
 
-**Next operator action:** On Kvin,
-the source-qualified Square opt-in
-stage reconciliation followed by
-the anonymous comparison play,
-chained with `&&` (exact
-commands in the lead handoff/runbook).
-If not opted in, ordinary stage
-reconciliation restores the
-Yarn-only candidate. No change
-to Kvar NPM or DNS is authorized.
+Source suspicion: the role bind mounts
+a **single Nginx config file** into Podman,
+then atomically replaces the host-side
+file on updates and sends `nginx -s reload`
+rather than restarting the container.
+Linux bind mounts can preserve the old
+file inode; a stale Yarn-only file inside
+the container could make Square fall into
+the default `return 444`. This is
+unproven until comparing the actual host
+config and the running container's
+mounted file.
 
-**Separate future gate:** Maintenance
-#20 owns runtime and permanent Kvin
-LAN HTTP80 admission; stage-local
-requests do not need this.
-Prism WebSockets, Nextcloud
-login/calendar through the *new*
-proxy, the remaining disabled
-routes, failover, backups/restore,
-routine updates and eventual DNS/
-production cutover are still
-pending independent acceptance.
+**Next operator action:** Source-qualified,
+strictly read-only
+[`ansible/yxorp-kvin-stage-mounted-config-observe.yml`](../ansible/yxorp-kvin-stage-mounted-config-observe.yml)
+compares host candidate/active file and
+container-visible config with exact
+trailing-newline handling, and reports
+only Square/Yarn presence, equality and
+bounded curl outcomes for Square and a
+deliberately unmatched host. No raw
+configs, response bodies or errors logged.
+See [YXORP runbook](runbooks/yxorp-reconstruction.md)
+and the project lead handoff for a single
+`git pull && ansible-navigator` command.
+
+Do not rerun accepted Yarn tests,
+restart Nginx speculatively or modify
+Kvar/DNS/firewall before distinguishing
+stale mount from another cause.
+After native inspection, fix the
+*source-managed role/update lifecycle*
+if indicated, then retest Square before
+attempting sessions, WebSockets, remote
+client access, standby or production cutover.
 
 ## Nova's available-week priority — November 1–8, 2026
 
