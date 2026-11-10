@@ -1,5 +1,54 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: all eight YXORP backends answer; incumbent NPM parity next
+
+Nova ran the new Kvin anonymous direct-backend inventory after the
+clean Kvin TCP80 readiness report. `ansible/yxorp-upstreams-observe.yml`
+returned `kvin.outer.sanctum ok=5 changed=0 failed=0` with HTTP
+responses for **all eight** declared backends:
+
+`yarn.nexus.sanctum=200`,
+`square.nexus.sanctum=302`,
+`joule.nexus.sanctum=200`,
+`search.nexus.sanctum=200`,
+`dir.nexus.sanctum=200`,
+`kuma.nexus.sanctum=302`,
+`pihole.nexus.sanctum=404`,
+`yarn.inner.sanctum=200`.
+
+**No backend was unreachable.** A 302 may be normal; Pi-hole returning
+404 at `/` does not mean its web admin application is down.
+This is not user-session/WebSocket/actual-proxy or restore acceptance.
+
+**Next meaningful, source-prepared native operator comparison:**
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-incumbent-parity.yml
+```
+The tested, read-only play queries seven **existing** named proxy
+hosts through current Kvar NPM and directly against their declared
+backends from the same Kvin observer. It uses the same Host header,
+anonymous GET /, no redirects, no raw response/log values and a
+six-second bound per request. The newly proposed
+`yarn.nexus.sanctum` is excluded (not an incumbent host).
+It also checks `/admin/` on Pi-hole's `kvar:82` backend
+versus the current Kvar NPM Pi-hole route, avoiding a false
+diagnosis from root 404. Output reports statuses and *boolean*
+redirect equality, not actual redirect URLs, bodies or cookies.
+No changes to Kvar, firewall, DNS, Kvin or route flags.
+
+**Outstanding cross-owner gate:** Maintenance controls Kvin's
+`eth0/public` runtime+permanent HTTP/80 firewall rule. Neither
+store currently admits port80, and Maintenance #20 has the future
+source/approval handoff. Kvin has no listener, no YXORP Quadlet and
+does have the rootful ARM64 Nginx digest. Existing Peanut-only
+Yarn trial passed byte-identical 349-byte HTTP200 and was
+successfully removed. Do not repeat those steps. Full Kvin
+production/Peanut standby, migration of remaining app services and
+wildcard DNS cutover are separately unapproved.
+
+
 ## CURRENT — November 10: Kvin rootful port80 ready except host firewall; direct upstream discovery next
 
 The corrected `ansible/yxorp-kvin-readiness.yml` passed natively on Kvin:
