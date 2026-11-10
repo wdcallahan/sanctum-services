@@ -1,5 +1,52 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvin YXORP stage Yarn content ACCEPTED (native four-way)
+
+**Latest native operator run:** Nova executed the read-only
+`ansible/yxorp-kvin-yarn-transport-diagnose.yml` from Kvin
+after the earlier direct-origin timeout. **`ok=6 changed=0
+unreachable=0 failed=0 skipped=0`.** The separate
+rootful `sanctum-yxorp-kvin-stage.service` is **active**.
+Four independent GETs returned HTTP200:
+(1) local `127.0.0.1:80/__yxorp_health` with
+`yxorp-ready`; (2) Kvin stage Yarn virtual host at
+`127.0.0.1:80/` with `Host: yarn.nexus.sanctum`;
+(3) direct `http://yarn.inner.sanctum/` with same Host;
+(4) direct literal `http://192.168.1.110/` with same Host.
+**Stage response body equals direct hostname body AND direct
+literal-IP body**. Kvin's resolver succeeded with **one
+unique IPv4 address including `192.168.1.110`**.
+Every result was read-only; no service/network mutation.
+
+**Accept local Yarn application forwarding/content parity on
+Kvin's stage.** The original sequential
+`yxorp-kvin-stage-probe.yml` failed on direct-origin timeout
+*before proxy observation*, but this independent later probe
+returned HTTP200 for every path. Treat that original failure
+as an intermittent/unexplained timeout, **not a diagnosed
+Nginx, DNS, filtering or return-path defect**.
+Do not request another rerun of the now accepted Yarn
+path tests merely for reassurance.
+
+**Still not accepted:** LAN client HTTP80 from Peanut/Mace,
+real sessions, Prism WebSockets, Nextcloud user-facing
+proxy behavior, other disabled route hosts, production
+cutover/DNS, standby/failover and restore/update lifecycle.
+Existing Kvar NPM remains production. Kvin stage is
+currently installed and should be left running for next
+tests; **do not remove or replace merely because the
+local Yarn acceptance passed**. Maintenance #20 owns
+future Kvin runtime+permanent firewalld HTTP80
+admission for external clients. All seven legacy
+route entries remain disabled.
+
+**Next project-lead work:** Record the native result
+([Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2))
+and prepare appropriately isolated, source-managed
+stage acceptance for another needed application,
+beginning with Nextcloud/Square, while preserving
+production route disable flags and Kvar authority.
+
 ## CURRENT — November 10: Kvin rootful YXORP STAGE INSTALLED; direct Yarn origin timed out
 
 **Latest actual native operator report:** Nova ran the authorized
