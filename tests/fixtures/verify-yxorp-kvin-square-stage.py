@@ -38,21 +38,21 @@ check_off = {
 fixture = [
     {
         "name": "Stage Square only when opted-in",
-        "hosts": "localhost",
+        "hosts": "square_on",
         "gather_facts": False,
         "vars": {"yxorp_routes": ROUTES, "yxorp_stage_square_approved": True},
         "tasks": selected + [check_on],
     },
     {
         "name": "Preserve Yarn-only default when no Square opt-in",
-        "hosts": "localhost",
+        "hosts": "square_off",
         "gather_facts": False,
         "vars": {"yxorp_routes": ROUTES, "yxorp_stage_square_approved": False},
         "tasks": selected + [check_off],
     },
     {
         "name": "Render actual Square diagnostic from synthetic anonymous HTTP responses",
-        "hosts": "localhost",
+        "hosts": "square_report",
         "gather_facts": False,
         "vars": {
             "yxorp_square_stage_responses": {
@@ -72,8 +72,18 @@ fixture = [
 with tempfile.TemporaryDirectory(prefix="yxorp-square-stage-") as tmp:
     path = Path(tmp) / "square-stage-fixture.yml"
     path.write_text(yaml.safe_dump(fixture, sort_keys=False), encoding="utf-8")
+    # set_fact intentionally persists for the lifetime of an Ansible run:
+    # separate synthetic hosts mirror independent operator invocations.
+    inventory = Path(tmp) / "inventory.yml"
+    inventory.write_text(yaml.safe_dump({
+        "all": {"hosts": {
+            "square_on": {"ansible_connection": "local"},
+            "square_off": {"ansible_connection": "local"},
+            "square_report": {"ansible_connection": "local"},
+        }}
+    }), encoding="utf-8")
     result = subprocess.run(
-        ["ansible-playbook", "-i", "localhost,", str(path), "-c", "local"],
+        ["ansible-playbook", "-i", str(inventory), str(path)],
         cwd=ROOT, capture_output=True, text=True, check=False,
     )
     output = result.stdout + result.stderr
