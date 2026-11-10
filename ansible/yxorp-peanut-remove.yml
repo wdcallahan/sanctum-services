@@ -123,6 +123,87 @@
         state: absent
       when: yxorp_remove_config_dir.stat.exists
 
+    - name: Inspect runtime HTTP trial cleanup marker
+      ansible.builtin.stat:
+        path: /run/sanctum-yxorp-peanut-http80-trial-owned
+        follow: false
+      register: peanut_trial_cleanup_marker
+
+    - name: Refuse unknown or symlinked trial firewall marker
+      ansible.builtin.assert:
+        that:
+          - peanut_trial_cleanup_marker.stat.isreg | default(false)
+          - not peanut_trial_cleanup_marker.stat.islnk | default(false)
+        fail_msg: The runtime-only HTTP cleanup marker was altered; refuse.
+      when: peanut_trial_cleanup_marker.stat.exists
+
+    - name: Read exact firewall trial owner marker
+      ansible.builtin.slurp:
+        src: /run/sanctum-yxorp-peanut-http80-trial-owned
+      register: peanut_trial_cleanup_owner
+      when: peanut_trial_cleanup_marker.stat.exists
+
+    - name: Confirm that this marker owns only the recorded public TCP 80 test rule
+      ansible.builtin.assert:
+        that:
+          - (peanut_trial_cleanup_owner.content | b64decode) == 'peanut.arcane.sanctum public 80/tcp runtime 4h yxorp\n'
+        fail_msg: Ownership token does not match this trial; investigate.
+      when: peanut_trial_cleanup_marker.stat.exists
+
+    - name: Check firewall runtime state before restoring the previous port policy
+      ansible.builtin.command:
+        argv: [firewall-cmd, --state]
+      register: peanut_trial_cleanup_fw_state
+      changed_when: false
+      failed_when: false
+      when: peanut_trial_cleanup_marker.stat.exists
+
+    - name: Inspect whether the temporary TCP 80 runtime rule remains active
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
+      register: peanut_trial_cleanup_port
+      changed_when: false
+      failed_when: false
+      when:
+        - peanut_trial_cleanup_marker.stat.exists
+        - peanut_trial_cleanup_fw_state.rc == 0
+
+    - name: Remove only the temporary public TCP 80 runtime rule we added
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --remove-port=80/tcp]
+      changed_when: true
+      when:
+        - peanut_trial_cleanup_marker.stat.exists
+        - peanut_trial_cleanup_fw_state.rc == 0
+        - peanut_trial_cleanup_port.rc == 0
+
+    - name: Verify temporary public TCP 80 admission has been withdrawn
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
+      register: peanut_trial_cleanup_confirm
+      changed_when: false
+      failed_when: false
+      when:
+        - peanut_trial_cleanup_marker.stat.exists
+        - peanut_trial_cleanup_fw_state.rc == 0
+
+    - name: Require the original no-explicit-port runtime policy
+      ansible.builtin.assert:
+        that:
+          - peanut_trial_cleanup_confirm.rc == 1
+        fail_msg: >-
+          The temporary HTTP port is still allowed after removal.
+          Preserve the cleanup marker and investigate before claiming done.
+      when:
+        - peanut_trial_cleanup_marker.stat.exists
+        - peanut_trial_cleanup_fw_state.rc == 0
+
+    - name: Remove only the verified trial ownership marker
+      ansible.builtin.file:
+        path: /run/sanctum-yxorp-peanut-http80-trial-owned
+        state: absent
+      when: peanut_trial_cleanup_marker.stat.exists
+
     - name: Report stage removal scope and unresolved external ownership
       ansible.builtin.debug:
         msg:
@@ -130,9 +211,11 @@
           images_removed: false
           app_data_removed: false
           kvar_npm_changed: false
-          dns_or_firewall_changed: false
+          dns_changed: false
+          firewall_temporary_rule_reverted: true
+          firewall_permanent_policy_changed: false
           external_cleanup: >-
-            This removes an isolated stage only. A production service
+            This removes the Peanut trial and restores its runtime-only port admission. A production service
             removal additionally requires DNS, proxy-route, monitoring,
             client/dependent inventory and data-retention reconciliation
             with their actual owners; none of those were changed here.
