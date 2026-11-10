@@ -359,6 +359,55 @@ migration requirements are qualified. No assumption of a new
 unapproved private HTTPS initiative, alternate 18080 listener or
 client-specific route workaround is needed.
 
+## Narrow diagnosis of incumbent redirect differences — November 10
+
+Nova ran the source-owned `ansible/yxorp-incumbent-parity.yml`
+from Kvin. All seven legacy route comparisons completed without
+configuration changes (`ok=8 changed=0 failed=0`). Actual incumbent
+HTTP/80 and direct-backend results:
+
+| Legacy frontend | Backend status | NPM status | Redirect value comparison |
+| --- | ---: | ---: | --- |
+| `square.nexus.sanctum` | 302 | 302 | Equal |
+| `joule.nexus.sanctum` | 200 | 200 | Neither redirected |
+| `search.nexus.sanctum` | 200 | 200 | Neither redirected |
+| `dir.nexus.sanctum` | 200 | 200 | Neither redirected |
+| `kuma.nexus.sanctum` | 302 | 302 | Different |
+| `pihole.nexus.sanctum` | 404 | 404 | Neither redirected at / |
+| `yarn.inner.sanctum` | 200 | -1 | NPM returned no HTTP status |
+
+An additional Pi-hole **/admin/** GET returned 302 from both its
+declared backend and NPM, but the redirect values differed. This
+is **not** proof that Pi-hole or Kuma is broken: absolute/relative
+redirects and proxy origin rewrites are plausible. The legacy Yarn
+`-1` does not identify whether Kvar NPM deliberately closed the
+connection, timed out, or suffered another transport error. No
+sensitive HTTP responses or raw Location values were logged.
+
+A smaller, read-only follow-up is therefore available:
+
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-discrepancies-observe.yml
+```
+
+It checks **only** the Kuma root redirect and Pi-hole /admin/
+redirect from Kvin, direct and through incumbent Kvar NPM. It
+reports redirect *shapes* (relative/absolute, scheme,
+frontend/backend/other host classification), and whether path and
+query components match, without exposing raw Location, body or
+cookie values. One bounded curl request to the old Yarn NPM route
+returns only a sanitized exit-code category such as
+`empty_reply`, `timeout` or `receive_failure`.
+The checked-in synthetic fixture exercises the actual Ansible
+`urlsplit` filter, rather than relying only on syntax checking.
+
+These are migration observations only. Do not copy NPM's different
+redirect merely because it is different, enable unqualified routes,
+modify the host HTTP/80 policy or treat a browser session as accepted
+from anonymous root-page status alone.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
