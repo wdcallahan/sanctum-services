@@ -22,6 +22,7 @@ on:
       - "tests/test_yxorp_kvin_stage_square.py"
       - "tests/test_yxorp_kvin_stage_prism.py"
       - "tests/test_yxorp_kvin_stage_search.py"
+      - "tests/test_yxorp_kvin_stage_dir.py"
       - "tests/test_yxorp_kvin_stage_mounted_config.py"
       - "tests/test_yxorp_config_update_lifecycle.py"
       - "tests/test_yxorp_kvin_yarn_transport_diagnose.py"
@@ -36,6 +37,7 @@ on:
       - "tests/fixtures/verify-yxorp-kvin-square-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-prism-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-search-stage.py"
+      - "tests/fixtures/verify-yxorp-kvin-dir-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py"
       - "tests/fixtures/verify-yxorp-config-update-lifecycle.py"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
@@ -83,6 +85,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_square.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_prism.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_search.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_dir.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_mounted_config.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_config_update_lifecycle.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_yarn_transport_diagnose.py'
@@ -112,6 +115,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-square-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-prism-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-search-probe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-dir-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-mounted-config-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-yarn-transport-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-peer-probe.yml --syntax-check
@@ -126,6 +130,7 @@ jobs:
           python3 tests/fixtures/verify-yxorp-kvin-square-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-prism-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-search-stage.py
+          python3 tests/fixtures/verify-yxorp-kvin-dir-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py
           python3 tests/fixtures/verify-yxorp-config-update-lifecycle.py
           ansible-playbook -i 'localhost,' tests/fixtures/yxorp-redirect-urlsplit.yml -c local
