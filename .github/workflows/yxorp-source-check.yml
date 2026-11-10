@@ -20,6 +20,7 @@ on:
       - "tests/test_yxorp_upstreams_observe.py"
       - "tests/test_yxorp_incumbent_parity.py"
       - "tests/test_yxorp_discrepancies_observe.py"
+      - "tests/test_yxorp_npm_path_diagnose.py"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
@@ -38,6 +39,7 @@ on:
       - "ansible/yxorp-upstreams-observe.yml"
       - "ansible/yxorp-incumbent-parity.yml"
       - "ansible/yxorp-discrepancies-observe.yml"
+      - "ansible/yxorp-npm-path-diagnose.yml"
       - "ansible/yxorp-peanut-remove.yml"
       - "ansible/group_vars/yxorp_test.yml"
       - "ansible/yxorp-inspect-npm.yml"
@@ -62,6 +64,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_upstreams_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_incumbent_parity.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_discrepancies_observe.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_npm_path_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_publication_review.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_behavior_observer.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
@@ -80,7 +83,17 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-upstreams-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-incumbent-parity.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-discrepancies-observe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-npm-path-diagnose.yml --syntax-check
           ansible-playbook -i 'localhost,' tests/fixtures/yxorp-redirect-urlsplit.yml -c local
+          python3 - <<'PY'
+          import pathlib, yaml
+          play = yaml.safe_load(pathlib.Path('ansible/yxorp-npm-path-diagnose.yml').read_text())
+          tasks = play[1]['tasks']
+          commands = [task['ansible.builtin.command']['argv'] for task in tasks if 'ansible.builtin.command' in task]
+          assert len(commands) == 1 and commands[0][:5] == ['podman', 'exec', 'nginx-proxman', 'node', '-e']
+          pathlib.Path('/tmp/yxorp-npm-node-diagnostic.js').write_text(commands[0][-1])
+          PY
+          node --check /tmp/yxorp-npm-node-diagnostic.js
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-status.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-qualify-image.yml --syntax-check
