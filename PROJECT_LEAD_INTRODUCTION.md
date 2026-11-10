@@ -1,5 +1,62 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvin staging AUTHORIZED, local test can proceed before firewall change
+
+**Operator clarification:** Nova expected YXORP already on Kvin, but
+the only accepted rootful Nginx deployment so far was the **temporary
+Peanut trial**, which was removed. **Current live YXORP remains
+Kvar Nginx Proxy Manager; Kvin currently has no YXORP service
+installed.** Peanut was a separate realistic HTTP80 test host, not
+proof of an installation on Kvin. Nova explicitly authorized
+installing and locally testing the Kvin stage now, because there is
+no existing Kvin listener to displace. Do **not** ask for that
+permission again.
+
+**Corrected engineering gate:** Kvin's missing
+Maintenance-owned `eth0/public` HTTP/80 admission controls **LAN
+reachability**, not binding a rootful listener or making same-host
+requests via `127.0.0.1:80`. The earlier stage play incorrectly
+required both runtime and permanent firewalld HTTP80 admission
+**before installing**. Corrected `ansible/yxorp-kvin-stage.yml`
+retains exact identity, independent stage approval, no-conflicting-
+listener, existing Quadlet/config ownership and production-cutover
+guards, but has **no firewall prerequisite and no firewall mutation**.
+Its separate `ansible/yxorp-kvin-stage-probe.yml` performs **only
+Kvin-local** YXORP health and exact Yarn origin-versus-proxy
+status/MIME/body comparison using `http://127.0.0.1:80` and the
+same Host header. The previous combined Peanut peer play was
+split into `ansible/yxorp-kvin-stage-peer-probe.yml`, which
+checks that Maintenance has admitted HTTP80 at runtime before
+testing Kvin from Peanut. This separation was source/CI
+qualified in [Actions #42898369323](https://github.com/wdcallahan/sanctum-services/actions/runs/42898369323).
+**No live Kvin installation or HTTP probe has been executed yet.**
+
+**Next exact operator action on Kvin:** The stage and local
+probe now need *real* execution by Nova; there is no connected
+shell or Ansible controller for the assistant to run itself.
+From Kvin's ordinary Services checkout:
+```bash
+cd ~/src/sanctum-services
+git pull
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-probe.yml -e yxorp_kvin_stage_approved=true
+```
+The `-e` passes Nova's already-given stage approval only
+to these invocations. Keep `yxorp_production_cutover_approved=false`;
+do not use `ansible/yxorp.yml`. The stage has a separately owned
+Quadlet/service/config and binds `0.0.0.0:80` on Kvin; Kvar NPM and
+wildcard DNS continue carrying production traffic. No immediate
+stage cleanup: retain for later independently owned LAN/client
+qualification, or use its exact scoped remove play if needed.
+
+**Remaining external gate:** Maintenance #20's review/application
+of Kvin runtime+permanent HTTP80 firewall policy is still required
+for **Peanut-to-Kvin and other LAN client acceptance** (and eventual
+production). A separate read-only peer play is ready but must
+not be run before that policy is actually in place.
+The production/DNS cutover and persistent Peanut standby are
+unapproved and no other route is enabled.
+
 ## CURRENT — November 10: independent Kvin HTTP80 stage source complete; operator/owner gate next
 
 **Current source result:** A separate, removable Kvin rootful host-network
