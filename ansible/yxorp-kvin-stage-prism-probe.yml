@@ -1,0 +1,93 @@
+---
+# Read-only, independent anonymous GET comparison for the opt-in Prism
+# frontend. No credentials, HTML, cookies, redirects or arbitrary errors
+# are logged. WebSocket behavior is a separate acceptance gate.
+- name: Compare Joule Prism anonymous HTTP through Kvin stage and Kvar NPM
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact Kvin Prism stage scope and closed production authority
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[1].hostname == 'square.nexus.sanctum'
+          - not (yxorp_routes[1].enabled | bool)
+          - yxorp_routes[2].hostname == 'joule.nexus.sanctum'
+          - not (yxorp_routes[2].enabled | bool)
+          - yxorp_routes[2].upstream_host == 'kvin.outer.sanctum'
+          - yxorp_routes[2].upstream_port | int == 8084
+          - yxorp_routes[2].websocket | bool
+        fail_msg: >-
+          Prism read-only comparison is only for the approved Kvin
+          trial; the source manifest remains Yarn-only.
+
+    - name: Independently request Prism root through backend and both proxies
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        method: GET
+        headers:
+          Host: joule.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200, 301, 302, 303, 307, 308, 401, 403, 404]
+        timeout: 8
+      loop:
+        - name: direct_backend
+          url: http://kvin.outer.sanctum:8084/
+        - name: incumbent_kvar_npm
+          url: http://kvar.outer.sanctum/
+        - name: candidate_kvin_stage
+          url: http://127.0.0.1:80/
+      loop_control:
+        label: "{{ item.name }}"
+      register: yxorp_prism_stage_responses
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require exact three-path Prism comparison set
+      ansible.builtin.assert:
+        that:
+          - yxorp_prism_stage_responses.results | length == 3
+          - (yxorp_prism_stage_responses.results | map(attribute='item.name') | list) == ['direct_backend', 'incumbent_kvar_npm', 'candidate_kvin_stage']
+
+    - name: Report only Prism HTTP status and response equivalence metadata
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          frontend: joule.nexus.sanctum
+          direct_backend: kvin.outer.sanctum:8084
+          incumbent_npm: kvar.outer.sanctum:80
+          candidate_stage: 127.0.0.1:80
+          direct_status: "{{ direct.status | default(-1) }}"
+          incumbent_status: "{{ incumbent.status | default(-1) }}"
+          candidate_status: "{{ candidate.status | default(-1) }}"
+          all_three_have_http_response: "{{ (direct.status | default(-1) | int) >= 100 and (incumbent.status | default(-1) | int) >= 100 and (candidate.status | default(-1) | int) >= 100 }}"
+          candidate_and_incumbent_status_equal: "{{ candidate.status | default(-1) == incumbent.status | default(-1) }}"
+          candidate_and_direct_status_equal: "{{ candidate.status | default(-1) == direct.status | default(-1) }}"
+          candidate_content_type_equals_incumbent: "{{ (candidate.content_type | default('')) == (incumbent.content_type | default('')) if (candidate.status | default(-1) | int) >= 100 and (incumbent.status | default(-1) | int) >= 100 else 'not_comparable' }}"
+          incumbent_redirect_present: "{{ incumbent.location | default('') | length > 0 }}"
+          candidate_redirect_present: "{{ candidate.location | default('') | length > 0 }}"
+          candidate_redirect_equals_incumbent: "{{ candidate.location | default('') == incumbent.location | default('') if (candidate.status | default(-1) | int) >= 300 and (candidate.status | default(-1) | int) < 400 and (incumbent.status | default(-1) | int) >= 300 and (incumbent.status | default(-1) | int) < 400 else 'not_comparable' }}"
+          configuration_changed: false
+          limitation: >-
+            Anonymous GET / and coarse response parity only. Prism session
+            authentication, browser behavior, WebSocket upgrades, streaming,
+            DNS, remote LAN access and production cutover remain untested.
+      vars:
+        direct: "{{ yxorp_prism_stage_responses.results[0] }}"
+        incumbent: "{{ yxorp_prism_stage_responses.results[1] }}"
+        candidate: "{{ yxorp_prism_stage_responses.results[2] }}"
