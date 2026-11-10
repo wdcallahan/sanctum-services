@@ -1,5 +1,80 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Square stage installed but no HTTP response; inspect file bind mount
+
+**Actual native Square stage:** Nova ran
+`ansible/yxorp-kvin-stage.yml` with
+`yxorp_kvin_stage_approved=true` and
+`yxorp_stage_square_approved=true`: **`ok=31 changed=3
+failed=0 skipped=1`**. Exact target and candidate checks
+passed, only **Yarn and Square** were enabled in the
+in-memory stage manifest, candidate rendered, config
+published, existing Quadlet retained, and Nginx
+**reloaded** (not container restarted). Local stage
+health passed. Kvin rootful port80 stage still active;
+Kvar NPM and wildcard DNS remain authoritative; no
+firewall change or production cutover approval.
+
+**Actual Square comparison:** Native
+`ansible/yxorp-kvin-stage-square-probe.yml` returned
+`ok=4 changed=0 failed=0`, **but the HTTP checks
+were intentionally nonfatal**. At `Host:
+square.nexus.sanctum` GET /: direct Kvin Nextcloud
+backend `kvin.outer.sanctum:8085` returned HTTP302;
+incumbent Kvar NPM port80 also HTTP302; **new Kvin
+stage `127.0.0.1:80` returned no HTTP response
+(`candidate_status=-1`)**, so candidate status
+and redirect parity FAIL. `candidate_location_present=false`.
+Do NOT call this a passing Square application test.
+
+**Strong source-based hypothesis, still unconfirmed
+natively:** The role's
+`ansible.builtin.copy remote_src:true` atomically
+replaced `/etc/sanctum-services/yxorp-kvin-stage/nginx.conf`.
+The Quadlet mounts that **single host file** read-only
+at `/etc/nginx/nginx.conf` inside the running Podman
+container. A Linux file bind mount can remain pinned
+to the previous inode after host-file replacement;
+the role then sends **`nginx -s reload` instead of
+restarting the container**. If the container sees
+the OLD Yarn-only config, the new Square request
+matches default `return 444` and yields empty
+HTTP response (`curl` exit52/HTTP000). This
+fits the symptom but **must be verified**;
+do not presume it is the actual cause or alter
+container state to test it.
+
+**Source-qualified read-only check**:
+`ansible/yxorp-kvin-stage-mounted-config-observe.yml`
+compares host active and candidate configs against
+the content of `/etc/nginx/nginx.conf` *inside
+the already-running rootful Podman stage*,
+plus two bounded curl requests with exact Square
+and deliberately unmatched Host headers. It
+reports **only config equality and Square/Yarn
+presence booleans, stage-active flag, numeric
+curl exit and status codes**. All raw configs,
+responses and errors remain under `no_log`.
+No host/service/router/firewall/route/DNS writes.
+Unit source contract and real-Ansible synthetic
+stale/aligned mount report tests passed
+[Services CI #42909408599](https://github.com/wdcallahan/sanctum-services/actions/runs/42909408599).
+
+**Next genuine operator command on Kvin**:
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-mounted-config-observe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true
+```
+Return the **single sanitized report and recap**.
+Do not rerun the already accepted Yarn tests or
+repeat the failed three-way Square comparison.
+Keep the stage running; no experimental service
+restart or changes to Kvar, wildcard DNS,
+firewalld or production cutover. Once the live
+comparison establishes whether mount divergence
+occurred, correct the durable role/update lifecycle
+as appropriate and retest Square, retaining the
+separate stage/production authorization boundaries.
+
 ## CURRENT — November 10: local Yarn accepted; controlled Square-only Kvin stage ready
 
 **Native accepted state:** The rootful Kvin
