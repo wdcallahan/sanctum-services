@@ -1,0 +1,139 @@
+---
+# Compare incumbent Kvar NPM's current anonymous routing with the intended
+# upstreams, from the same Kvin client. No app data/credentials logged.
+# The new yarn.nexus.sanctum proposal has no incumbent NPM route; exclude it.
+- name: Observe direct backend versus Kvar NPM HTTP behavior without changing YXORP
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - ../data/yxorp-routes.yml
+  vars:
+    yxorp_legacy_routes: "{{ yxorp_routes | rejectattr('hostname', 'equalto', 'yarn.nexus.sanctum') | list }}"
+  tasks:
+    - name: Require exact Kvin observer and deliberately closed production gate
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_legacy_routes | length == 7
+          - (yxorp_legacy_routes | selectattr('enabled', 'equalto', true) | list | length) == 0
+          - (yxorp_legacy_routes | map(attribute='hostname') | list | unique | length) == 7
+
+    - name: Observe each declared backend anonymously with its current frontend Host
+      ansible.builtin.uri:
+        url: "http://{{ item.upstream_host }}:{{ item.upstream_port }}/"
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        follow_redirects: none
+        use_proxy: false
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      loop: "{{ yxorp_legacy_routes }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_origin_observations
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Observe same anonymous frontend Host through current Kvar NPM HTTP 80
+      ansible.builtin.uri:
+        url: http://kvar.outer.sanctum/
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        follow_redirects: none
+        use_proxy: false
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      loop: "{{ yxorp_legacy_routes }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_npm_observations
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Report safe per-route HTTP status and redirect equality, not raw responses
+      ansible.builtin.debug:
+        msg:
+          route: "{{ item.0.item.hostname }}"
+          direct_upstream: "{{ item.0.item.upstream_host }}"
+          direct_port: "{{ item.0.item.upstream_port }}"
+          direct_status: "{{ item.0.status | default(-1) }}"
+          incumbent_npm_status: "{{ item.1.status | default(-1) }}"
+          http_status_equal: "{{ (item.0.status | default(-1)) == (item.1.status | default(-1)) }}"
+          redirect_present_on_direct: "{{ (item.0.location | default('') | length) > 0 }}"
+          redirect_present_on_npm: "{{ (item.1.location | default('') | length) > 0 }}"
+          redirect_value_equal: "{{ (item.0.location | default('')) == (item.1.location | default('')) }}"
+          route_still_disabled: "{{ not (item.0.item.enabled) }}"
+      loop: "{{ yxorp_origin_observations.results | zip(yxorp_npm_observations.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item.hostname }}"
+
+    - name: Probe Pi-hole's specific administrator path on its declared backend
+      ansible.builtin.uri:
+        url: http://kvar.outer.sanctum:82/admin/
+        method: GET
+        headers:
+          Host: pihole.nexus.sanctum
+        follow_redirects: none
+        use_proxy: false
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      register: yxorp_pihole_admin_backend
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Probe the same Pi-hole administrator path through incumbent Kvar NPM
+      ansible.builtin.uri:
+        url: http://kvar.outer.sanctum/admin/
+        method: GET
+        headers:
+          Host: pihole.nexus.sanctum
+        follow_redirects: none
+        use_proxy: false
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      register: yxorp_pihole_admin_npm
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Report administrator path behavior without body or redirect URL
+      ansible.builtin.debug:
+        msg:
+          path: /admin/
+          service: pihole.nexus.sanctum
+          backend_status: "{{ yxorp_pihole_admin_backend.status | default(-1) }}"
+          incumbent_npm_status: "{{ yxorp_pihole_admin_npm.status | default(-1) }}"
+          http_status_equal: "{{ (yxorp_pihole_admin_backend.status | default(-1)) == (yxorp_pihole_admin_npm.status | default(-1)) }}"
+          redirect_value_equal: "{{ (yxorp_pihole_admin_backend.location | default('')) == (yxorp_pihole_admin_npm.location | default('')) }}"
+          credentials_used: false
+          note: >-
+            Pi-hole's root-path 404 alone is not a service-health conclusion.
+            This is an anonymous HTTP status comparison, not UI login acceptance.
+
+    - name: Preserve cutover and safety boundary in the evidence
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          incumbent_proxy: kvar.outer.sanctum
+          names_compared: "{{ yxorp_legacy_routes | length }}"
+          newly_proposed_yarn_host_excluded: true
+          kvars_proxy_modified: false
+          backend_configuration_modified: false
+          wildcard_dns_modified: false
+          new_yxorp_routes_activated: false
+          sensitive_request_or_response_values_logged: false
+          note: >-
+            Status and redirect equality is necessary migration evidence, but
+            does not prove user sessions, cookies, content or WebSocket parity.
