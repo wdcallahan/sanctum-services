@@ -1,5 +1,91 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Current Kvin stage — LinkStack interim HTTP passed; Kuma sixth canary (November 10)
+
+**Local anonymous Kvin HTTP stage progress: 5 of 8
+routes tested, all five passed their scoped
+first tests.** Yarn returned HTTP200 with
+direct-origin body equality, Square/Nextcloud
+HTTP302 with Kvar NPM's same redirect and
+content type, Prism HTTP200 with status and
+MIME equality, Search HTTP200 with status
+and MIME equality, and **LinkStack**
+`dir.nexus.sanctum` HTTP200 through
+direct Kvar backend :8081, Kvar NPM :80
+and Kvin stage `127.0.0.1:80`.
+The native LinkStack sanitized report
+had `all_three_have_http_response=true`
+and candidate/direct/incumbent status
+and candidate/incumbent MIME equality
+all true; neither proxy redirected.
+Probe recap `ok=4 changed=0 failed=0`.
+No fifth-stage reconcile recap was
+supplied, but its staged HTTP response
+was observed. LinkStack still resides
+on **Kvar**; this test did **not**
+move its data or application to Kvin.
+
+**Next scoped compatibility candidate:
+Uptime Kuma `kuma.nexus.sanctum`.**
+The checked-in route still targets the
+**legacy Kvar backend `:3001`**.
+`yxorp_stage_kuma_approved` defaults
+false and can select only this sixth
+host alongside the previously accepted
+five, with all stage approval flags
+explicitly true. Neither the production
+manifest (Yarn-only) nor Kvar NPM,
+wildcard DNS, host firewall or production
+cutover are edited. The stage retains
+safe Nginx validation, restart-on-drift
+and post-start mounted-config equality.
+
+Kuma's known anonymous GET / returns
+**HTTP302** both directly and through
+NPM, but the *direct backend* originally
+included explicit port 3001 in its
+absolute Location and incumbent NPM
+removed it. For this reason,
+`ansible/yxorp-kvin-stage-kuma-probe.yml`
+checks three paths (direct Kvar :3001,
+incumbent Kvar NPM :80 and candidate
+Kvin stage :80), compares status and
+content-type and reports conditional
+redirect equality, redirect path,
+hostname and scheme equality and
+**port classes**, never raw URLs or
+credentials. An unexpected mismatch
+is a **diagnostic result**, not
+automatic success or failure of
+Kuma itself. Kuma's application restore,
+monitors/history, login, notification
+behavior and WebSockets are separate
+migration gates, not proven here.
+
+**Next exact command, on Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+
+**Return only** two one-line
+`PLAY RECAP` results and the
+`msg` dictionary from **“Report only
+Kuma status and redirect authority
+components”**. For a failure instead
+return the failed task and error.
+No long Ansible logs; request accepted
+tests only once. The report is
+deliberately nonfatal and its
+HTTP values determine routing
+acceptance, not a clean play recap.
+
+[Source CI #42923666179](https://github.com/wdcallahan/sanctum-services/actions/runs/42923666179)
+**passed** the sixth-route contracts, real
+Ansible staged source selection, synthetically
+different/equal redirect-port cases,
+syntax and Nginx checks. Native
+Kuma stage has **not yet run**.
+
 ## Current Kvin stage — Search accepted; interim LinkStack next (November 10)
 
 **Native initial local HTTP acceptance: 4/8
