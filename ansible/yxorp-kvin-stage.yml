@@ -1,0 +1,206 @@
+---
+# Explicitly approved real HTTP:80 Kvin stage. Deliberately separate from
+# Kvin's production Quadlet and production cutover flag. This file never
+# opens a firewall rule, rewrites DNS, or touches incumbent Kvar NPM.
+- name: Validate and install only a removable Kvin YXORP HTTP 80 stage
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/yxorp-routes.yml
+    - vars/yxorp-kvin-stage.yml
+  pre_tasks:
+    - name: Require exact Kvin stage authorization before any host changes
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - not ansible_check_mode
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - yxorp_config_dir == '/etc/sanctum-services/yxorp-kvin-stage'
+          - yxorp_quadlet_file == '/etc/containers/systemd/sanctum-yxorp-kvin-stage.container'
+          - yxorp_service_name == 'sanctum-yxorp-kvin-stage.service'
+          - yxorp_container_name == 'sanctum-yxorp-kvin-stage'
+          - yxorp_image is match('^docker.io/library/nginx@sha256:[a-f0-9]{64}$')
+        fail_msg: >-
+          Kvin HTTP:80 stage requires explicit separate authorization.
+          Production cutover, Kvar NPM and DNS remain untouched.
+
+    - name: Check that the production Quadlet is not present
+      ansible.builtin.stat:
+        path: /etc/containers/systemd/sanctum-yxorp.container
+        follow: false
+      register: kvin_stage_production_quadlet
+
+    - name: Check that the separate production service is not running
+      ansible.builtin.command:
+        argv: [systemctl, is-active, sanctum-yxorp.service]
+      register: kvin_stage_production_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse staging over an existing production YXORP service
+      ansible.builtin.assert:
+        that:
+          - not (kvin_stage_production_quadlet.stat.exists | default(false))
+          - kvin_stage_production_unit.rc != 0
+        fail_msg: >-
+          Kvin production YXORP state exists; do not stage or disturb
+          its port 80 until the owner separately reconciles production.
+
+    - name: Check whether the exact stage Quadlet already exists
+      ansible.builtin.stat:
+        path: "{{ yxorp_quadlet_file }}"
+        follow: false
+      register: kvin_stage_quadlet
+
+    - name: Reject non-regular stage Quadlet before inspecting or overwriting
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_quadlet.stat.isreg | default(false)
+          - not (kvin_stage_quadlet.stat.islnk | default(false))
+      when: kvin_stage_quadlet.stat.exists
+
+    - name: Inspect installed stage Quadlet without changing it
+      ansible.builtin.slurp:
+        src: "{{ yxorp_quadlet_file }}"
+      register: kvin_stage_quadlet_contents
+      when: kvin_stage_quadlet.stat.exists
+
+    - name: Refuse adopting a modified or unrelated existing Quadlet
+      ansible.builtin.assert:
+        that:
+          - "'ContainerName=sanctum-yxorp-kvin-stage' in quadlet_lines"
+          - "'Network=host' in quadlet_lines"
+          - "quadlet_lines | select('match', '^Network=') | list | length == 1"
+          - "quadlet_lines | select('match', '^PublishPort=') | list | length == 0"
+          - "('Volume=' ~ yxorp_active_config ~ ':/etc/nginx/nginx.conf:ro,Z') in quadlet_lines"
+        fail_msg: Existing stage Quadlet is not the owned rootful host-network test.
+      vars:
+        quadlet_lines: "{{ (kvin_stage_quadlet_contents.content | b64decode).splitlines() }}"
+      when: kvin_stage_quadlet.stat.exists
+
+    - name: Check stage configuration directory for unexpected ownership
+      ansible.builtin.stat:
+        path: "{{ yxorp_config_dir }}"
+        follow: false
+      register: kvin_stage_config_dir
+
+    - name: Refuse symlinked or non-directory stage configuration path
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_config_dir.stat.isdir | default(false)
+          - not (kvin_stage_config_dir.stat.islnk | default(false))
+      when: kvin_stage_config_dir.stat.exists
+
+    - name: Inventory any existing stage-only configuration files
+      ansible.builtin.find:
+        paths: "{{ yxorp_config_dir }}"
+        recurse: true
+        hidden: true
+        follow: false
+        file_type: any
+      register: kvin_stage_existing_files
+      when: kvin_stage_config_dir.stat.exists
+
+    - name: Reject unexpected files before rendering into stage directory
+      ansible.builtin.assert:
+        that:
+          - item.path in [yxorp_candidate_config, yxorp_active_config]
+          - not (item.isdir | default(false))
+          - not (item.islnk | default(false))
+        fail_msg: Stage directory contains files outside this role's ownership.
+      loop: "{{ kvin_stage_existing_files.files | default([]) }}"
+      loop_control:
+        label: "{{ item.path }}"
+
+    - name: Observe any existing TCP port 80 listener
+      ansible.builtin.command:
+        argv: [ss, -H, -ltnp, "sport = :80"]
+      register: kvin_stage_port80
+      changed_when: false
+
+    - name: Observe whether the exact stage service is already active
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: kvin_stage_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse taking port 80 away from another service
+      ansible.builtin.assert:
+        that:
+          - >-
+            (kvin_stage_port80.stdout_lines | length == 0) or
+            (kvin_stage_unit.rc == 0 and
+             (kvin_stage_quadlet.stat.isreg | default(false)) and
+             not (kvin_stage_quadlet.stat.islnk | default(false)))
+        fail_msg: TCP 80 is occupied by an unidentified listener; do not stage.
+
+    - name: Require active Maintenance-managed firewalld
+      ansible.builtin.command:
+        argv: [firewall-cmd, --state]
+      register: kvin_stage_firewall_state
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse a disabled or unknown firewall daemon
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_firewall_state.rc == 0
+          - kvin_stage_firewall_state.stdout == 'running'
+
+    - name: Observe Kvin eth0's active firewall zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --get-zone-of-interface=eth0]
+      register: kvin_stage_lan_zone
+      changed_when: false
+
+    - name: Require the declared Kvin public-zone ownership boundary
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_lan_zone.stdout == 'public'
+
+    - name: Query runtime HTTP service admission without changing it
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-service=http]
+      register: kvin_stage_runtime_http
+      changed_when: false
+      failed_when: false
+
+    - name: Query runtime TCP 80 admission without changing it
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
+      register: kvin_stage_runtime_port
+      changed_when: false
+      failed_when: false
+
+    - name: Query permanent HTTP service admission without changing it
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --zone=public, --query-service=http]
+      register: kvin_stage_permanent_http
+      changed_when: false
+      failed_when: false
+
+    - name: Query permanent TCP 80 admission without changing it
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, --zone=public, --query-port=80/tcp]
+      register: kvin_stage_permanent_port
+      changed_when: false
+      failed_when: false
+
+    - name: Require both firewall policy stores admit ordinary HTTP before staging
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_runtime_http.rc == 0 or kvin_stage_runtime_port.rc == 0
+          - kvin_stage_permanent_http.rc == 0 or kvin_stage_permanent_port.rc == 0
+        fail_msg: >-
+          Kvin's public-zone HTTP 80 admission is not yet in both
+          runtime and permanent stores. Maintenance owns that policy.
+          Do not bypass it, modify Kvar, or deploy an inaccessible test.
+  roles:
+    - yxorp
