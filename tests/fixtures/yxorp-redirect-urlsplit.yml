@@ -1,0 +1,25 @@
+---
+# Real Ansible filter execution with synthetic redirects; no Sanctum host used.
+- name: Qualify the redirect parsing filters used by the YXORP observer
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    direct_location: http://kvar.outer.sanctum:3001/dashboard?q=synthetic
+    incumbent_location: /dashboard?q=synthetic
+    frontend_hostname: kuma.nexus.sanctum
+    declared_backend: kvar.outer.sanctum
+    direct_host: "{{ (direct_location | urlsplit('hostname')) | default('', true) }}"
+    incumbent_host: "{{ (incumbent_location | urlsplit('hostname')) | default('', true) }}"
+  tasks:
+    - name: Prove host, scheme, path and query classification really renders
+      ansible.builtin.assert:
+        that:
+          - direct_host == declared_backend
+          - incumbent_host == ''
+          - (direct_location | urlsplit('scheme')) == 'http'
+          - (incumbent_location | urlsplit('scheme')) == ''
+          - (direct_location | urlsplit('path')) == (incumbent_location | urlsplit('path'))
+          - (direct_location | urlsplit('query')) == (incumbent_location | urlsplit('query'))
+          - direct_location != incumbent_location
+          - direct_host != frontend_hostname
