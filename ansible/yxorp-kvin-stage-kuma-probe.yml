@@ -88,8 +88,8 @@
           candidate_redirect_path_equals_incumbent: "{{ (candidate_loc | urlsplit('path')) == (incumbent_loc | urlsplit('path')) if candidate_loc | length > 0 and incumbent_loc | length > 0 else 'not_comparable' }}"
           candidate_redirect_scheme_equals_incumbent: "{{ (candidate_loc | urlsplit('scheme')) == (incumbent_loc | urlsplit('scheme')) if candidate_loc | length > 0 and incumbent_loc | length > 0 else 'not_comparable' }}"
           candidate_redirect_host_equals_incumbent: "{{ (candidate_loc | urlsplit('hostname')) == (incumbent_loc | urlsplit('hostname')) if candidate_loc | length > 0 and incumbent_loc | length > 0 else 'not_comparable' }}"
-          candidate_redirect_port_class: "{{ 'no_explicit_port' if candidate_port is none else ('declared_backend_port' if candidate_port | int == 3001 else 'other_explicit_port') if candidate_loc | length > 0 else 'not_comparable' }}"
-          incumbent_redirect_port_class: "{{ 'no_explicit_port' if incumbent_port is none else ('declared_backend_port' if incumbent_port | int == 3001 else 'other_explicit_port') if incumbent_loc | length > 0 else 'not_comparable' }}"
+          candidate_redirect_port_class: "{{ 'not_comparable' if candidate_loc | length == 0 else ('no_explicit_port' if candidate_port is none else ('declared_backend_port' if candidate_port | int == 3001 else 'other_explicit_port')) }}"
+          incumbent_redirect_port_class: "{{ 'not_comparable' if incumbent_loc | length == 0 else ('no_explicit_port' if incumbent_port is none else ('declared_backend_port' if incumbent_port | int == 3001 else 'other_explicit_port')) }}"
           application_migrated_to_kvin: false
           configuration_changed: false
           limitation: >-
