@@ -1,0 +1,64 @@
+---
+# Services uses the existing Kvin and Kvar inventory connections to observe
+# selected kernel forwarding decisions. This does not modify any route.
+# A selected route does not establish TCP return-path or firewall acceptance.
+- name: Compare kernel-selected source and next hop to Yarn from Kvin and Kvar
+  hosts: "yxorp:npm_proxy_legacy"
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require exactly the two known observers and ordinary execution
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in ['kvin.outer.sanctum', 'kvar.outer.sanctum']
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_play_hosts_all | length == 2
+          - not ansible_check_mode
+
+    - name: Observe selected route to the previously accepted Yarn backend
+      ansible.builtin.command:
+        argv: [ip, -4, -j, route, get, "192.168.1.110"]
+      register: yxorp_yarn_route
+      changed_when: false
+      failed_when: false
+
+    - name: Observe selected route to known Arcane peer as a control
+      ansible.builtin.command:
+        argv: [ip, -4, -j, route, get, "192.168.3.3"]
+      register: yxorp_arcane_control_route
+      changed_when: false
+      failed_when: false
+
+    - name: Report only selected device, source and next-hop metadata
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          yarn_destination: 192.168.1.110
+          yarn_route_query_succeeded: "{{ yxorp_yarn_route.rc == 0 }}"
+          yarn_selected_interface: "{{ yarn_route.dev | default('unavailable') }}"
+          yarn_selected_gateway: "{{ yarn_route.gateway | default('direct_or_unreported') }}"
+          yarn_selected_source: "{{ yarn_route.prefsrc | default(yarn_route.src | default('unavailable')) }}"
+          yarn_route_type: "{{ yarn_route.type | default('ordinary_or_unreported') }}"
+          control_destination: 192.168.3.3
+          control_route_query_succeeded: "{{ yxorp_arcane_control_route.rc == 0 }}"
+          control_selected_interface: "{{ control_route.dev | default('unavailable') }}"
+          control_selected_gateway: "{{ control_route.gateway | default('direct_or_unreported') }}"
+          control_selected_source: "{{ control_route.prefsrc | default(control_route.src | default('unavailable')) }}"
+          control_route_type: "{{ control_route.type | default('ordinary_or_unreported') }}"
+          configuration_changed: false
+          interpretation: >-
+            This displays selected routes, not a packet capture or
+            bidirectional TCP test. Comparing Kvin and Kvar can expose
+            a different source, interface, or gateway, but identical routes
+            do not prove the same source/firewall/return-path behavior.
+      vars:
+        yarn_route: >-
+          {{ (yxorp_yarn_route.stdout | from_json | first)
+             if (yxorp_yarn_route.rc == 0 and
+                 (yxorp_yarn_route.stdout | default('')) is match('^\\s*\\['))
+             else {} }}
+        control_route: >-
+          {{ (yxorp_arcane_control_route.stdout | from_json | first)
+             if (yxorp_arcane_control_route.rc == 0 and
+                 (yxorp_arcane_control_route.stdout | default('')) is match('^\\s*\\['))
+             else {} }}
