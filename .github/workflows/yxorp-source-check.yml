@@ -20,6 +20,7 @@ on:
       - "tests/test_yxorp_upstreams_observe.py"
       - "tests/test_yxorp_incumbent_parity.py"
       - "tests/test_yxorp_discrepancies_observe.py"
+      - "tests/fixtures/yxorp-redirect-urlsplit.yml"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
       - "tools/observe-yxorp-npm-behavior.py"
@@ -79,6 +80,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-upstreams-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-incumbent-parity.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-discrepancies-observe.yml --syntax-check
+          ansible-playbook -i 'localhost,' tests/fixtures/yxorp-redirect-urlsplit.yml -c local
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-status.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-qualify-image.yml --syntax-check
