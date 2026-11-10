@@ -1,0 +1,96 @@
+---
+# Compare only the anonymous Search landing page through direct backend,
+# incumbent Kvar NPM and new Kvin YXORP stage. Hide response bodies,
+# cookie values, redirects and errors. No user search queries are sent.
+- name: Compare Search anonymous HTTP through Kvin stage and incumbent
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact Kvin Search-stage scope with unchanged production
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[1].hostname == 'square.nexus.sanctum'
+          - not (yxorp_routes[1].enabled | bool)
+          - yxorp_routes[2].hostname == 'joule.nexus.sanctum'
+          - not (yxorp_routes[2].enabled | bool)
+          - yxorp_routes[3].hostname == 'search.nexus.sanctum'
+          - not (yxorp_routes[3].enabled | bool)
+          - yxorp_routes[3].upstream_host == 'kvin.outer.sanctum'
+          - yxorp_routes[3].upstream_port | int == 8083
+          - not (yxorp_routes[3].websocket | bool)
+        fail_msg: >-
+          Only Kvin's already-authorized test stage may run the
+          bounded Search HTTP comparison.
+
+    - name: Independently request Search root through backend and both proxies
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        method: GET
+        headers:
+          Host: search.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200, 301, 302, 303, 307, 308, 401, 403, 404, 429, 500, 502, 503]
+        timeout: 8
+      loop:
+        - name: direct_backend
+          url: http://kvin.outer.sanctum:8083/
+        - name: incumbent_kvar_npm
+          url: http://kvar.outer.sanctum/
+        - name: candidate_kvin_stage
+          url: http://127.0.0.1:80/
+      loop_control:
+        label: "{{ item.name }}"
+      register: yxorp_search_stage_responses
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require exact three-path Search comparison set
+      ansible.builtin.assert:
+        that:
+          - yxorp_search_stage_responses.results | length == 3
+          - (yxorp_search_stage_responses.results | map(attribute='item.name') | list) == ['direct_backend', 'incumbent_kvar_npm', 'candidate_kvin_stage']
+
+    - name: Report only Search HTTP status and anonymous metadata parity
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          frontend: search.nexus.sanctum
+          direct_backend: kvin.outer.sanctum:8083
+          incumbent_npm: kvar.outer.sanctum:80
+          candidate_stage: 127.0.0.1:80
+          direct_status: "{{ direct.status | default(-1) }}"
+          incumbent_status: "{{ incumbent.status | default(-1) }}"
+          candidate_status: "{{ candidate.status | default(-1) }}"
+          all_three_have_http_response: "{{ (direct.status | default(-1) | int) >= 100 and (incumbent.status | default(-1) | int) >= 100 and (candidate.status | default(-1) | int) >= 100 }}"
+          candidate_and_incumbent_status_equal: "{{ candidate.status | default(-1) == incumbent.status | default(-1) }}"
+          candidate_and_direct_status_equal: "{{ candidate.status | default(-1) == direct.status | default(-1) }}"
+          candidate_content_type_equals_incumbent: "{{ (candidate.content_type | default('')) == (incumbent.content_type | default('')) if (candidate.status | default(-1) | int) >= 100 and (incumbent.status | default(-1) | int) >= 100 else 'not_comparable' }}"
+          incumbent_redirect_present: "{{ incumbent.location | default('') | length > 0 }}"
+          candidate_redirect_present: "{{ candidate.location | default('') | length > 0 }}"
+          candidate_redirect_equals_incumbent: "{{ candidate.location | default('') == incumbent.location | default('') if (candidate.status | default(-1) | int) >= 300 and (candidate.status | default(-1) | int) < 400 and (incumbent.status | default(-1) | int) >= 300 and (incumbent.status | default(-1) | int) < 400 else 'not_comparable' }}"
+          configuration_changed: false
+          limitation: >-
+            Anonymous GET / status and metadata only. This does not test
+            actual search queries, results, cookies, sessions, browser
+            behavior, remote LAN clients or production cutover.
+      vars:
+        direct: "{{ yxorp_search_stage_responses.results[0] }}"
+        incumbent: "{{ yxorp_search_stage_responses.results[1] }}"
+        candidate: "{{ yxorp_search_stage_responses.results[2] }}"
