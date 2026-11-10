@@ -257,6 +257,34 @@
         yxorp_routes: "{{ yxorp_routes[:4] + [(yxorp_routes[4] | combine({'enabled': true}))] + yxorp_routes[5:] }}"
       when: yxorp_stage_dir_approved | default(false) | bool
 
+    # Kuma remains on Kvar and is intended for a separately managed
+    # Kvin migration. This canary tests only proxy compatibility with the
+    # exact current backend. Redirects may be normalized differently.
+    - name: Require Kuma stage on top of five accepted local HTTP routes
+      ansible.builtin.assert:
+        that:
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - yxorp_stage_dir_approved | bool
+          - yxorp_routes | length == 8
+          - yxorp_routes[5].hostname == 'kuma.nexus.sanctum'
+          - not (yxorp_routes[5].enabled | bool)
+          - yxorp_routes[5].upstream_scheme == 'http'
+          - yxorp_routes[5].upstream_host == 'kvar.outer.sanctum'
+          - yxorp_routes[5].upstream_port | int == 3001
+          - yxorp_routes[5].websocket | bool
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum', 'square.nexus.sanctum', 'joule.nexus.sanctum', 'search.nexus.sanctum', 'dir.nexus.sanctum']
+        fail_msg: >-
+          Kuma trial is limited to the current old Kvar port 3001
+          and the previously accepted five stage route names.
+      when: yxorp_stage_kuma_approved | default(false) | bool
+
+    - name: Enable only interim Kuma with five previously accepted Kvin routes
+      ansible.builtin.set_fact:
+        yxorp_routes: "{{ yxorp_routes[:5] + [(yxorp_routes[5] | combine({'enabled': true}))] + yxorp_routes[6:] }}"
+      when: yxorp_stage_kuma_approved | default(false) | bool
+
     # Host firewalld is intentionally not a deployment prerequisite:
     # its LAN admission is independently owned by Maintenance. A local
     # HTTP:80 stage can bind and be accepted on Kvin without opening
