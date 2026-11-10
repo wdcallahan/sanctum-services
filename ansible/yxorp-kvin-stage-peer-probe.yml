@@ -1,0 +1,121 @@
+---
+# Separately gated read-only LAN acceptance for the Kvin real-port stage.
+# Maintenance owns the host firewall. Only run after it admits inbound
+# HTTP80 at runtime; this play never changes its firewall, DNS, or Kvar.
+- name: Require owner-provided Kvin LAN HTTP admission before peer testing
+  hosts: yxorp
+  gather_facts: false
+  become: true
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+  tasks:
+    - name: Require Kvin stage and closed production cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Observe the specifically named staged system service
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: kvin_stage_peer_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse remote test until the Kvin stage is running
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_peer_unit.rc == 0
+
+    - name: Read Kvin wired interface's owning firewalld zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --get-zone-of-interface=eth0]
+      register: kvin_stage_peer_zone
+      changed_when: false
+
+    - name: Require the expected Maintenance-owned LAN zone
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_peer_zone.stdout == 'public'
+
+    - name: Observe runtime admission by the HTTP service name
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-service=http]
+      register: kvin_stage_peer_http_service
+      changed_when: false
+      failed_when: false
+
+    - name: Observe explicit runtime TCP 80 admission
+      ansible.builtin.command:
+        argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
+      register: kvin_stage_peer_http_port
+      changed_when: false
+      failed_when: false
+
+    - name: Require owner-supplied runtime LAN admission
+      ansible.builtin.assert:
+        that:
+          - kvin_stage_peer_http_service.rc == 0 or kvin_stage_peer_http_port.rc == 0
+        fail_msg: >-
+          Kvin is locally staged, but Maintenance-managed public-zone
+          HTTP80 is not admitted at runtime. Do not change policy in
+          Services; defer only this remote-client acceptance test.
+
+- name: Verify separate Peanut client reaches the new Kvin real-port listener
+  hosts: yxorp_test
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require exact remote client and no Peanut test deployment
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Query Kvin stage health from a different network host
+      ansible.builtin.uri:
+        url: http://kvin.outer.sanctum/__yxorp_health
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 8
+      register: kvin_stage_peer_health
+      changed_when: false
+      no_log: true
+
+    - name: Query new Yarn route from a different network host
+      ansible.builtin.uri:
+        url: http://kvin.outer.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 8
+      register: kvin_stage_peer_yarn
+      changed_when: false
+      no_log: true
+
+    - name: Require remote health and actual Yarn response
+      ansible.builtin.assert:
+        that:
+          - "'yxorp-ready' in (kvin_stage_peer_health.content | default(''))"
+          - kvin_stage_peer_yarn.status == 200
+
+    - name: Report remote client result without leaking response content
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          target: kvin.outer.sanctum
+          frontend: yarn.nexus.sanctum
+          stage_health_ok: "{{ 'yxorp-ready' in (kvin_stage_peer_health.content | default('')) }}"
+          yarn_http_status: "{{ kvin_stage_peer_yarn.status }}"
+          yarn_body_length: "{{ (kvin_stage_peer_yarn.content | default('')) | length }}"
+          changed: false
+          limitation: >-
+            A reachable network peer and anonymous GET do not prove
+            other client subnets, sessions or WebSocket behavior.
