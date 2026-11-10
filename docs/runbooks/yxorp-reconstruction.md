@@ -152,6 +152,45 @@ occurs, preserve its exact result rather than bypassing Nginx's parser.
 The previous temporary permission expires four hours after addition
 unless removed by `ansible/yxorp-peanut-remove.yml`.
 
+## Read-only status after the temporary HTTP exception expires
+
+The Peanut Nginx trial can stay running locally after firewalld's four-hour
+runtime HTTP/80 exception expires. This is expected and is **not** evidence
+that Nginx or its upstream has failed. The temporary permission was granted
+on the original addition, not reset by a successful rerun.
+
+From Kvin's `~/src/sanctum-services` checkout, use the source-owned
+read-only status check:
+
+```bash
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-peanut-status.yml
+```
+
+This observes the actual Peanut rootful systemd unit, port-80 listener,
+Quadlet and Nginx configuration presence, local health, active firewalld
+LAN zone, runtime `80/tcp` and `http` admissions, and trial ownership
+marker. A second play checks the same health URL **from Kvin** as a
+different-subnet network client. Both HTTP requests have five-second
+timeouts; connectivity failure is reported rather than treated as a
+deployment command. The marker may remain after a time-limited rule
+expires; its presence is not proof that access is still admitted.
+
+This check never opens or renews a firewall port, starts or stops a
+service, commits DNS, rerenders configuration, or changes Kvar NPM. The
+Peanut stage can be retired via the explicitly approved scoped removal
+below. A later test requiring a renewed temporary HTTP opening must
+use the existing approved trial admission/deployment procedure, not an
+untracked manual firewalld mutation.
+
+The Mace-to-Peanut client-path failure was isolated to Bunny Inner's
+IPv4 forwarding policy by an A/B/A firewall-rule experiment, with the
+permanent fix tracked in
+[Sanctum Maintenance issue #36](https://github.com/wdcallahan/sanctum-maintenance/issues/36).
+The already accepted Kvin-origin Yarn HTTP 200 remains valid. Retest Mace
+only after router policy reconciliation; no extra Mace static route is
+appropriate.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
