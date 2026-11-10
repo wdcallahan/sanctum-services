@@ -224,6 +224,39 @@ and validated configuration; it must not be treated as a production
 cutover or lasting standby permission. When this bounded trial
 finishes, use the reviewed removal procedure below to retire it.
 
+## Kvin production readiness without changing Kvar
+
+Yarn's real response through Peanut is now independently content-accepted:
+on November 10 Nova's Kvin origin/Peanut comparison returned HTTP 200,
+`text/html`, and **349 identical response bytes** on each side. The
+second application of the Peanut trial role made no Nginx/Quadlet changes;
+it renewed only the approved expiring firewall exception. This does
+not authorize production cutover or enable the other routes.
+
+The next *separate* production-host prerequisite can be checked safely
+while Kvar continues serving the existing proxy. On Kvin, run:
+
+```bash
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-readiness.yml
+```
+
+The play observes Kvin's current TCP/80 listeners and owner metadata,
+whether its production YXORP service or Quadlet already exists,
+whether the previously native-qualified Nginx ARM64 image digest is
+in the **rootful** image store, and the active/permanent firewalld
+admission for HTTP on `eth0`'s zone. It collects facts only: no
+`podman pull`, installation, file edit, Quadlet creation, start,
+firewall change, service publication or DNS mutation. A missing port-80
+allowance or occupied port is a finding for the corresponding owner,
+not permission to take over the listener or open policy automatically.
+
+The **current Peanut trial** remains distinct from the intended
+persistent Peanut standby. Once the authorized Yarn trial concludes,
+the scoped removal below retires its temporary service/port allowance.
+Permanent twin/standby publication, route and client tests, and
+production cutover still require their own reviewed deployment and
+recovery controls.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
