@@ -30,7 +30,7 @@
 
     - name: Look up actual Yarn backend A records through Kvin's host resolver
       ansible.builtin.command:
-        argv: [getent, ahostsv4, yarn.inner.sanctum]
+        argv: [timeout, '5', getent, ahostsv4, yarn.inner.sanctum]
       register: kvin_yarn_diag_dns
       changed_when: false
       failed_when: false
