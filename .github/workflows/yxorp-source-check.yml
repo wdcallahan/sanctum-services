@@ -27,6 +27,7 @@ on:
       - "tests/test_yxorp_yarn_route_observe.py"
       - "tests/fixtures/yxorp-route-get-parse.yml"
       - "tests/fixtures/verify-yxorp-kvin-stage-guard.py"
+      - "tests/fixtures/verify-yxorp-kvin-yarn-transport-report.py"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
@@ -102,6 +103,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-yarn-route-observe.yml --syntax-check
           ansible-playbook -i 'localhost,' tests/fixtures/yxorp-route-get-parse.yml -c local
           python3 tests/fixtures/verify-yxorp-kvin-stage-guard.py
+          python3 tests/fixtures/verify-yxorp-kvin-yarn-transport-report.py
           ansible-playbook -i 'localhost,' tests/fixtures/yxorp-redirect-urlsplit.yml -c local
           python3 - <<'PY'
           import pathlib, yaml
