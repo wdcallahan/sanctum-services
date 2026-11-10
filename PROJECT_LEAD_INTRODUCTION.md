@@ -1,5 +1,57 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvar host itself cannot reach legacy Yarn; route choice to observe
+
+**Latest actual native result:** Nova ran
+`ansible/yxorp-npm-path-diagnose.yml` through Kvin. Kvin
+`ok=4 changed=0 failed=0`, Kvar `ok=5 changed=0 failed=0`.
+Kuma `/` and Pi-hole `/admin/` redirect differences are now
+fully classified as **backend port included directly, omitted
+by incumbent Kvar NPM**; HTTP302, same backend hostname, path,
+query, fragment and userinfo. Do not blindly reproduce a
+legacy redirect rewrite or diagnose an application outage.
+
+The old `yarn.inner.sanctum` route through Kvar NPM timed
+out. The **Kvar host itself** also failed to receive any HTTP
+response from `192.168.1.110:80`, and Kvar's running rootful
+NPM container's own native Node HTTP request independently
+**timed out**. Kvin did receive HTTP200 directly from
+that same backend earlier. The common Kvar network path,
+rather than solely an NPM proxy setting, needs explanation.
+This is separate from Mace→Peanut/Bunny Inner's already
+A/B/A-proven policy issue; do not assert they share a cause
+without new evidence.
+
+**Next exact native operator action:** From Kvin:
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-yarn-route-observe.yml
+```
+Read-only comparison uses two exact existing inventory peers:
+Kvin and Kvar (latter via declared SSH10022). It reports the
+selected kernel IPv4 device, source, next-hop and route type
+for the Yarn backend `192.168.1.110` and control destination
+`192.168.3.3` at each host. It does not contact backend HTTP,
+add a route, manipulate a firewall or restart anything. A
+kernel route choice is **not** a packet-delivery proof. The
+synthetic real-Ansible JSON parse fixture and route-source
+contract passed in CI. Do not rerun the already accepted
+Kvar NPM, redirect or Peanut checks.
+
+**Separate, unchanged service release gate:** Kvin's host TCP80
+is unoccupied and its qualified rootful ARM64 Nginx image is
+cached, but Kvin public-zone firewalld has NO runtime or
+permanent HTTP/80 admission. Maintenance #20 owns a
+reviewed addition after Thursday and Nova's approval.
+Maintenance #36 owns the Bunny Inner asymmetric-forwarding
+fix. Kvar NPM still serves existing DNS names, seven
+legacy YXORP routes remain disabled, and Kvin production/
+Peanut persistent standby are NOT commissioned. No new
+host route, blanket firewall rule or TLS/CA initiative
+is authorized by these observations.
+
+
 ## CURRENT — November 10: Kvar legacy Yarn timeout isolated; host versus NPM namespace next
 
 Nova executed `ansible/yxorp-discrepancies-observe.yml` on Kvin:
