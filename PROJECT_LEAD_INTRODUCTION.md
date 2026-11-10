@@ -1,5 +1,53 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10, 2026: YXORP Peanut Yarn route content-accepted
+
+**This is the active restart point. All dated \"pending\" instructions below
+are historical unless restated here. Do not repeat accepted tests or revisit
+the rejected Kvin loopback staging proposal.**
+
+Nova ran the native authorized four-hour Peanut trial reopening, followed
+by the independent Kvin same-Host origin/proxy comparison. Result:
+`peanut.arcane.sanctum ok=43 changed=1 failed=0` (only the runtime
+TCP/80 exception was renewed; existing rootful Nginx parser, Quadlet,
+config and local health were unchanged/healthy), then
+`kvin.outer.sanctum ok=4 changed=0 failed=0`.
+Both the direct `http://yarn.inner.sanctum/` and the route through
+`http://peanut.arcane.sanctum/` using
+`Host: yarn.nexus.sanctum` returned HTTP **200**, MIME `text/html`,
+**349 bytes each**, and **`body_equal=true`**. This is real anonymous
+content equality, not just an HTTP 200; browser/login/WebSocket, other
+routes, Kvin production and standby promotion remain unqualified.
+[Accepted issue receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6774641790).
+
+**Next distinct live steps (operator-required):** from Kvin's current
+Services checkout, `git pull --ff-only`, then
+`ansible/yxorp-peanut-remove.yml` to stop/remove the **Peanut test**
+Quadlet/config and its marked temporary HTTP/80 opening now that
+Yarn-only trial acceptance is complete. Follow with read-only
+`ansible/yxorp-kvin-readiness.yml` to inspect actual production
+Kvin port-80 occupancy, rootful known-good image digest and active/
+permanent firewall admission. Both are source-controlled in Services;
+the former was expressly approved for trial cleanup, the latter
+does not modify services. Never remove Kvar NPM, change DNS or deploy
+Kvin YXORP without a separate cutover decision.
+
+**Independent infrastructure issue:** Mace cannot normally SSH to
+Arcane/Peanut because Bunny Inner's IPv4 `forward` rule 20
+(`state invalid action drop`) breaks the valid asymmetric return path.
+Nova's five-minute `commit-confirm` A/B/A test identified the rule
+and safely restored it. [Maintenance #36](https://github.com/wdcallahan/sanctum-maintenance/issues/36)
+owns the source fix when Maintenance resumes Thursday; the YXORP
+route itself was independently accepted from Kvin. No client host
+route, blanket router/firewall redesign or unnecessary YXORP rebuild.
+
+**Service design remains** plain Nginx rootful host-network HTTP/80,
+Kvin primary and Peanut intended future peer/standby; Git-declared
+routes, with **Yarn only** enabled for trial. Production gate false;
+no permanent standby or automatic updates commissioned. Record new
+native evidence in Services issue #2; do not infer deployment from CI.
+
+
 ## Most recent blocker — Mace→Peanut transport is pre-existing Maintenance #36
 
 **November 9 native client evidence** supersedes any following note
