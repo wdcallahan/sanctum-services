@@ -1,5 +1,78 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Current native result — November 10: Square's stale bind mount found; source repair awaiting Kvin
+
+**Route acceptance:** Of eight declared YXORP routes,
+**two have been tested through the new Kvin HTTP80 stage**:
+**Yarn passed** (HTTP200 and matching direct-origin
+bodies); **Square/Nextcloud did not yet pass**
+(direct backend and Kvar NPM HTTP302, but Kvin stage
+no HTTP response). The remaining six routes have
+not been qualified through the new Kvin proxy.
+The checked-in manifest remains Yarn-only,
+Kvar NPM and wildcard DNS remain production,
+and Maintenance still owns the separate Kvin
+LAN HTTP80 firewall admission.
+
+**Confirmed diagnosis:** The read-only native
+`ansible/yxorp-kvin-stage-mounted-config-observe.yml`
+returned `ok=8 changed=0 failed=0`.
+The host's published config **equaled its
+validated candidate**, both contained the
+Square virtual host. The running rootful
+Podman container's mounted `/etc/nginx/nginx.conf`
+was readable, contained Yarn but **not Square**,
+and **differed from the host's active file**.
+`curl` with the Square Host and with a deliberately
+unmatched Host each returned exit52/HTTP000.
+Thus the problem is an **outdated single-file bind
+mount**, not Nginx's parser or a broken Nextcloud
+backend. The prior role atomically replaced the
+host's config and issued `nginx -s reload`, which
+could still see the old inode.
+
+**Durable repair, source-qualified:** The shared
+YXORP Ansible role continues to validate candidate
+Nginx syntax before publishing. It now **restarts
+only the selected, authorized systemd YXORP service**
+on changed config or changed Quadlet, so Podman
+remounts the new file. An unchanged run keeps the
+existing service running. The old Nginx-only reload
+path was removed. A new post-reconcile check
+compares SHA256 of the host-published config and
+the exact config inside the running container,
+with raw contents hidden; **mount mismatch is
+now a failed deployment**, not a health-only false
+positive. [Source CI #42911002825](https://github.com/wdcallahan/sanctum-services/actions/runs/42911002825)
+**PASSED** unit and real-Ansible synthetic cases,
+playbook syntax, Nginx parser and synthetic HTTP.
+Actual Kvin remediation still requires a native run.
+
+**Next native operator step, from Kvin's existing
+Services checkout**, with already-granted stage
+authorization and the separately enabled Square
+canary for this test-stage invocation:
+
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-square-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true
+```
+
+The first play will validate/publish, restart **only
+`sanctum-yxorp-kvin-stage.service`** if the
+configuration changes, verify mounted content
+equals published content, and check local health.
+The next play independently queries anonymous
+Nextcloud root through direct backend, incumbent
+Kvar NPM and Kvin staged virtual host; nonfatal
+probe responses report only safe status/redirect
+comparison booleans. HTTP302 parity would accept
+**anonymous root routing only**, not login,
+Calendar, WebDAV, WebSocket, other applications
+or client LAN access. Do not run the production
+YXORP play, reopen the old Yarn investigation
+or change NPM, DNS, Kvin firewall or routings.
+Leave the test stage installed afterward.
+
 **Current verified state, November 10, 2026:** Kvar's
 **Nginx Proxy Manager** is still the live production proxy
 for wildcard `*.nexus.sanctum` names, and neither
