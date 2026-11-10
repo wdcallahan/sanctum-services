@@ -1,22 +1,47 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
-**Current source state, November 9, 2026:** Peanut is the explicitly selected
-full-port, full-LAN trial host. Kvin remains the intended production host.
-Kvar's incumbent Nginx Proxy Manager (NPM) remains online until a separate
-accepted cutover. Peanut is **Kvin's intended service peer and standby**:
-once YXORP is accepted and its persistent standby publication is deliberately
-commissioned, Peanut can assume the reverse-proxy role if Kvin fails.
-This ad hoc test is not yet that failover mechanism. **Native Peanut
-test installation has now passed**: Nova's complete November 9,
-18:59 CST Ansible run returned `ok=40 changed=3 failed=0`.
-The disposable Nginx parser test passed with host networking, the
-validated config and rootful Quadlet were installed, systemd started
-the trial service, and its local health endpoint returned 200.
-The temporary firewall port remained admitted from its earlier
-time-limited addition; this successful run did **not** refresh the
-four-hour expiration. [Runtime acceptance record](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6755844881).
-**Client-side Yarn acceptance from Kvin is the next real boundary**;
-do not declare full service success from the local health check.
+**Current state, November 10, 2026:** **Kvar Nginx Proxy Manager
+remains the production proxy**; the authoritative wildcard DNS and
+existing client routes have not been switched. Plain Nginx on Kvin
+is the intended rootful Podman host-network HTTP:80 replacement;
+Peanut is the intended future peer/standby, not currently serving
+permanent standby traffic.
+
+The **Peanut-only rootful trial is complete**: Kvin got a same-client,
+same-Host **349-byte byte-identical HTTP200** Yarn response via Peanut
+and directly from the origin. Nova then ran the scoped removal play
+on Peanut successfully (`ok=26 changed=5 failed=0`).
+Do not repeat this trial, client test or cleanup. The prior Peanut
+local health check and cross-host HTTP200 have been superseded by
+the stronger content comparison and completed removal.
+
+The **independent Kvin stage source** is now implemented:
+`ansible/yxorp-kvin-stage.yml`, its same-Host/remote-client
+`ansible/yxorp-kvin-stage-probe.yml`, and the verified
+`ansible/yxorp-kvin-stage-remove.yml`. CI includes executed
+real-Ansible checks of the exact stage permission expression.
+The stage is a separate `sanctum-yxorp-kvin-stage` unit/Quadlet and
+config tree, sharing **only the intended host port80** with
+future production; it cannot coexist with another port80 listener.
+**Neither Kvin stage nor production has been deployed**.
+The stage approval and removal approval default false, and the
+separate production cutover approval remains false.
+
+**Blockers to native Kvin staging:** Maintenance owns the absent
+runtime and permanent `eth0/public` HTTP:80 admission on Kvin
+([Maintenance #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6775538017));
+actual firewall policy application and actual stage deployment
+each require Nova's separate approval. Stage/production and wildcard
+DNS are distinct authorization boundaries. See the new **Independent
+Kvin stage** section below for precise source and future commands.
+
+Kvar's broken old `yarn.inner.sanctum` NPM path is deferred, not
+repaired, after a Kvar/Kvin native route comparison showed the same
+gateway for Yarn and Arcane destinations. The new
+`yarn.nexus.sanctum` route was accepted in the Peanut trial, and
+the old name remains tracked for explicit eventual consumer
+review/retirement. No arbitrary route, firewall, private CA or
+Kvar NPM rewrite is warranted by those results.
 
 ## Same service architecture in trial and production
 
@@ -49,7 +74,7 @@ The other observed NPM routes remain declared but disabled until their
 applications and consumer behavior are accepted. The NPM administrative
 UI itself is retired rather than reproduced.
 
-## First trial: Kvin controller, Peanut target
+## Historical completed trial: Kvin controller, Peanut target (do not rerun)
 
 From `~/src/sanctum-services` on Kvin:
 
@@ -603,7 +628,7 @@ an explicit production/DNS cutover decision. That decision is
 separate from stage install or removal and from Maintenance's
 host firewall approval.
 
-## Reversal: remove the entire temporary Peanut service
+## Historical completed reversal: remove the temporary Peanut test (do not rerun)
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
 **Peanut only**. Run it from Kvin's Services checkout when the test
