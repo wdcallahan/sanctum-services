@@ -58,7 +58,7 @@ responses and errors remain under `no_log`.
 No host/service/router/firewall/route/DNS writes.
 Unit source contract and real-Ansible synthetic
 stale/aligned mount report tests passed
-[Services CI #42909408599](https://github.com/wdcallahan/sanctum-services/actions/runs/42909408599).
+[Services CI #42909739503](https://github.com/wdcallahan/sanctum-services/actions/runs/42909739503).
 
 **Next genuine operator command on Kvin**:
 ```bash
