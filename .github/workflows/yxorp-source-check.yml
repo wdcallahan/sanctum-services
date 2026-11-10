@@ -19,6 +19,7 @@ on:
       - "tests/test_yxorp_yarn_content.py"
       - "tests/test_yxorp_kvin_readiness.py"
       - "tests/test_yxorp_kvin_stage.py"
+      - "tests/test_yxorp_kvin_yarn_transport_diagnose.py"
       - "tests/test_yxorp_upstreams_observe.py"
       - "tests/test_yxorp_incumbent_parity.py"
       - "tests/test_yxorp_discrepancies_observe.py"
@@ -68,6 +69,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_yarn_content.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_readiness.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kvin_yarn_transport_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_upstreams_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_incumbent_parity.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_discrepancies_observe.py'
@@ -91,6 +93,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-probe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-yarn-transport-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-peer-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-upstreams-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-incumbent-parity.yml --syntax-check
