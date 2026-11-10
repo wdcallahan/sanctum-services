@@ -1,5 +1,48 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvin rootful port80 ready except host firewall; direct upstream discovery next
+
+The corrected `ansible/yxorp-kvin-readiness.yml` passed natively on Kvin:
+`ok=13 changed=0 failed=0`. It found `aarch64`; no host TCP80
+listener, production YXORP Quadlet or systemd unit; and the exact
+qualified rootful official Nginx image already in the cache. Kvin
+`firewalld` is running with `eth0` in `public`, but both runtime
+and permanent `http` service and `80/tcp` allowances are absent.
+Kvar NPM and wildcard DNS remain untouched. The production cutover
+gate remains false. [Native evidence in Services #2](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6775524905).
+
+**Maintenance ownership:** Kvin's ordinary published-service firewall
+policy already provides accepted 8084/5432/8085 via a shared owner;
+Services filed a **no-immediate-change** HTTP/80 request for Thursday
+in [Maintenance #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6775538017).
+Do not write another firewalld policy in Services or install arbitrary
+source/32 restrictions. Actual approval/implementation is not recorded.
+
+**Prepared next read-only operator action from Kvin:**
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-upstreams-observe.yml
+```
+The source-driven, tested play probes each of the eight declared
+direct backend URLs with its corresponding Host header. No login,
+no content output, redirects not followed, six-second limit per route,
+no firewall/DNS/Nginx/Quadlet changes. It returns status per backend,
+including disabled routes, to separate real application availability
+from missing proxy publication. [CI check](https://github.com/wdcallahan/sanctum-services/actions/runs/42874534629)
+passed all contracts, syntax, render, Nginx and synthetic HTTP checks.
+Native execution has **not** yet occurred; operator output is needed
+before further per-application route planning.
+
+**Completed and not to repeat:** Peanut rootful HTTP/80 trial passed
+same-client Yarn page byte-for-byte from Kvin (HTTP200,
+`text/html`, 349 bytes). The scoped Peanut cleanup passed
+`ok=26 changed=5 failed=0`. No Nginx production service or
+standby has been deployed to Kvin/Peanut by this trial. The
+separately A/B/A-proven Mace→Arcane asymmetric-route firewall fault
+belongs to Maintenance #36. No client host-route workaround.
+
+
 ## CURRENT — November 10 late morning: Peanut trial removed; Kvin preflight corrected
 
 Nova ran the previously authorized Peanut trial removal. Native recap:
