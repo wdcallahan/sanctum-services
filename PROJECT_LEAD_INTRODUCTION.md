@@ -1,5 +1,69 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: 2/8 Kvin routes tested, 1 accepted; Square bind-mount lifecycle repaired in source
+
+**Native accepted routes:** On the Kvin rootful HTTP80
+YXORP **stage**, Yarn has passed its local application forwarding
+and direct-versus-proxy body parity. Square/Nextcloud has
+been attempted but not yet accepted. Other six of eight
+declared routes have **not** been tested through Kvin
+YXORP. Kvar Nginx Proxy Manager remains live production;
+no DNS/firewall or production cutover.
+
+**Square native failure now DIAGNOSED:** Nova's
+`ansible/yxorp-kvin-stage-mounted-config-observe.yml`
+returned `ok=8 changed=0 failed=0`:
+host active config **equals** validated candidate and
+both contain the `square.nexus.sanctum` vhost;
+running container's `/etc/nginx/nginx.conf` was
+read successfully, contains **Yarn but not Square**,
+and **does not equal the host's published file**.
+Local Square `curl` returned exit52/HTTP000,
+as did the intentionally unmatched host. This
+confirms the stale single-file bind mount: Ansible
+atomically replaced the host file, but the running
+Podman container remained mounted to the older
+Yarn-only file and a mere `nginx -s reload` read
+the stale version. Nextcloud backend and incumbent
+Kvar NPM both returned HTTP302; do not blame
+Nextcloud or network routing.
+
+**Source repair implemented/CI passed:** In the shared
+`ansible/roles/yxorp/tasks/main.yml`, after
+successful candidate `nginx -t` and host publication,
+the exact owned systemd service **restarts** if
+either `yxorp_config_publish.changed` or
+`yxorp_quadlet_publish.changed`. With neither
+changed, state `started` is idempotent.
+The stale `podman exec ... nginx -s reload`
+branch is removed. Before accepting local health,
+the role now reads back both the published host file
+and the running container's mounted file and
+asserts SHA256 equality, suppressing raw contents.
+[GitHub Actions #42911002825](https://github.com/wdcallahan/sanctum-services/actions/runs/42911002825)
+**PASSED** source-contract tests, the real
+Ansible four-scenario service-state fixture,
+Ansible syntax and existing Nginx/synthetic
+HTTP checks. This is source qualification;
+**the repaired role has not yet run on native Kvin**.
+
+**Next exact operator command on Kvin**:
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-square-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true
+```
+Nova already authorized the Kvin stage; this is
+reconciliation of **only the test-stage** service
+and the separately read-only Square application
+comparison. Existing stage files are Kvin-owned,
+Kvar and DNS remain intact, and all candidate
+routes outside Yarn/Square stay disabled. Request
+the two native recaps and three-way Square
+report. Do **not** run production `ansible/yxorp.yml`
+or bypass the Maintenance-owned Kvin firewall.
+After successful status/redirect parity, real
+Nextcloud login/Calendar and client-network
+acceptance remain separate and unproven.
+
 ## CURRENT — November 10: Square stage installed but no HTTP response; inspect file bind mount
 
 **Actual native Square stage:** Nova ran
