@@ -118,6 +118,34 @@
     mode: "0644"
   register: yxorp_quadlet_publish
 
+# A prior Ansible run may already have published the desired host
+# config while the *running* Podman container still sees an older
+# single-file bind mount. File/Quadlet changed flags alone do NOT detect
+# this condition on a repeat run. Compare the two before choosing the
+# service action; no raw configuration content is logged.
+- name: Read the published YXORP config before choosing service reconciliation
+  ansible.builtin.slurp:
+    src: "{{ yxorp_active_config }}"
+  register: yxorp_prestart_host_config
+  no_log: true
+
+- name: Observe the existing container mount before service reconciliation
+  ansible.builtin.command:
+    argv: [podman, exec, "{{ yxorp_container_name }}", cat, /etc/nginx/nginx.conf]
+    strip_empty_ends: false
+  register: yxorp_prestart_container_config
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Detect an obsolete mounted Nginx file even when host files are unchanged
+  ansible.builtin.set_fact:
+    yxorp_mount_stale: >-
+      {{ yxorp_prestart_container_config.rc == 0 and
+         ((yxorp_prestart_host_config.content | b64decode | hash('sha256')) !=
+          (yxorp_prestart_container_config.stdout | hash('sha256'))) }}
+  no_log: true
+
 - name: Start or reconcile YXORP using the system service manager
   ansible.builtin.systemd_service:
     name: "{{ yxorp_service_name }}"
@@ -130,9 +158,10 @@
     # Nginx inside that container would re-read the OLD config. Restart
     # only this owned systemd service after either the file or the
     # Quadlet changes, so Podman remounts the current file at startup.
-    # With no source changes, 'started' is idempotent and does not
-    # interrupt an already-running service.
-    state: "{{ 'restarted' if (yxorp_quadlet_publish.changed or yxorp_config_publish.changed) else 'started' }}"
+    # A previously stale single-file mount also forces a remount even
+    # if an earlier run already wrote the desired config on the host.
+    # Once content matches, a repeat with no changes is idempotent.
+    state: "{{ 'restarted' if (yxorp_quadlet_publish.changed or yxorp_config_publish.changed or yxorp_mount_stale | bool) else 'started' }}"
 
 # The generator input is mounted as an individual file. Explicitly
 # verify the running container sees the exact content Ansible published;
