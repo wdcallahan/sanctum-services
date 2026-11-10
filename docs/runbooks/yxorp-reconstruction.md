@@ -31,22 +31,36 @@ backend. The prior role atomically replaced the
 host's config and issued `nginx -s reload`, which
 could still see the old inode.
 
-**Durable repair, source-qualified:** The shared
-YXORP Ansible role continues to validate candidate
-Nginx syntax before publishing. It now **restarts
-only the selected, authorized systemd YXORP service**
-on changed config or changed Quadlet, so Podman
-remounts the new file. An unchanged run keeps the
-existing service running. The old Nginx-only reload
-path was removed. A new post-reconcile check
-compares SHA256 of the host-published config and
-the exact config inside the running container,
-with raw contents hidden; **mount mismatch is
-now a failed deployment**, not a health-only false
-positive. [Source CI #42911002825](https://github.com/wdcallahan/sanctum-services/actions/runs/42911002825)
-**PASSED** unit and real-Ansible synthetic cases,
-playbook syntax, Nginx parser and synthetic HTTP.
-Actual Kvin remediation still requires a native run.
+**Durable repair, source-qualified:** The
+shared YXORP role validates generated
+Nginx syntax **before** publishing.
+It now compares the host's published
+config with the file visible inside
+the existing Podman container prior
+to systemd reconciliation. A **stale
+single-file mount forces an exact
+owned-service restart even if no
+Ansible host-file change is reported**
+(the current native Kvin situation).
+A config or Quadlet change also
+restarts that unit. If the mounted
+config already matches and source is
+unchanged, the role remains idempotent.
+No old Nginx-only reload is used.
+A second **post-restart SHA256 equality
+check** verifies the container
+actually reads the published config;
+a mismatch fails deployment before
+local health can be accepted, without
+logging the contents.
+
+**[GitHub Actions #42911815868 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/42911815868)**:
+Ansible source contracts, six real-
+Ansible synthetic cases including
+host-unchanged/mount-stale drift and
+already aligned state, playbook syntax,
+Nginx parse and synthetic HTTP behavior.
+No live Kvin remediation has run yet.
 
 **Next native operator step, from Kvin's existing
 Services checkout**, with already-granted stage
