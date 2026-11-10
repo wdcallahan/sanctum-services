@@ -257,6 +257,53 @@ Permanent twin/standby publication, route and client tests, and
 production cutover still require their own reviewed deployment and
 recovery controls.
 
+## Kvin actual readiness and direct backend discovery — November 10
+
+The native read-only Kvin production inspection passed with
+`ok=13 changed=0 failed=0`. It found no existing TCP/80 listener,
+YXORP service or Quadlet, and the exact ARM64-qualified rootful Nginx
+image was already cached. Firewalld was running with `eth0` in
+`public`, but **neither runtime nor permanent HTTP service/80-tcp
+admission existed**. Kvin was not modified and
+`yxorp_production_cutover_approved` remains false.
+
+This absence is an **owner prerequisite**, not an invitation for
+Services to add a competing firewalld task. Maintenance already owns
+Kvin's ordinary published-service port policy; the requirements for
+TCP/80 have been handed off to its [work board #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6775538017).
+Review and apply it only when Nova approves a concrete Kvin HTTP/80
+deployment. Do not open unsolicited /32 ACLs, stage on 18080, change
+Kvar, or redirect wildcard DNS to a configuration containing only
+Yarn while other accepted service names remain disabled.
+
+**We can qualify backend prerequisites before any Kvin proxy deployment.**
+The source-controlled read-only
+`ansible/yxorp-upstreams-observe.yml` sends anonymous GET requests
+from Kvin to **each** declared backend, with its proposed frontend
+`Host` header. It uses no credentials and doesn't follow redirects,
+sends no request through Kvar's NPM or YXORP, has a 6-second bound per
+request, and suppresses raw request/response details in logs. The
+report shows only hostname, target/port, desired enabled state and
+HTTP response status. Authentication responses (401/403) can indicate
+a healthy backend; `-1` is an observation to diagnose, not proof
+that an application should be retired.
+
+From Kvin:
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-upstreams-observe.yml
+```
+
+This does not enable any route, install a service, open a firewall port
+or alter DNS. It cannot prove login/WebSocket behavior or source
+equivalence; its purpose is to identify actual app/backend blockers
+before designing a safe real-port Kvin acceptance sequence.
+
+The previously authorized Peanut-only Yarn trial cleanup succeeded
+`ok=26 changed=5 failed=0`. Do **not** rerun that removal or
+reopen Peanut as a prerequisite to observing backend availability.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
