@@ -1,0 +1,150 @@
+---
+# Read-only status of the already authorized Peanut HTTP/80 YXORP trial.
+# The temporary firewalld port exception may expire while the Quadlet
+# remains active. Distinguish those conditions without reopening either.
+- name: Observe the Peanut YXORP trial locally without reconciling it
+  hosts: yxorp_test
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Require exactly the existing Peanut trial target
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - yxorp_deployment_scope == 'peanut_trial'
+          - yxorp_peanut_test_approved | bool
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Observe the trial systemd service
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: yxorp_status_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Observe listeners on TCP port 80
+      ansible.builtin.command:
+        argv: [ss, -H, -ltn, "sport = :80"]
+      register: yxorp_status_listeners
+      changed_when: false
+
+    - name: Observe exact installed Quadlet
+      ansible.builtin.stat:
+        path: "{{ yxorp_quadlet_file }}"
+        follow: false
+      register: yxorp_status_quadlet
+
+    - name: Observe installed Nginx configuration
+      ansible.builtin.stat:
+        path: "{{ yxorp_active_config }}"
+        follow: false
+      register: yxorp_status_config
+
+    - name: Observe whether the trial cleanup marker still exists
+      ansible.builtin.stat:
+        path: /run/sanctum-yxorp-peanut-http80-trial-owned
+        follow: false
+      register: yxorp_status_marker
+
+    - name: Observe live firewalld state without altering it
+      ansible.builtin.command:
+        argv: [firewall-cmd, --state]
+      register: yxorp_status_firewall
+      changed_when: false
+      failed_when: false
+
+    - name: Observe the current LAN interface zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --get-zone-of-interface=eth0]
+      register: yxorp_status_zone
+      changed_when: false
+      failed_when: false
+      when: yxorp_status_firewall.rc == 0
+
+    - name: Observe the explicit runtime port-80 exception
+      ansible.builtin.command:
+        argv: [firewall-cmd, "--zone={{ yxorp_status_zone.stdout }}", --query-port=80/tcp]
+      register: yxorp_status_port
+      changed_when: false
+      failed_when: false
+      when:
+        - yxorp_status_firewall.rc == 0
+        - yxorp_status_zone.rc == 0
+
+    - name: Observe HTTP service admission independently of the port exception
+      ansible.builtin.command:
+        argv: [firewall-cmd, "--zone={{ yxorp_status_zone.stdout }}", --query-service=http]
+      register: yxorp_status_service
+      changed_when: false
+      failed_when: false
+      when:
+        - yxorp_status_firewall.rc == 0
+        - yxorp_status_zone.rc == 0
+
+    - name: Probe the built-in local health endpoint without Yarn upstream
+      ansible.builtin.uri:
+        url: http://127.0.0.1:80/__yxorp_health
+        use_proxy: false
+        return_content: true
+        status_code: [200]
+        timeout: 5
+      register: yxorp_status_local_http
+      changed_when: false
+      failed_when: false
+      when: yxorp_status_unit.rc == 0
+
+    - name: Report facts without treating an expired trial port as a dead Nginx service
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          unit_active: "{{ yxorp_status_unit.rc == 0 }}"
+          tcp80_listeners: "{{ yxorp_status_listeners.stdout_lines }}"
+          quadlet_regular_file: "{{ yxorp_status_quadlet.stat.isreg | default(false) }}"
+          nginx_config_regular_file: "{{ yxorp_status_config.stat.isreg | default(false) }}"
+          trial_marker_present: "{{ yxorp_status_marker.stat.exists | default(false) }}"
+          firewalld_running: "{{ yxorp_status_firewall.rc == 0 }}"
+          lan_zone: "{{ yxorp_status_zone.stdout | default('unavailable') }}"
+          runtime_tcp80_explicitly_allowed: "{{ yxorp_status_port.rc | default(-1) == 0 }}"
+          runtime_http_service_allowed: "{{ yxorp_status_service.rc | default(-1) == 0 }}"
+          local_health_status: "{{ yxorp_status_local_http.status | default('not_checked') }}"
+          local_yxorp_ready: "{{ 'yxorp-ready' in (yxorp_status_local_http.content | default('')) }}"
+          note: >-
+            The four-hour runtime firewall rule is not renewed by this probe.
+            An existing marker does not prove an unexpired exception.
+            An HTTP port can also be allowed by the service name instead.
+
+- name: Observe Peanut HTTP health from the existing Kvin controller
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require the known Kvin client and no production YXORP cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Probe Peanut HTTP from a different subnet without altering DNS
+      ansible.builtin.uri:
+        url: http://peanut.arcane.sanctum/__yxorp_health
+        use_proxy: false
+        return_content: true
+        status_code: [200]
+        timeout: 5
+      register: yxorp_status_peer_http
+      changed_when: false
+      failed_when: false
+
+    - name: Report peer reachability distinctly from local service health
+      ansible.builtin.debug:
+        msg:
+          client: "{{ inventory_hostname }}"
+          target: peanut.arcane.sanctum
+          peer_http_status: "{{ yxorp_status_peer_http.status | default('unavailable') }}"
+          peer_yxorp_ready: "{{ 'yxorp-ready' in (yxorp_status_peer_http.content | default('')) }}"
+          probe_error: "{{ yxorp_status_peer_http.msg | default('') }}"
+          changed: false
