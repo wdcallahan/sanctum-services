@@ -45,6 +45,8 @@
     - name: Read the bind-mounted Nginx configuration from the existing container
       ansible.builtin.command:
         argv: [podman, exec, "{{ yxorp_container_name }}", cat, /etc/nginx/nginx.conf]
+        # Preserve trailing newlines for exact equality with slurp's bytes.
+        strip_empty_ends: false
       register: yxorp_container_config
       failed_when: false
       changed_when: false
