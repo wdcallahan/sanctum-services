@@ -63,7 +63,7 @@ class KvinSquareMountObservation(unittest.TestCase):
         fields = output["ansible.builtin.debug"]["msg"]
         for name in [
             "stage_unit_active", "host_active_has_square_vhost",
-            "candidate_has_square_vhost", "host_active_equals_candidate",
+            "candidate_has_square_vhost", "stage_host_active_equals_candidate",
             "running_container_read_succeeded",
             "container_mount_has_square_vhost", "host_active_equals_container_mount",
             "container_mount_has_yarn_vhost", "square_curl_exit_code",
