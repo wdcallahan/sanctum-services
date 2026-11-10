@@ -1,5 +1,53 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: incumbent parity measured; narrow redirect/no-response diagnosis is next
+
+Nova ran the native Kvin read-only `ansible/yxorp-incumbent-parity.yml`:
+`kvin.outer.sanctum ok=8 changed=0 failed=0`. Same-client,
+same-Host anonymous **backend vs Kvar NPM** responses:
+Square `302/302` same Location; Joule, Search, Directory
+`200/200`; Kuma `302/302` but **different Location**;
+Pi-hole `404/404` on `/`; legacy
+`yarn.inner.sanctum` backend `200`, NPM **status -1 / no
+HTTP response**. Pi-hole `/admin/` separately `302/302`
+with **different Location**. Those discrepancies are not
+established application failures. No configuration changed.
+[Native evidence](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6776037327).
+
+A standalone narrow **read-only** follow-up,
+`ansible/yxorp-discrepancies-observe.yml`, has been source
+validated. It samples only Kuma `/` and Pi-hole `/admin/`,
+both directly and through Kvar NPM; reports whether redirects
+differ in scheme, absolute/relative form, frontend/backend/other
+hostname *classification*, path or query **without leaking
+Location values, cookies or bodies**. A single Kvin-origin
+`curl` GET to NPM's legacy Yarn hostname reports a safe numeric
+exit-code fingerprint (e.g. empty_reply/timeout) instead of
+unredacted errors. CI includes a synthetic **executed Ansible
+urlsplit** fixture, in addition to tests/syntax/Nginx behavior.
+No live migration or firewall publication is authorized by it.
+
+**Next actual operator command on Kvin:**
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-discrepancies-observe.yml
+```
+Do not rerun the full seven-route comparison, the completed
+Peanut trial or its cleanup. Capture the new sanitized outcomes
+before deciding whether any of these differences needs a
+reverse-proxy rule or is just expected legacy rewriting.
+
+**Separate gates unchanged:** Kvin HTTP/80 is unadmitted in both
+firewalld stores (Maintenance #20 owner handoff for Thursday);
+Kvar NPM remains live and wildcard DNS still unchanged;
+all replacement routes except the new Yarn trial route remain
+disabled; Kvin production deployment/Peanut persistent standby
+not commissioned. Bunny Inner asymmetric-path issue belongs to
+Maintenance #36. No private HTTPS/CA initiative or Kvin high-port
+workaround is a requirement.
+
+
 ## CURRENT — November 10: all eight YXORP backends answer; incumbent NPM parity next
 
 Nova ran the new Kvin anonymous direct-backend inventory after the
