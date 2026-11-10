@@ -1,0 +1,105 @@
+---
+# Read-only follow-up to 2026-11-10 Kuma stage HTTP302 redirect mismatch.
+# Classify authority hostname and explicit port without leaking the values.
+# No changes to Nginx, Podman, Kvar, firewall, DNS or production.
+- name: Classify Kuma redirect authorities on direct Kvar NPM and Kvin stage paths
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require previously selected Kuma stage and closed production authority
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - yxorp_stage_dir_approved | bool
+          - yxorp_stage_kuma_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum']
+          - yxorp_routes[5].hostname == 'kuma.nexus.sanctum'
+          - not (yxorp_routes[5].enabled | bool)
+          - yxorp_routes[5].upstream_host == 'kvar.outer.sanctum'
+          - yxorp_routes[5].upstream_port | int == 3001
+        fail_msg: Only read-only diagnosis of the exact pre-approved Kuma stage is allowed.
+
+    - name: Observe only three anonymous Kuma root response headers
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        method: GET
+        headers:
+          Host: kuma.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200, 301, 302, 303, 307, 308, 401, 403, 404, 429, 500, 502, 503]
+        timeout: 8
+      loop:
+        - name: direct_kuma_backend
+          url: http://kvar.outer.sanctum:3001/
+        - name: incumbent_kvar_npm
+          url: http://kvar.outer.sanctum/
+        - name: candidate_kvin_stage
+          url: http://127.0.0.1:80/
+      loop_control:
+        label: "{{ item.name }}"
+      register: yxorp_kuma_authority_observations
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Require exactly three response records before classifying
+      ansible.builtin.assert:
+        that:
+          - yxorp_kuma_authority_observations.results | length == 3
+          - (yxorp_kuma_authority_observations.results | map(attribute='item.name') | list) == ['direct_kuma_backend', 'incumbent_kvar_npm', 'candidate_kvin_stage']
+
+    - name: Report only Kuma redirect host classes and explicit port classes
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          frontend: kuma.nexus.sanctum
+          direct_status: "{{ direct.status | default(-1) }}"
+          incumbent_status: "{{ incumbent.status | default(-1) }}"
+          candidate_status: "{{ candidate.status | default(-1) }}"
+          all_three_redirect: "{{ (direct.status | default(-1) | int) in [301, 302, 303, 307, 308] and (incumbent.status | default(-1) | int) in [301, 302, 303, 307, 308] and (candidate.status | default(-1) | int) in [301, 302, 303, 307, 308] and (dloc | length > 0) and (nloc | length > 0) and (cloc | length > 0) }}"
+          direct_redirect_host_class: "{{ 'absent' if not dloc else ('relative' if not dh else {'kuma.nexus.sanctum':'frontend','kvar.outer.sanctum':'kvar_backend_host','kvin.outer.sanctum':'kvin_host','127.0.0.1':'loopback','localhost':'loopback'}.get(dh,'other')) }}"
+          incumbent_redirect_host_class: "{{ 'absent' if not nloc else ('relative' if not nh else {'kuma.nexus.sanctum':'frontend','kvar.outer.sanctum':'kvar_backend_host','kvin.outer.sanctum':'kvin_host','127.0.0.1':'loopback','localhost':'loopback'}.get(nh,'other')) }}"
+          candidate_redirect_host_class: "{{ 'absent' if not cloc else ('relative' if not ch else {'kuma.nexus.sanctum':'frontend','kvar.outer.sanctum':'kvar_backend_host','kvin.outer.sanctum':'kvin_host','127.0.0.1':'loopback','localhost':'loopback'}.get(ch,'other')) }}"
+          direct_redirect_port_class: "{{ 'absent' if not dloc else ('no_explicit_port' if dp is none else ('stage_http_port_80' if dp | int == 80 else ('kuma_backend_port_3001' if dp | int == 3001 else 'other_explicit_port'))) }}"
+          incumbent_redirect_port_class: "{{ 'absent' if not nloc else ('no_explicit_port' if np is none else ('stage_http_port_80' if np | int == 80 else ('kuma_backend_port_3001' if np | int == 3001 else 'other_explicit_port'))) }}"
+          candidate_redirect_port_class: "{{ 'absent' if not cloc else ('no_explicit_port' if cp is none else ('stage_http_port_80' if cp | int == 80 else ('kuma_backend_port_3001' if cp | int == 3001 else 'other_explicit_port'))) }}"
+          direct_and_incumbent_host_equal: "{{ dh == nh if dh and nh else 'not_comparable' }}"
+          candidate_and_direct_host_equal: "{{ ch == dh if ch and dh else 'not_comparable' }}"
+          candidate_and_incumbent_host_equal: "{{ ch == nh if ch and nh else 'not_comparable' }}"
+          candidate_and_incumbent_path_equal: "{{ (cloc | urlsplit('path')) == (nloc | urlsplit('path')) if cloc and nloc else 'not_comparable' }}"
+          candidate_and_incumbent_query_equal: "{{ (cloc | urlsplit('query')) == (nloc | urlsplit('query')) if cloc and nloc else 'not_comparable' }}"
+          candidate_and_incumbent_fragment_equal: "{{ (cloc | urlsplit('fragment')) == (nloc | urlsplit('fragment')) if cloc and nloc else 'not_comparable' }}"
+          candidate_and_incumbent_redirect_equal: "{{ cloc == nloc if cloc and nloc else 'not_comparable' }}"
+          raw_host_url_port_cookie_body_exposed: false
+          configuration_changed: false
+          interpretation: >-
+            Read-only classification only: identify whether Nginx's
+            redirect host/port behavior differs from the incumbent.
+            No backend migration, WebSocket, browser, login, notification,
+            DNS, LAN access or production cutover acceptance.
+      vars:
+        direct: "{{ yxorp_kuma_authority_observations.results[0] }}"
+        incumbent: "{{ yxorp_kuma_authority_observations.results[1] }}"
+        candidate: "{{ yxorp_kuma_authority_observations.results[2] }}"
+        dloc: "{{ direct.location | default('') }}"
+        nloc: "{{ incumbent.location | default('') }}"
+        cloc: "{{ candidate.location | default('') }}"
+        dh: "{{ dloc | urlsplit('hostname') | default('',true) | lower }}"
+        nh: "{{ nloc | urlsplit('hostname') | default('',true) | lower }}"
+        ch: "{{ cloc | urlsplit('hostname') | default('',true) | lower }}"
+        dp: "{{ dloc | urlsplit('port') }}"
+        np: "{{ nloc | urlsplit('port') }}"
+        cp: "{{ cloc | urlsplit('port') }}"
