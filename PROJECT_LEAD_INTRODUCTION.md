@@ -1,5 +1,32 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10 late morning: Peanut trial removed; Kvin preflight corrected
+
+Nova ran the previously authorized Peanut trial removal. Native recap:
+`peanut.arcane.sanctum ok=26 changed=5 failed=0`. The Yarn
+origin/proxy anonymous response comparison had already passed exact
+HTTP 200, `text/html`, and **349-byte body equality** from Kvin.
+Do **not** repeat trial cleanup or reopen Peanut solely for this step.
+
+The following first run of standalone read-only
+`ansible/yxorp-kvin-readiness.yml` stopped at `systemctl is-active`
+because `yxorp_service_name` was undefined; the task never executed
+on Kvin. It also would have lacked `yxorp_quadlet_file`. Those
+names are in the YXORP role defaults, but the independent preflight
+doesn't execute the role. The play now explicitly loads
+`vars_files: [roles/yxorp/defaults/main.yml]`, with a regression test
+verifying all YXORP references are declared and no vars-precedence
+collision with production group vars. Source + syntax + synthetic
+Nginx CI [#42870253729](https://github.com/wdcallahan/sanctum-services/actions/runs/42870253729)
+**passed** after the correction.
+
+**Exact next operator boundary:** on Kvin, update Services checkout and
+run **only** `ansible/yxorp-kvin-readiness.yml`. It is read-only and
+will observe production Kvin TCP80 listeners, rootful qualified image
+cache, Quadlet presence, and both runtime/permanent HTTP firewall
+admission. Report results before proposing any Kvar/DNS production
+cutover. See [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6775045034).
+
 ## CURRENT — November 10, 2026: YXORP Peanut Yarn route content-accepted
 
 **This is the active restart point. All dated \"pending\" instructions below
