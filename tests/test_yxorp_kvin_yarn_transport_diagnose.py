@@ -69,7 +69,7 @@ class KvinYarnTransportDiagnosisContract(unittest.TestCase):
     def test_dns_and_output_sanitization(self):
         resolve = next(t for t in self.tasks if t["name"].startswith("Look up actual Yarn"))
         self.assertEqual(resolve["ansible.builtin.command"]["argv"],
-                         ["getent", "ahostsv4", "yarn.inner.sanctum"])
+                         ["timeout", "5", "getent", "ahostsv4", "yarn.inner.sanctum"])
         self.assertTrue(resolve["no_log"])
         self.assertFalse(resolve["changed_when"])
         self.assertFalse(resolve["failed_when"])
