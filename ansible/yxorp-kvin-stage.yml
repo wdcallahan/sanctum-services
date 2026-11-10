@@ -197,6 +197,34 @@
         yxorp_routes: "{{ yxorp_routes[:2] + [(yxorp_routes[2] | combine({'enabled': true}))] + yxorp_routes[3:] }}"
       when: yxorp_stage_prism_approved | default(false) | bool
 
+    # Keep the three accepted HTTP routes visible in this stage while
+    # testing Search. Never modify the checked-in production manifest.
+    - name: Require Search staging on top of Yarn Square and Prism only
+      ansible.builtin.assert:
+        that:
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[1].hostname == 'square.nexus.sanctum'
+          - yxorp_routes[2].hostname == 'joule.nexus.sanctum'
+          - yxorp_routes[3].hostname == 'search.nexus.sanctum'
+          - not (yxorp_routes[3].enabled | bool)
+          - yxorp_routes[3].upstream_scheme == 'http'
+          - yxorp_routes[3].upstream_host == 'kvin.outer.sanctum'
+          - yxorp_routes[3].upstream_port | int == 8083
+          - not (yxorp_routes[3].websocket | bool)
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum', 'square.nexus.sanctum', 'joule.nexus.sanctum']
+        fail_msg: >-
+          The Search candidate requires the exact three accepted
+          Kvin-stage HTTP hosts and the known local 8083 backend.
+      when: yxorp_stage_search_approved | default(false) | bool
+
+    - name: Enable only Search in addition to three accepted Kvin stage routes
+      ansible.builtin.set_fact:
+        yxorp_routes: "{{ yxorp_routes[:3] + [(yxorp_routes[3] | combine({'enabled': true}))] + yxorp_routes[4:] }}"
+      when: yxorp_stage_search_approved | default(false) | bool
+
     # Host firewalld is intentionally not a deployment prerequisite:
     # its LAN admission is independently owned by Maintenance. A local
     # HTTP:80 stage can bind and be accepted on Kvin without opening
