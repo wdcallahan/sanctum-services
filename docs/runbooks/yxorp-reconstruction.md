@@ -191,6 +191,39 @@ The already accepted Kvin-origin Yarn HTTP 200 remains valid. Retest Mace
 only after router policy reconciliation; no extra Mace static route is
 appropriate.
 
+## Compare actual Yarn content from one client
+
+A cross-host HTTP 200 alone proves only that some backend responded. After
+Peanut's already authorized four-hour test admission is re-established, run
+the read-only `ansible/yxorp-peanut-yarn-content.yml` on the existing
+Kvin controller. It makes two anonymous GET requests from **the same
+client**, with the exact same `Host: yarn.nexus.sanctum` header:
+one directly to `http://yarn.inner.sanctum/`, and one through
+`http://peanut.arcane.sanctum/`. No hostname, DNS, firewall or application
+configuration is changed. Both responses are collected under `no_log`;
+the report contains only HTTP status, MIME type, body length and
+whether the returned bytes are equal, **not** page bodies or login cookies.
+
+```bash
+~/.local/bin/ansible-navigator run ansible/yxorp-peanut-yarn-content.yml
+```
+
+Matching HTTP status, content type and body provide stronger evidence
+that the new proxy delivers the intended Yarn application than the prior
+simple HTTP 200. Non-identical dynamic content (including CSRF, cookies,
+timestamps and absolute URLs) is not by itself proof of bad routing:
+the comparison reports these observations rather than asserting byte
+identity unconditionally. No application credentials are supplied,
+and WebSocket/browser/session acceptance remains separate.
+
+If the prior read-only status report shows that Peanut's firewall HTTP
+test rule has expired, the existing trial procedure can re-apply
+the already authorized **four-hour runtime-only** permission by rerunning
+`ansible/yxorp-peanut.yml`. The role reconciles the existing Quadlet
+and validated configuration; it must not be treated as a production
+cutover or lasting standby permission. When this bounded trial
+finishes, use the reviewed removal procedure below to retire it.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
