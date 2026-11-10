@@ -15,12 +15,12 @@
     yarn_route: >-
       {{ (yxorp_yarn_route.stdout | from_json | first)
          if (yxorp_yarn_route.rc == 0 and
-             (yxorp_yarn_route.stdout | default('')) is match('^\\s*\\['))
+             (yxorp_yarn_route.stdout | default('') | trim).startswith('['))
          else {} }}
     control_route: >-
       {{ (yxorp_arcane_control_route.stdout | from_json | first)
          if (yxorp_arcane_control_route.rc == 0 and
-             (yxorp_arcane_control_route.stdout | default('')) is match('^\\s*\\['))
+             (yxorp_arcane_control_route.stdout | default('') | trim).startswith('['))
          else {} }}
   tasks:
     - name: Require valid route projection and safe fallback on failed lookup
