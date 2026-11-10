@@ -1,5 +1,85 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Current Kvin stage — Search accepted; interim LinkStack next (November 10)
+
+**Native initial local HTTP acceptance: 4/8
+declared routes tested through Kvin, 4 passed.**
+Yarn: HTTP200 with direct-origin body equality.
+Square/Nextcloud: HTTP302 with Kvar NPM Location
+and content-type equality. Joule/Prism: HTTP200
+with direct/incumbent status and MIME equality.
+Search: HTTP200 from direct Kvin :8083,
+incumbent Kvar NPM and staged Kvin YXORP,
+with equal candidate/incumbent MIME and status.
+Native Search stage passed `ok=40 changed=3
+failed=0 skipped=1`; read-only Search
+comparison `ok=4 changed=0 failed=0`
+reported all three HTTP200 and matching
+metadata. Search query/results functionality
+was not tested. No production DNS,
+Kvar NPM, firewall or cutover change.
+
+**Remaining four are NOT all ordinary proxy
+migrations.** The current LinkStack
+`dir.nexus.sanctum` backend is on Kvar
+:8081; Kuma remains on Kvar :3001, Pi-hole
+UI on Kvar :82. The estate's intended host
+for those retained services is Kvin,
+but their application data/config,
+credentials, clients and restore
+must be separately qualified. Passing
+an interim route from Kvin's Nginx
+back to Kvar does **not** qualify that
+migration or authorize Kvar retirement.
+The last name, `yarn.inner.sanctum`,
+is a legacy alias whose Kvar NPM
+upstream path previously timed out;
+client review and retirement decision
+are still outstanding.
+
+**Next isolated Kvin stage-only compatibility
+trial: LinkStack.** A new default-off
+`yxorp_stage_dir_approved: false`
+requires the four previously tested
+Yarn+Square+Prism+Search route flags.
+It checks the exact disabled legacy
+`dir.nexus.sanctum` backend
+`http://kvar.outer.sanctum:8081`
+with no WebSockets, and projects **only
+that fifth host** in memory. Production
+manifest remains Yarn-only; the other
+unaccepted legacy hosts remain disabled.
+The existing validated restart-on-change
+and bind-mount equality checks still
+apply to the exact Kvin test stage.
+
+`ansible/yxorp-kvin-stage-dir-probe.yml`
+makes three independent bounded anonymous
+GET / requests with the LinkStack
+Host header from Kvin: direct Kvar
+LinkStack :8081, Kvar NPM :80,
+and local Kvin stage :80. It reports
+only HTTP status/MIME and optional
+redirect parity; raw URLs, cookies,
+bodies and errors are suppressed.
+It explicitly reports
+`application_migrated_to_kvin:false`.
+
+**Next command, from Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-dir-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true
+```
+**Operator output contract:** Return **only
+two one-line play recaps** and the `msg`
+dictionary from **“Report only LinkStack
+HTTP status and compatibility metadata”**.
+On a failure, share the failed task and
+error. The probe deliberately uses
+`failed_when:false`; its recap alone
+cannot establish HTTP acceptance.
+The stage remains installed and
+Kvar production traffic unchanged.
+
 ## Current Kvin YXORP stage — Prism accepted, Search next (November 10)
 
 **Native initial HTTP acceptance: 3 of 8 declared routes
