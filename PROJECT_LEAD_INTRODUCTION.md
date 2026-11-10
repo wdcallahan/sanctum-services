@@ -1,5 +1,50 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: independent Kvin HTTP80 stage source complete; operator/owner gate next
+
+**Current source result:** A separate, removable Kvin rootful host-network
+Nginx `0.0.0.0:80` **stage** has been committed to `main`.
+It is NOT Kvin production and does not share its Quadlet or config
+paths. `ansible/yxorp-kvin-stage.yml` has explicit
+`yxorp_kvin_stage_approved` (default false) and pre-mutation
+checks for exact Kvin identity, free/owned port 80, absent
+production YXORP, no unrelated stage files, `eth0/public`
+firewalld **runtime and permanent** HTTP80 admission, and
+closed `yxorp_production_cutover_approved`.
+The role's own first assertion separately recognizes stage scope.
+`ansible/yxorp-kvin-stage-remove.yml` has independent
+`yxorp_kvin_stage_remove_approved` (default false), checks
+exact owned Quadlet/only two config files, stops/removes stage
+only and leaves host firewalld untouched.
+`ansible/yxorp-kvin-stage-probe.yml` prepares same-Kvin-client
+Yarn-origin-versus-new-proxy body equality and separate Peanut
+client GET/health from Kvin; no application responses leaked.
+Shared manifest still enables **only new Yarn**; all seven
+legacy candidates remain disabled.
+
+**Source qualification PASSED:** [GitHub Actions #42894828289](https://github.com/wdcallahan/sanctum-services/actions/runs/42894828289)
+tested source contracts, Ansible syntax, real Nginx synthetic
+config/client behavior and **executed the exact role's
+stage/production/Peanut authorization expression in real Ansible
+against synthetic local connections**, including rejection cases.
+No live Kvin deployment/probe/removal is claimed.
+
+**Genuine next owner/operator blockers:** Kvin port80 is currently
+free, correct digest cached, but last native check showed
+`eth0/public` HTTP80 absent in both firewalld stores.
+Maintenance #20 owns source-managed policy review after
+Thursday November 12 and **Nova must authorize its actual
+application**. Nova must **separately authorize** the disposable
+Kvin stage before its default-false approval flag is supplied.
+Do NOT deploy with `ansible/yxorp.yml` or flip the production
+cutover flag to simulate a stage. Once firewall is admitted and
+stage approved, run only the stage play from Kvin; then its
+new read-only client probe and scoped removal. Exact future
+commands/rollback and conditions are in the [YXORP runbook](docs/runbooks/yxorp-reconstruction.md).
+Continue preserving Kvar NPM/live wildcard DNS; actual production
+and permanent Peanut standby still uncommissioned. Do not repeat
+completed Peanut work or legacy Yarn route probes.
+
 ## CURRENT — November 10: Kvin/Kvar route comparison passed; legacy Kvar Yarn transport deferred
 
 **Latest native operator result:** Nova ran
