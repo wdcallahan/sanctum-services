@@ -543,6 +543,64 @@ Nextcloud, Prism/WebSockets and other intended routes rather than
 only anonymous HTTP status parity.
 
 
+## Native Kvin stage installed; direct Yarn origin timeout — November 10
+
+Nova executed the authorized Kvin stage deployment:
+`ansible/yxorp-kvin-stage.yml` returned
+**`ok=22 changed=5 unreachable=0 failed=0 skipped=8`**.
+The rootful, host-network Nginx stage now **runs on Kvin HTTP:80**,
+with a distinct `sanctum-yxorp-kvin-stage` service/Quadlet/config.
+This is not production cutover; Kvar NPM remains the live
+proxy and wildcard DNS has not moved.
+
+Next, the **Kvin local** acceptance play
+`ansible/yxorp-kvin-stage-probe.yml` passed its scope assertion
+and **local health endpoint**, but failed immediately after that
+at the **direct Yarn backend** request,
+`http://yarn.inner.sanctum/` with
+`Host: yarn.nexus.sanctum`: Ansible URI reported no HTTP status
+(`-1`), connection timed out. Native recap:
+`ok=2 changed=0 failed=1`. The play had **not reached**
+its request through the new staged reverse proxy.
+Do not diagnose this as an Nginx forwarding failure without
+checking the new stage route. Earlier successful Yarn origin
+responses do not prove it is presently reachable.
+
+The next **read-only** diagnostic
+`ansible/yxorp-kvin-yarn-transport-diagnose.yml` uses the
+already-authorized Kvin stage and does **not** change
+containers, DNS, firewalld, Kvar or network routes.
+It independently probes **four exact requests** under
+`no_log`, seven seconds each: Kvin local health,
+Kvin local proxy with `Host: yarn.nexus.sanctum`,
+direct Yarn by DNS name with the same Host header,
+and direct Yarn by numeric previously accepted
+`192.168.1.110` with the same Host header.
+It also observes whether the exact stage systemd unit
+is active and queries Kvin's hostname resolution for
+Yarn with a 5-second bound. Each GET has
+`failed_when: false` so one unavailable endpoint
+cannot suppress the other observations. It reports only
+safe codes/outcomes, whether DNS includes the known IP
+and conditional body equality if both calls get HTTP200.
+It does not treat a timeout as proof of causation.
+
+**Next operator command on Kvin**, using `&&` for proper
+short-circuiting:
+
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-yarn-transport-diagnose.yml -e yxorp_kvin_stage_approved=true
+```
+
+The read-only source, its regression tests and a
+**real-Ansible synthetic report fixture** passed
+[GitHub Actions #42901044205](https://github.com/wdcallahan/sanctum-services/actions/runs/42901044205).
+That is not a native transport result. Share its sanitized report
+and recap before changing the stage config, application endpoints
+or any host-network policy. **Leave the new Kvin stage installed**;
+the previously accepted Peanut trial was already removed and
+need not be repeated.
+
 ## Kvin HTTP:80 stage — install locally before network publication
 
 **Status, November 10:** The operator has authorized deploying the
