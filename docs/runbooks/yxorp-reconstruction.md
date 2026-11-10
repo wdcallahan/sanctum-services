@@ -1,47 +1,86 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
-**Current state, November 10, 2026:** **Kvar Nginx Proxy Manager
-remains the production proxy**; the authoritative wildcard DNS and
-existing client routes have not been switched. Plain Nginx on Kvin
-is the intended rootful Podman host-network HTTP:80 replacement;
-Peanut is the intended future peer/standby, not currently serving
-permanent standby traffic.
+**Current verified state, November 10, 2026:** Kvar's
+**Nginx Proxy Manager** is still the live production proxy
+for wildcard `*.nexus.sanctum` names, and neither
+DNS nor Maintenance-owned Kvin HTTP80 firewall has
+changed. A separate **rootful host-network Nginx
+stage is installed on Kvin's real port80**, as
+`sanctum-yxorp-kvin-stage.service`. Its local
+health and Yarn forwarding/content equality
+are natively accepted. The temporary Peanut
+rootful Nginx trial passed previously and
+was removed; it is not the standby yet.
 
-The **Peanut-only rootful trial is complete**: Kvin got a same-client,
-same-Host **349-byte byte-identical HTTP200** Yarn response via Peanut
-and directly from the origin. Nova then ran the scoped removal play
-on Peanut successfully (`ok=26 changed=5 failed=0`).
-Do not repeat this trial, client test or cleanup. The prior Peanut
-local health check and cross-host HTTP200 have been superseded by
-the stronger content comparison and completed removal.
+**Latest native Square result:** With only
+Yarn and Square enabled on Kvin's stage in
+memory (the production manifest stays Yarn-only),
+Ansible `ansible/yxorp-kvin-stage.yml`
+finished `ok=31 changed=3 failed=0`: host
+config published and Nginx reloaded, health
+passed. The follow-up read-only Square
+comparison returned direct Nextcloud
+`kvin:8085` HTTP302, Kvar NPM HTTP302,
+but **new staged Nginx `127.0.0.1:80`
+no HTTP response (`status=-1`)**.
+The comparison's `failed=0` recap is
+expected from `failed_when:false`; it
+**does not accept Square**. All other
+legacy candidate routes remain disabled,
+and production cutover is unapproved.
 
-The **independent Kvin stage source** is now implemented:
-`ansible/yxorp-kvin-stage.yml`, its same-Host/remote-client
-`ansible/yxorp-kvin-stage-probe.yml`, and the verified
-`ansible/yxorp-kvin-stage-remove.yml`. CI includes executed
-real-Ansible checks of the exact stage permission expression.
-The stage is a separate `sanctum-yxorp-kvin-stage` unit/Quadlet and
-config tree, sharing **only the intended host port80** with
-future production; it cannot coexist with another port80 listener.
-**Neither Kvin stage nor production has been deployed**.
-The stage approval and removal approval default false, and the
-separate production cutover approval remains false.
+### Current next test: why Square has no HTTP response
 
-**Blockers to native Kvin staging:** Maintenance owns the absent
-runtime and permanent `eth0/public` HTTP:80 admission on Kvin
-([Maintenance #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6775538017));
-actual firewall policy application and actual stage deployment
-each require Nova's separate approval. Stage/production and wildcard
-DNS are distinct authorization boundaries. See the new **Independent
-Kvin stage** section below for precise source and future commands.
+**Specific unconfirmed source hypothesis:**
+The role mounts a **single** Nginx config file
+into the running Podman container and publishes
+updated host configs using Ansible
+`copy remote_src:true` (normally atomic file
+replacement). Its config-only path executes
+`podman exec ... nginx -s reload`, not a
+container restart. Linux bind mounts can
+stay attached to an **old inode** after
+atomic host-file replacement, leaving
+the container using the prior Yarn-only
+configuration even though the host file
+contains Square. Nginx then could treat
+Square as unmatched and issue its
+intentional default `return 444`, which
+closes the connection with **no HTTP
+response**. This is a testable hypothesis,
+**not yet an established cause**.
 
-Kvar's broken old `yarn.inner.sanctum` NPM path is deferred, not
-repaired, after a Kvar/Kvin native route comparison showed the same
-gateway for Yarn and Arcane destinations. The new
-`yarn.nexus.sanctum` route was accepted in the Peanut trial, and
-the old name remains tracked for explicit eventual consumer
-review/retirement. No arbitrary route, firewall, private CA or
-Kvar NPM rewrite is warranted by those results.
+The **read-only bounded** play
+[`ansible/yxorp-kvin-stage-mounted-config-observe.yml`](../../ansible/yxorp-kvin-stage-mounted-config-observe.yml)
+compares host active/candidate config to
+the exact file visible **inside** the
+running rootful Kvin container and probes
+the Square/unknown-host response using
+curl without exposing raw configs,
+headers, cookies, URLs, errors or content.
+It only reports equality/presence booleans
+and numeric curl results. **No restart,
+reconciliation, network or firewall writes.**
+Its real-Ansible synthetic stale-and-aligned
+report test and playbook checks passed
+[CI #42909408599](https://github.com/wdcallahan/sanctum-services/actions/runs/42909408599).
+
+**Next command, from Kvin's existing checkout**:
+
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-mounted-config-observe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true
+```
+
+Share the sanitized message and recap. Leave
+Kvin's stage and Kvar NPM running; do not
+rerun already accepted Yarn tests or
+speculatively change role, firewall,
+DNS or proxy port before inspecting actual
+mount evidence. After the result, correct
+the durable source-managed lifecycle if
+staleness is verified, and then requalify
+the Square route separately. This does
+not grant production cutover authorization.
 
 ## Same service architecture in trial and production
 
