@@ -1,6 +1,7 @@
 """Source guard: Peanut YXORP status inspection is read-only and client-aware."""
 from pathlib import Path
 import unittest
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -44,9 +45,11 @@ class PeanutStatusContract(unittest.TestCase):
                     request = task[module]
                     self.assertEqual(request["timeout"], 5)
                     self.assertFalse(request["use_proxy"])
-                    self.assertEqual(request["url"].split(":80")[0].split("//")[-1],
+                    self.assertEqual(urlsplit(request["url"]).hostname,
                                      "127.0.0.1" if play["hosts"] == "yxorp_test"
                                      else "peanut.arcane.sanctum")
+                    self.assertEqual(urlsplit(request["url"]).path,
+                                     "/__yxorp_health")
 
     def test_observes_both_service_and_network_admission(self):
         local = STATUS.read_text(encoding="utf-8")
