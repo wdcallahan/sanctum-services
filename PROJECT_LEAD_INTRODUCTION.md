@@ -1,5 +1,112 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: 5 of 8 Kvin initial HTTP routes accepted; Kuma sixth canary prepared
+
+**Native LinkStack initial HTTP comparison ACCEPTED.**
+Nova supplied the sanitized result from
+`ansible/yxorp-kvin-stage-dir-probe.yml`:
+with `Host: dir.nexus.sanctum`,
+direct old Kvar LinkStack `:8081`,
+incumbent Kvar NPM `:80` and new Kvin
+YXORP stage `127.0.0.1:80` all
+returned **HTTP200**. All-three-have-
+HTTP, candidate/direct status equality,
+candidate/incumbent status equality and
+candidate/incumbent content-type equality
+were **true**. Neither proxy redirected;
+the sanitized observer correctly said
+`candidate_redirect_equals_incumbent:
+not_comparable` and
+`application_migrated_to_kvin:false`.
+The read-only probe recap was
+`ok=4 changed=0 failed=0`. The
+separate fifth-stage reconciliation
+recap was not supplied, but the
+running Kvin candidate did respond.
+Do not request that missing recap
+or rerun the accepted probe.
+
+**Current YXORP stage progress:** 5 of 8
+declared names have passed their first
+bounded Kvin local HTTP tests: Yarn,
+Square, Joule/Prism, Search and LinkStack.
+Three untested on Kvin:
+`kuma.nexus.sanctum`,
+`pihole.nexus.sanctum`,
+`yarn.inner.sanctum`.
+Kvar NPM is still production; wildcard
+DNS, Maintenance Kvin port80 firewall and
+production cutover remain unchanged.
+
+**Migration boundary:** LinkStack, Kuma and
+Pi-hole still run on Kvar. Their
+Kvin-stage proxy comparisons to Kvar's
+backends are interim routing evidence,
+not a successful app/persistent-state
+restore on Kvin or authorization to
+retire Kvar. `docs/SERVICE-ESTATE.md`
+preserves Kvin destination and these
+restore obligations.
+
+**Next sixth route source:** New default-off
+`yxorp_stage_kuma_approved: false`
+in `ansible/vars/yxorp-kvin-stage.yml`.
+If all previous Kvin stage opt-ins plus
+the Kuma flag are true,
+`ansible/yxorp-kvin-stage.yml` checks
+that only the first five exact names
+are projected and the sixth disabled
+route points to `kuma.nexus.sanctum`
+→ `http://kvar.outer.sanctum:3001`
+with WebSocket true. It then adds only
+Kuma to the in-memory Kvin stage config.
+Checked-in production routes remain
+Yarn-only, and the role's candidate
+`nginx -t`, drift-aware Podman remount
+and post-start file-equivalence checks
+remain in effect.
+
+**Special redirect rule:** Kvar NPM
+previously removed explicit backend
+port 3001 from Kuma's absolute 302
+redirect; the direct backend includes
+it. Do **not** assume full redirect
+equality before observing the new
+proxy. The read-only bounded
+`ansible/yxorp-kvin-stage-kuma-probe.yml`
+compares direct old Kvar :3001, Kvar
+NPM :80 and Kvin stage :80 anonymous
+GET / requests. It reports HTTP status,
+candidate/incumbent content-type,
+conditional redirect equality, and
+**safe hostname/scheme/path equality
+plus explicit port classification**
+without leaking raw Location URLs
+or cookies. A difference is evidence
+for a later source fix, not proof
+the backend is broken. Kuma
+application data, monitors, sessions
+and restore are not tested.
+
+**Next exact native operator command
+on Kvin, after source CI passes:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+
+**User output contract:** Ask for ONLY both
+one-line PLAY RECAP entries and the
+`msg` dictionary from **“Report only
+Kuma status and redirect authority
+components”**. If any task fails,
+only its failed-task/error output.
+A clean nonfatal probe recap does not
+prove 302 parity. Avoid full logs
+to conserve context. Every Services
+assistant turn ends with a concrete
+next action (not merely a status
+report).
+
 ## CURRENT — November 10: Search local HTTP accepted (4/8); interim LinkStack canary ready
 
 **Native acceptance:** Nova ran `ansible/yxorp-kvin-stage.yml`
