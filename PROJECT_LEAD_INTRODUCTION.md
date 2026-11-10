@@ -1,5 +1,87 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Prism local HTTP accepted; Search fourth route canary prepared
+
+**Actual native Kvin Prism:** Stage reconcile with
+Yarn+Square+Prism enabled through explicit Kvin
+stage flags completed `ok=38 changed=3 failed=0
+skipped=1`. The follow-up anonymous GET /
+three-path comparison completed `ok=4 changed=0
+failed=0`; its sanitized native report showed
+**HTTP200** for direct Prism backend
+`kvin.outer.sanctum:8084`, incumbent
+Kvar NPM `kvar.outer.sanctum:80`, and
+new Kvin YXORP `127.0.0.1:80`.
+All three supplied valid HTTP responses,
+candidate/incumbent and candidate/direct
+statuses matched, and candidate/incumbent
+content types matched. Neither candidate
+nor incumbent returned a redirect, so
+`candidate_redirect_equals_incumbent` was
+correctly `not_comparable`. **Accept
+initial local anonymous Prism HTTP routing,
+NOT login/streaming/WebSocket semantics.**
+
+**Route count: 3/8 tested through new Kvin
+stage; 3/3 passed bounded first HTTP checks.**
+Accepted: Yarn HTTP200/body parity; Square
+HTTP302 and exact incumbent redirect/MIME
+parity; Prism HTTP200 status and MIME parity.
+Five remaining names have not passed on
+new Kvin stage.
+
+**Next fourth route:** New default-off
+`yxorp_stage_search_approved: false`
+flag in `ansible/vars/yxorp-kvin-stage.yml`.
+`ansible/yxorp-kvin-stage.yml` selects
+only Search `search.nexus.sanctum` →
+`http://kvin.outer.sanctum:8083` alongside
+the existing Yarn/Square/Prism stage routes
+*when all four separate scope/route flags
+are supplied*. It validates the exact
+eight-entry source manifest and already-
+selected previous three routes before
+projecting Search via a stage-only
+`set_fact`. Manifest remains Yarn-only.
+The shared role validates candidate
+Nginx configuration, handles the Podman
+single-file config remount/restart, and
+verifies mounted/host equality.
+
+`ansible/yxorp-kvin-stage-search-probe.yml`
+independently compares three anonymous,
+bounded, private GET / requests from Kvin
+with `Host: search.nexus.sanctum`:
+direct `kvin:8083`, incumbent Kvar NPM:80,
+and Kvin stage `127.0.0.1:80`. Its output
+is limited to HTTP status, status/MIME
+equality and conditional redirect metadata;
+no full URLs, queries, content, credentials,
+cookies or errors are emitted. This
+is only root HTTP routing, not an
+actual search-results functional test.
+
+**Next operator command on Kvin after
+source CI succeeds:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-search-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true
+```
+
+**Request only**: the one-line recap from
+each of the two plays and the sanitized
+`msg` dictionary from
+**“Report only Search HTTP status and
+anonymous metadata parity”**. On failure,
+ask for only the failed task and error.
+Do not request verbose run output or
+already accepted test results. Always
+end user-facing turn with something
+actionable. Kvar NPM remains authoritative
+for existing wildcard DNS; Kvin LAN
+firewall belongs to Maintenance and
+neither DNS nor production cutover
+are authorized.
+
 ## CURRENT — November 10: Yarn and Square accepted; Prism HTTP canary prepared
 
 **Updated native Kvin progress: 2 of 8 declared routes
