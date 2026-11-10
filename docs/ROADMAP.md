@@ -30,17 +30,23 @@ Nginx-only reload; it does not implicate
 Nextcloud.
 
 The source-managed [YXORP role](../ansible/roles/yxorp/tasks/main.yml)
-now **restarts the exact authorized service
-on a validated config or Quadlet change**,
-reestablishing the current file mount.
-An unchanged Ansible run stays idempotent.
-A post-reconcile SHA256 assertion checks
-the running container's mounted config
-matches the published host file before
-health can be accepted. [Source CI #42911002825](https://github.com/wdcallahan/sanctum-services/actions/runs/42911002825)
-**PASSED** real-Ansible synthetic service
-state cases, tests, playbook syntax and
-Nginx synthetic behavior. **The repaired
+now compares the current published file
+with the running container's mounted
+file **before** deciding service state.
+An already-stale mount causes an
+owned-service restart **even if the
+host's source files show no new change**.
+Validated config/Quadlet changes also
+restart the unit; no source change and
+no mount drift remains idempotent.
+Afterward a SHA256 assertion verifies
+that the running container sees the
+published file before accepting health.
+[Source CI #42911815868](https://github.com/wdcallahan/sanctum-services/actions/runs/42911815868)
+**PASSED** six real-Ansible synthetic
+cases, including the existing stale
+Kvin state, plus syntax and Nginx
+behavior tests. **The repaired
 source has not been run on Kvin yet.**
 
 **Next operator action:** From Kvin, pull
