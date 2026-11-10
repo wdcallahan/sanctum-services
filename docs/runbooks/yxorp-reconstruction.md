@@ -456,6 +456,52 @@ Neither outcome justifies adding client-side static routes,
 changing Bunny policy here, modifying NPM, or commissioning
 Kvin before the separately controlled port-80 application.
 
+## Confirm Kvar routing to legacy Yarn without changing either host — November 10
+
+Nova ran `ansible/yxorp-npm-path-diagnose.yml` from Kvin.
+Both plays passed with no changes (`Kvin ok=4`, `Kvar ok=5`).
+Kuma `/` and Pi-hole `/admin/` gave HTTP302 both directly and
+through Kvar NPM, using absolute HTTP redirects to the **same declared
+backend hostname** with matching path, query, fragment and userinfo.
+The only detected difference was their explicit authority port:
+direct URLs included the backend port (3001 or 82); incumbent
+NPM stripped it. This is a legacy proxy rewrite/normalization
+difference, **not** a demonstrated application fault.
+
+The former `yarn.inner.sanctum` NPM route still timed out from Kvin.
+More importantly, the **Kvar host's own GET** to Yarn
+`192.168.1.110:80` yielded **no HTTP status**, and a GET made
+inside Kvar's existing rootful NPM container also returned
+`timeout` with no HTTP status. Kvin's own prior direct GET to
+that backend succeeded (200). **Do not blame NPM's proxy-host config
+yet**: the shared failure involves Kvar's path to Yarn.
+
+The next bounded observation is the actual Linux route choice,
+not a manual static-route change:
+
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-yarn-route-observe.yml
+```
+
+The read-only play requires **exactly Kvin and Kvar** through the
+existing inventory (including Kvar SSH port10022). It asks each kernel
+for the selected IPv4 interface, preferred source and next hop to
+`192.168.1.110`, with the known Arcane peer `192.168.3.3` as a
+control destination. No new TCP request, service/container action,
+DNS manipulation, firewall or route change occurs. Its parsing
+logic and failed-lookup fallback have been **executed under real
+Ansible using synthetic `ip -j route get` JSON** in CI.
+
+An `ip route get` choice is not a successful packet trace. Use
+its actual source and gateway contrast to decide whether a further
+network/return-path observation belongs to Maintenance, or whether
+the legacy route can safely be left unrepaired until Kvar's
+retirement. The known-good new Yarn route on the rootful
+Peanut trial previously returned byte-identical application
+content from Kvin and was then completely removed.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
