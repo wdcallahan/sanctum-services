@@ -1,5 +1,78 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Search local HTTP accepted (4/8); interim LinkStack canary ready
+
+**Native acceptance:** Nova ran `ansible/yxorp-kvin-stage.yml`
+with Yarn, Square, Prism and Search selected, obtaining
+**`ok=40 changed=3 failed=0 skipped=1`**. The bounded
+`ansible/yxorp-kvin-stage-search-probe.yml` completed
+`ok=4 changed=0 failed=0`; its **actual sanitized HTTP report**
+shows `search.nexus.sanctum` anonymous GET / HTTP200
+through direct `kvin.outer.sanctum:8083`, existing
+Kvar NPM and new Kvin stage, with
+`all_three_have_http_response=true`,
+candidate/direct and candidate/incumbent status equality
+true and candidate/incumbent content-type equality true.
+Neither proxy redirected. **Accept anonymous root HTTP
+routing for Search**, not actual search queries/results,
+sessions, remote clients or production traffic.
+
+**Route count: 4 of 8 tested on new Kvin YXORP,
+4 of 4 initial local HTTP checks passed:**
+Yarn, Square, Prism, Search. Four untested remain:
+`dir.nexus.sanctum`, `kuma.nexus.sanctum`,
+`pihole.nexus.sanctum`, `yarn.inner.sanctum`.
+Kvar NPM and wildcard DNS remain production, and
+Maintenance owns Kvin LAN port80 firewall admission.
+
+**Critical migration distinction:** LinkStack, Kuma and
+Pi-hole remain hosted on **Kvar**, not Kvin. Testing
+Kvin's proxy to those old backends may qualify interim
+HTTP compatibility only, **not app/data migration**.
+Per `docs/SERVICE-ESTATE.md`, all three must eventually
+have state/persistence/restoration accepted on Kvin
+before Kvar can be retired. Old `yarn.inner.sanctum`
+has a separately known timeout from Kvar and requires
+a client-name retirement/usage decision, not blind promotion.
+
+**Next source-managed interim LinkStack trial:** Added
+default-off `yxorp_stage_dir_approved: false` to
+`ansible/vars/yxorp-kvin-stage.yml`.
+`ansible/yxorp-kvin-stage.yml` requires all prior
+Yarn/Square/Prism/Search stage flags, checks the
+exact fourth existing projection and `dir.nexus.sanctum`
+→ `http://kvar.outer.sanctum:8081`,
+WebSocket false, then projects only LinkStack as a
+**fifth stage-only route**. Checked-in
+`data/yxorp-routes.yml` remains Yarn-only.
+The existing role safely validates Nginx,
+detects stale mounts, restarts only the Kvin
+test stage when needed and checks mounted config
+equality; it does not edit Kvar, DNS, firewall
+or production authority.
+
+`ansible/yxorp-kvin-stage-dir-probe.yml`
+compares three bounded private anonymous GET /
+requests from Kvin with `Host: dir.nexus.sanctum`:
+direct old Kvar LinkStack :8081, incumbent Kvar
+NPM :80, and local Kvin stage :80. Its report
+has statuses, status/MIME and conditional redirect
+equality, no body/URL/cookie/credential leakage.
+The report includes `application_migrated_to_kvin:false`.
+
+**Next exact operator command, after CI passes:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-dir-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true
+```
+**Ask Nova ONLY for the two short `PLAY RECAP` lines
+and `msg` from `Report only LinkStack HTTP status
+and compatibility metadata`**. If a task fails,
+request only that task and error. Never demand
+full logs from a successful run; conserve context.
+The nonfatal comparison's recap alone cannot
+accept LinkStack. Every assistant turn must end
+with a concrete next action, not merely status.
+
 ## CURRENT — November 10: Prism local HTTP accepted; Search fourth route canary prepared
 
 **Actual native Kvin Prism:** Stage reconcile with
