@@ -1,0 +1,129 @@
+---
+# Diagnose why an opt-in Square vhost got no HTTP response after reload.
+# Read only: compare the host's published config with the exact file
+# visible inside the existing rootful stage container. Never restart
+# services, change routes, bypass firewall, or reveal config contents.
+- name: Compare Kvin YXORP stage host file and running container mount
+  hosts: yxorp
+  gather_facts: false
+  become: true
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+  tasks:
+    - name: Require existing authorized Kvin Square-stage scope only
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_container_name == 'sanctum-yxorp-kvin-stage'
+          - yxorp_active_config == '/etc/sanctum-services/yxorp-kvin-stage/nginx.conf'
+          - yxorp_candidate_config == '/etc/sanctum-services/yxorp-kvin-stage/nginx.conf.candidate'
+        fail_msg: Refusing to inspect anything except the already-approved Kvin Square stage.
+
+    - name: Observe exact stage service activation without changing it
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: yxorp_stage_unit
+      failed_when: false
+      changed_when: false
+
+    - name: Read the published host-side stage Nginx configuration
+      ansible.builtin.slurp:
+        src: "{{ yxorp_active_config }}"
+      register: yxorp_host_active
+      no_log: true
+
+    - name: Read the validated host-side stage candidate configuration
+      ansible.builtin.slurp:
+        src: "{{ yxorp_candidate_config }}"
+      register: yxorp_host_candidate
+      no_log: true
+
+    - name: Read the bind-mounted Nginx configuration from the existing container
+      ansible.builtin.command:
+        argv: [podman, exec, "{{ yxorp_container_name }}", cat, /etc/nginx/nginx.conf]
+      register: yxorp_container_config
+      failed_when: false
+      changed_when: false
+      no_log: true
+
+    - name: Observe exact Square host-header response without logging HTTP content
+      ansible.builtin.command:
+        argv:
+          - curl
+          - --http1.1
+          - --noproxy
+          - '*'
+          - --silent
+          - --show-error
+          - --output
+          - /dev/null
+          - --write-out
+          - '%{http_code}'
+          - --connect-timeout
+          - '3'
+          - --max-time
+          - '7'
+          - --header
+          - 'Host: square.nexus.sanctum'
+          - http://127.0.0.1:80/
+      register: yxorp_square_curl
+      failed_when: false
+      changed_when: false
+      no_log: true
+
+    - name: Observe deliberately unmatched host to classify Nginx default close
+      ansible.builtin.command:
+        argv:
+          - curl
+          - --http1.1
+          - --noproxy
+          - '*'
+          - --silent
+          - --show-error
+          - --output
+          - /dev/null
+          - --write-out
+          - '%{http_code}'
+          - --connect-timeout
+          - '3'
+          - --max-time
+          - '7'
+          - --header
+          - 'Host: unmatched-test.invalid'
+          - http://127.0.0.1:80/
+      register: yxorp_unknown_curl
+      failed_when: false
+      changed_when: false
+      no_log: true
+
+    - name: Report only content-presence booleans, equality and curl numeric outcomes
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          stage_unit_active: "{{ yxorp_stage_unit.rc == 0 }}"
+          stage_host_active_equals_candidate: "{{ active_text == candidate_text }}"
+          host_active_has_square_vhost: "{{ 'server_name square.nexus.sanctum;' in active_text }}"
+          candidate_has_square_vhost: "{{ 'server_name square.nexus.sanctum;' in candidate_text }}"
+          running_container_read_succeeded: "{{ yxorp_container_config.rc == 0 }}"
+          container_mount_has_square_vhost: "{{ ('server_name square.nexus.sanctum;' in yxorp_container_config.stdout) if yxorp_container_config.rc == 0 else 'not_observed' }}"
+          host_active_equals_container_mount: "{{ (active_text == yxorp_container_config.stdout) if yxorp_container_config.rc == 0 else 'not_observed' }}"
+          container_mount_has_yarn_vhost: "{{ ('server_name yarn.nexus.sanctum;' in yxorp_container_config.stdout) if yxorp_container_config.rc == 0 else 'not_observed' }}"
+          square_curl_exit_code: "{{ yxorp_square_curl.rc }}"
+          square_curl_http_code: "{{ yxorp_square_curl.stdout if yxorp_square_curl.stdout is match('^[0-9]{3}$') else 'unavailable' }}"
+          unknown_host_curl_exit_code: "{{ yxorp_unknown_curl.rc }}"
+          unknown_host_curl_http_code: "{{ yxorp_unknown_curl.stdout if yxorp_unknown_curl.stdout is match('^[0-9]{3}$') else 'unavailable' }}"
+          no_service_or_config_change: true
+          interpretation: >-
+            A host-vs-container mismatch with Square only in the host
+            file suggests the single-file Podman bind mount still sees
+            the pre-replacement inode. Curl exit 52/HTTP000 for both
+            Square and deliberately unmatched names is consistent
+            with Nginx's default 444 no-response behavior, not proof
+            by itself of the root cause. No config, URL or stderr is shown.
+      vars:
+        active_text: "{{ yxorp_host_active.content | b64decode }}"
+        candidate_text: "{{ yxorp_host_candidate.content | b64decode }}"
