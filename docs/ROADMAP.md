@@ -1,49 +1,63 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: 4/8 initial HTTP routes accepted; LinkStack compatibility next
+## Current YXORP milestone — November 10: five initial Kvin HTTP routes accepted; Kuma sixth
 
-Native Kvin rootful YXORP stage is now accepted for **four
-of eight declared route names at the bounded anonymous HTTP
-level**: Yarn (HTTP200/content parity); Square (HTTP302 and
-Kvar redirect/MIME parity); Prism (HTTP200 status/MIME parity);
-and **Search** (HTTP200 through direct Kvin :8083,
-Kvar incumbent NPM and new Kvin stage, same status/MIME).
-Search stage run: `ok=40 changed=3 failed=0`;
-read-only Search comparison `ok=4 changed=0 failed=0`
-with all three response and parity flags true.
-Real searches, Prism WebSockets/streaming and Nextcloud
-sessions/Calendar on the new proxy remain to be qualified.
+**New Kvin YXORP stage: 5/8 routes tested,
+5 passed initial anonymous HTTP
+routing acceptance.** Yarn, Square,
+Prism and Search were previously
+accepted. Newly tested LinkStack
+`dir.nexus.sanctum` now returned
+HTTP200 through direct old Kvar
+LinkStack :8081, Kvar NPM :80 and
+Kvin stage localhost :80, with
+candidate/incumbent status and MIME
+equal and no redirects. Its read-only
+probe returned `ok=4 changed=0
+failed=0` and all safe parity
+booleans true. **LinkStack's app and
+data are still on Kvar**; the
+successful proxy compatibility
+check does not move it or count
+toward Kvar-retirement restore.
 
-**Do not conflate reverse-proxy compatibility with
-service migration.** LinkStack, Kuma and Pi-hole's
-declared backends still run on **Kvar**. Their
-persistent state, application installation,
-restore and client behavior must be independently
-migrated/accepted on Kvin before Kvar's planned
-retirement. The old `yarn.inner.sanctum`
-route still requires a separate consumer/retirement
-decision following its known timeout from Kvar.
+**Next sixth test: interim Kuma proxy route.**
+Its Kvar backend remains :3001;
+current direct and incumbent root
+GETs both return HTTP302 but the
+old NPM normalizes away the backend
+port in its redirect. A new
+stage-only default-off
+`yxorp_stage_kuma_approved` opt-in
+projects only Kuma alongside the
+previous five accepted routes,
+with original production route
+manifest unchanged. The new
+read-only three-path Kuma probe
+compares HTTP status, MIME and
+redirect authority *components*
+(port class, host, scheme and
+path), suppressing actual Location
+values. This qualifies interim
+proxy behavior only, **not**
+Kuma's stateful restore, login,
+monitor history or notification
+delivery on Kvin.
 
-The next default-off `yxorp_stage_dir_approved`
-canary temporarily enables only
-`dir.nexus.sanctum` → `kvar.outer.sanctum:8081`
-alongside the four previously tested Kvin stage
-routes. Its new bounded three-path anonymous
-HTTP probe can qualify **interim LinkStack proxy
-parity**, not the eventual Kvin application restore.
-Ansible source is CI-qualified and retains
-distinct stage authorization, intact Yarn-only
-production manifest, unchanged Kvar NPM, wildcard
-DNS, firewalld and production cutover gates.
-
-**Next operator action:** Run the two chained
-LinkStack stage and probe plays documented in
-the [YXORP runbook](runbooks/yxorp-reconstruction.md).
-Provide **only** both single-line play recaps
-and the `msg` dictionary from
-“Report only LinkStack HTTP status and
-compatibility metadata”; no full logs unless
-the specific failed task is needed.
+**[Source CI #42923666179 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/42923666179)**
+role/probe contracts, real Ansible
+staged route-selection and synthetic
+redirect-shape tests, syntax and
+Nginx behavior. Next native
+operator command is in the
+[YXORP runbook](runbooks/yxorp-reconstruction.md).
+Return only both one-line recaps
+and the sanitized Kuma `msg`
+dictionary. Kvar NPM/wildcard
+DNS still serve production;
+Kvin HTTP80 firewalld is
+Maintenance-owned, and there
+is no cutover approval.
 
 
 ## Nova's available-week priority — November 1–8, 2026
