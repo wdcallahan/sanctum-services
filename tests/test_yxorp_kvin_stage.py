@@ -79,14 +79,10 @@ class KvinStageContract(unittest.TestCase):
         self.assertIn("recurse: true", source)
         self.assertIn("hidden: true", source)
         self.assertIn("follow: false", source)
-        self.assertIn("firewall-cmd, --state", source)
-        self.assertIn("--get-zone-of-interface=eth0", source)
-        self.assertIn("--zone=public, --query-service=http", source)
-        self.assertIn("--zone=public, --query-port=80/tcp", source)
-        self.assertIn("firewall-cmd, --permanent, --zone=public", source)
-        self.assertIn(
-            "Require both firewall policy stores admit ordinary HTTP before staging",
-            source)
+        # Local staging must not depend on any host firewall publication.
+        # Maintenance still owns the separate LAN admission.
+        self.assertNotIn("firewall-cmd", source)
+        self.assertNotIn("public-zone HTTP", source)
         allowed = {"ansible.builtin.assert", "ansible.builtin.command",
                    "ansible.builtin.stat", "ansible.builtin.slurp",
                    "ansible.builtin.find"}
@@ -124,40 +120,82 @@ class KvinStageContract(unittest.TestCase):
                 "Create YXORP system configuration directory"))
         self.assertNotIn("firewall-cmd", ROLE.read_text(encoding="utf-8"))
 
-    def test_stage_probe_uses_same_host_content_and_real_remote_client(self):
+    def test_stage_local_probe_stays_on_kvin_without_firewall_dependency(self):
         path = ROOT / "ansible/yxorp-kvin-stage-probe.yml"
+        plays = read_yaml(path)
+        self.assertEqual(len(plays), 1)
+        kvin = plays[0]
+        self.assertEqual(kvin["hosts"], "yxorp")
+        self.assertEqual(kvin["vars_files"], ["vars/yxorp-kvin-stage.yml"])
+        self.assertFalse(kvin["become"])
+        for task in kvin["tasks"]:
+            modules = {key for key in task if key.startswith("ansible.builtin.")}
+            self.assertEqual(len(modules), 1, task["name"])
+            self.assertTrue(modules <= {
+                "ansible.builtin.assert", "ansible.builtin.uri",
+                "ansible.builtin.debug"}, task["name"])
+            if "ansible.builtin.uri" in task:
+                uri = task["ansible.builtin.uri"]
+                self.assertFalse(uri["use_proxy"])
+                self.assertEqual(uri["follow_redirects"], "none")
+                self.assertTrue(uri["return_content"])
+                self.assertEqual(uri["status_code"], [200])
+                self.assertLessEqual(uri["timeout"], 10)
+                self.assertTrue(task["no_log"])
+                self.assertIs(task["changed_when"], False)
+        source = path.read_text(encoding="utf-8")
+        self.assertIn("http://yarn.inner.sanctum/", source)
+        self.assertIn("url: http://127.0.0.1:80/", source)
+        self.assertIn("Host: yarn.nexus.sanctum", source)
+        self.assertIn("same_body", source)
+        self.assertIn("same_content_type", source)
+        self.assertNotIn("yxorp_test", source)
+        self.assertNotIn("firewall-cmd", source)
+
+    def test_separate_peer_probe_requires_owner_supplied_runtime_admission(self):
+        path = ROOT / "ansible/yxorp-kvin-stage-peer-probe.yml"
         plays = read_yaml(path)
         self.assertEqual(len(plays), 2)
         kvin, peanut = plays
         self.assertEqual(kvin["hosts"], "yxorp")
-        self.assertEqual(peanut["hosts"], "yxorp_test")
         self.assertEqual(kvin["vars_files"], ["vars/yxorp-kvin-stage.yml"])
-        self.assertFalse(kvin["become"])
+        self.assertTrue(kvin["become"])
+        self.assertEqual(peanut["hosts"], "yxorp_test")
         self.assertFalse(peanut["become"])
-        for play in plays:
-            for task in play["tasks"]:
-                modules = {key for key in task if key.startswith("ansible.builtin.")}
-                self.assertEqual(len(modules), 1, task["name"])
-                self.assertTrue(modules <= {
-                    "ansible.builtin.assert", "ansible.builtin.uri",
-                    "ansible.builtin.debug"}, task["name"])
-                if "ansible.builtin.uri" in task:
-                    uri = task["ansible.builtin.uri"]
-                    self.assertEqual(uri["use_proxy"], False)
-                    self.assertEqual(uri["follow_redirects"], "none")
-                    self.assertEqual(uri["return_content"], True)
-                    self.assertEqual(uri["status_code"], [200])
-                    self.assertLessEqual(uri["timeout"], 10)
-                    self.assertTrue(task["no_log"])
-                    self.assertIs(task["changed_when"], False)
+        self.assertIn("Require owner-supplied runtime LAN admission",
+                      [t["name"] for t in kvin["tasks"]])
+        for task in kvin["tasks"]:
+            modules = {key for key in task if key.startswith("ansible.builtin.")}
+            self.assertEqual(len(modules), 1, task["name"])
+            self.assertTrue(modules <= {"ansible.builtin.assert",
+                                       "ansible.builtin.command"})
+            if "ansible.builtin.command" in task:
+                self.assertIs(task["changed_when"], False)
+                cmd = str(task["ansible.builtin.command"]["argv"])
+                for forbidden in ("--add", "--remove", "--reload",
+                                  "restart", "stop", "start"):
+                    self.assertNotIn(forbidden, cmd)
+        for task in peanut["tasks"]:
+            modules = {key for key in task if key.startswith("ansible.builtin.")}
+            self.assertEqual(len(modules), 1, task["name"])
+            self.assertTrue(modules <= {"ansible.builtin.assert", "ansible.builtin.uri",
+                                       "ansible.builtin.debug"})
+            if "ansible.builtin.uri" in task:
+                uri = task["ansible.builtin.uri"]
+                self.assertFalse(uri["use_proxy"])
+                self.assertEqual(uri["follow_redirects"], "none")
+                self.assertTrue(uri["return_content"])
+                self.assertEqual(uri["status_code"], [200])
+                self.assertLessEqual(uri["timeout"], 10)
+                self.assertTrue(task["no_log"])
+                self.assertIs(task["changed_when"], False)
         source = path.read_text(encoding="utf-8")
-        self.assertIn("http://yarn.inner.sanctum/", source)
+        self.assertIn("firewall-cmd, --zone=public, --query-port=80/tcp", source)
+        self.assertIn("firewall-cmd, --zone=public, --query-service=http", source)
         self.assertIn("http://kvin.outer.sanctum/", source)
         self.assertIn("Host: yarn.nexus.sanctum", source)
-        self.assertIn("same_body", source)
-        self.assertIn("same_content_type", source)
         self.assertIn("inventory_hostname == 'peanut.arcane.sanctum'", source)
-        self.assertNotIn("firewall-cmd", source)
+        self.assertNotIn("firewall-cmd, --zone=public, --add-port", source)
 
     def test_stage_removal_is_scoped_idempotent_and_never_unpublishes_dns(self):
         play = self.remove
