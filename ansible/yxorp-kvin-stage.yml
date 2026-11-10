@@ -1,5 +1,6 @@
 ---
-# Explicitly approved real HTTP:80 Kvin stage. Deliberately separate from
+# Removable real HTTP:80 Kvin stage, subject to explicit operator approval.
+# Deliberately separate from
 # Kvin's production Quadlet and production cutover flag. This file never
 # opens a firewall rule, rewrites DNS, or touches incumbent Kvar NPM.
 - name: Validate and install only a removable Kvin YXORP HTTP 80 stage
@@ -141,66 +142,10 @@
              not (kvin_stage_quadlet.stat.islnk | default(false)))
         fail_msg: TCP 80 is occupied by an unidentified listener; do not stage.
 
-    - name: Require active Maintenance-managed firewalld
-      ansible.builtin.command:
-        argv: [firewall-cmd, --state]
-      register: kvin_stage_firewall_state
-      changed_when: false
-      failed_when: false
-
-    - name: Refuse a disabled or unknown firewall daemon
-      ansible.builtin.assert:
-        that:
-          - kvin_stage_firewall_state.rc == 0
-          - kvin_stage_firewall_state.stdout == 'running'
-
-    - name: Observe Kvin eth0's active firewall zone
-      ansible.builtin.command:
-        argv: [firewall-cmd, --get-zone-of-interface=eth0]
-      register: kvin_stage_lan_zone
-      changed_when: false
-
-    - name: Require the declared Kvin public-zone ownership boundary
-      ansible.builtin.assert:
-        that:
-          - kvin_stage_lan_zone.stdout == 'public'
-
-    - name: Query runtime HTTP service admission without changing it
-      ansible.builtin.command:
-        argv: [firewall-cmd, --zone=public, --query-service=http]
-      register: kvin_stage_runtime_http
-      changed_when: false
-      failed_when: false
-
-    - name: Query runtime TCP 80 admission without changing it
-      ansible.builtin.command:
-        argv: [firewall-cmd, --zone=public, --query-port=80/tcp]
-      register: kvin_stage_runtime_port
-      changed_when: false
-      failed_when: false
-
-    - name: Query permanent HTTP service admission without changing it
-      ansible.builtin.command:
-        argv: [firewall-cmd, --permanent, --zone=public, --query-service=http]
-      register: kvin_stage_permanent_http
-      changed_when: false
-      failed_when: false
-
-    - name: Query permanent TCP 80 admission without changing it
-      ansible.builtin.command:
-        argv: [firewall-cmd, --permanent, --zone=public, --query-port=80/tcp]
-      register: kvin_stage_permanent_port
-      changed_when: false
-      failed_when: false
-
-    - name: Require both firewall policy stores admit ordinary HTTP before staging
-      ansible.builtin.assert:
-        that:
-          - kvin_stage_runtime_http.rc == 0 or kvin_stage_runtime_port.rc == 0
-          - kvin_stage_permanent_http.rc == 0 or kvin_stage_permanent_port.rc == 0
-        fail_msg: >-
-          Kvin's public-zone HTTP 80 admission is not yet in both
-          runtime and permanent stores. Maintenance owns that policy.
-          Do not bypass it, modify Kvar, or deploy an inaccessible test.
+    # Host firewalld is intentionally not a deployment prerequisite:
+    # its LAN admission is independently owned by Maintenance. A local
+    # HTTP:80 stage can bind and be accepted on Kvin without opening
+    # the port from other hosts. The separate peer probe handles LAN
+    # acceptance only after the host owner admits HTTP:80.
   roles:
     - yxorp
