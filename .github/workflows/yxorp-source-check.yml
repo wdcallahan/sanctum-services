@@ -91,6 +91,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-probe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-peer-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-upstreams-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-incumbent-parity.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-discrepancies-observe.yml --syntax-check
