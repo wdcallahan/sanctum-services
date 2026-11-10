@@ -1,5 +1,56 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvin/Kvar route comparison passed; legacy Kvar Yarn transport deferred
+
+**Latest native operator result:** Nova ran
+`ansible/yxorp-yarn-route-observe.yml` from Kvin. Both Kvin and Kvar
+returned `ok=5 changed=0 unreachable=0 failed=0`, and both Yarn and
+Arcane control route queries succeeded on each host.
+
+For destination **Yarn `192.168.1.110`**, Kvin's kernel selected
+`eth0`, source `192.168.0.192`, gateway `192.168.0.1`;
+Kvar selected `end0`, source `192.168.0.7`, the **same**
+gateway `192.168.0.1`. For control destination Peanut
+`192.168.3.3`, each host again selected its own same interface,
+source and shared gateway. Thus there is **no observed different
+gateway, missing selected IPv4 route, or route-table divergence**
+accounting for the earlier asymmetric HTTP result. Device names
+are host-specific and not evidence of a problem.
+
+Earlier accepted native HTTP evidence still distinguishes the hosts:
+Kvin direct GET to Yarn returned HTTP200, whereas Kvar host and its
+existing NPM container did not receive an HTTP response. A route
+selection is **not proof of bidirectional packet delivery**;
+source-specific policy, forwarding, target filtering or return path
+remain possible, but no particular cause is established.
+
+**Services decision:** Do **not** open another round of network probes
+merely to repair the obsolete Kvar NPM `yarn.inner.sanctum` route.
+This is **deferred diagnosis**, not a declaration that Kvar's route
+works. The legacy name remains in the migration inventory until
+consumers are reviewed and its retirement is separately accepted.
+The independently accepted new Yarn proxy route on the temporary
+rootful Peanut Nginx trial returned byte-identical HTTP200 content
+from Kvin and was removed cleanly; there is no proven Kvar-origin
+transport prerequisite for Kvin's new YXORP deployment. If an active
+consumer or replacement acceptance demonstrates dependence on the
+old path, hand source/return-path network diagnosis to the
+infrastructure owner with this evidence. Keep the Mace→Arcane
+Bunny Inner rule-20 defect (Maintenance #36) distinct.
+
+**Next Services work:** prepare and review the independently testable
+Kvin real-port-80 YXORP stage and route/consumer acceptance sequence,
+keeping incumbent Kvar NPM and authoritative DNS untouched. The
+**Maintenance-owned** Kvin `eth0/public` runtime+permanent HTTP/80
+allowance is still absent per the last native readiness check; the
+review and explicit approval gate is tracked in Maintenance #20
+for Thursday Nov 12. No live Kvin publication, cutover or permanent
+Peanut standby has been commissioned. Only new Yarn is enabled in
+the candidate manifest; seven legacy routes remain disabled.
+Kuma/Pi-hole redirect authority differences were fully explained
+as explicit backend port vs absent port and need no speculative
+rewrite. No extra operator command is required from this route test.
+
 ## CURRENT — November 10: Kvar host itself cannot reach legacy Yarn; route choice to observe
 
 **Latest actual native result:** Nova ran
