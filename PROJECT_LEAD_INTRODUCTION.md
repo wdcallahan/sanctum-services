@@ -28,24 +28,38 @@ the stale version. Nextcloud backend and incumbent
 Kvar NPM both returned HTTP302; do not blame
 Nextcloud or network routing.
 
-**Source repair implemented/CI passed:** In the shared
-`ansible/roles/yxorp/tasks/main.yml`, after
-successful candidate `nginx -t` and host publication,
-the exact owned systemd service **restarts** if
-either `yxorp_config_publish.changed` or
-`yxorp_quadlet_publish.changed`. With neither
-changed, state `started` is idempotent.
-The stale `podman exec ... nginx -s reload`
-branch is removed. Before accepting local health,
-the role now reads back both the published host file
-and the running container's mounted file and
-asserts SHA256 equality, suppressing raw contents.
-[GitHub Actions #42911002825](https://github.com/wdcallahan/sanctum-services/actions/runs/42911002825)
-**PASSED** source-contract tests, the real
-Ansible four-scenario service-state fixture,
-Ansible syntax and existing Nginx/synthetic
-HTTP checks. This is source qualification;
-**the repaired role has not yet run on native Kvin**.
+**Source repair implemented and fully qualified:** The
+shared `ansible/roles/yxorp/tasks/main.yml`
+now compares the host's current published file
+against the running Podman container's
+single-file bind mount **before** choosing
+its systemd action. An already-stale mount
+forces a restart of **only the authorized
+YXORP service**, even if a prior Ansible
+run wrote the desired host file and neither
+source file is marked changed. Validated
+config or Quadlet changes also trigger
+a restart. With **no changes and no drift**,
+state `started` remains idempotent; for an
+inactive service it starts the unit. The
+old `podman exec ... nginx -s reload`
+path is removed. After reconciliation,
+the role reads both mounted and host
+config and asserts SHA256 equality with
+raw content hidden, *before* local
+health acceptance.
+
+**[CI #42911815868 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/42911815868)**:
+source-contract tests, actual role mount-drift
+expression executed under real Ansible in
+**six synthetic isolated cases** (including
+*unchanged host config / stale existing mount*,
+aligned config, config/Quadlet changes, and
+stopped service), plus syntax, Nginx parser
+and synthetic proxy behavior. No remote
+host or service was touched by CI.
+**Native Kvin repair and Square acceptance
+still require the next operator run.**
 
 **Next exact operator command on Kvin**:
 ```bash
