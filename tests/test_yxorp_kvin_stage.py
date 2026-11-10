@@ -85,7 +85,7 @@ class KvinStageContract(unittest.TestCase):
         self.assertNotIn("public-zone HTTP", source)
         allowed = {"ansible.builtin.assert", "ansible.builtin.command",
                    "ansible.builtin.stat", "ansible.builtin.slurp",
-                   "ansible.builtin.find"}
+                   "ansible.builtin.find", "ansible.builtin.set_fact"}
         for task in self.stage["pre_tasks"]:
             modules = {key for key in task if key.startswith("ansible.builtin.")}
             self.assertEqual(len(modules), 1, task["name"])
