@@ -543,90 +543,86 @@ Nextcloud, Prism/WebSockets and other intended routes rather than
 only anonymous HTTP status parity.
 
 
-## Independent Kvin HTTP:80 stage — source only, awaiting owner gates
+## Kvin HTTP:80 stage — install locally before network publication
 
-**Status (November 10):** Stage-specific source has been prepared; **no
-native Kvin stage deployment, stage probe, or teardown has occurred**.
-Existing Kvar NPM remains the live reverse proxy and authoritative
-wildcard DNS has not moved. The initial Peanut trial was already
-accepted and removed; it must not be rerun to obtain Kvin stage evidence.
+**Status, November 10:** The operator has authorized deploying the
+**separately named YXORP stage on Kvin now**, while Kvar NPM continues
+serving production and wildcard DNS remains unchanged. This authorizes
+the Kvin stage, **not** publication, production cutover, DNS mutation
+or a Maintenance firewall change. The stage has not yet been natively
+installed; until the first successful Kvin run it is still source-only.
+The earlier rootful Peanut trial is accepted and removed.
 
-Files:
+**Why Kvin can be staged immediately:** The actual Kvin readiness
+check found no host TCP80 listener or existing YXORP Quadlet, and the
+qualified rootful ARM64 Nginx image is cached. The host firewall
+blocks **inbound LAN** TCP80 but does not prevent a local rootful
+Nginx process binding normal `0.0.0.0:80` or Kvin sending its own
+HTTP requests to `127.0.0.1:80`. Therefore firewalld admission
+is deliberately **not** an installation or local-test prerequisite.
+Maintenance retains full ownership of the host firewall.
 
-- `ansible/vars/yxorp-kvin-stage.yml` gives the Kvin stage its own
-  `/etc/sanctum-services/yxorp-kvin-stage` directory,
-  `sanctum-yxorp-kvin-stage.container` Quadlet and
-  `sanctum-yxorp-kvin-stage.service` unit. It uses the existing
-  natively qualified **digest-pinned ARM64 Nginx image**, rootful
-  Podman, host networking and **real `0.0.0.0:80`**, not localhost
-  or an alternate port. This stage cannot coexist with another
-  port-80 listener on Kvin.
-- `ansible/yxorp-kvin-stage.yml` runs the existing YXORP role only
-  after explicit `yxorp_kvin_stage_approved` authorization and
-  all read-only preflight checks. It refuses an existing production
-  Quadlet/active production unit, unowned port-80 listener, altered
-  stage Quadlet/configuration directory, unexpected host identity,
-  production cutover authorization or a missing public-zone
-  HTTP/80 admission in **either** firewalld runtime or permanent
-  policy. It never edits firewalld, DNS, Kvar or application state.
-  The single new Yarn route remains the only manifest-enabled
-  server; seven existing routes stay disabled.
-- `ansible/yxorp-kvin-stage-probe.yml` compares direct Yarn content
-  with proxied Kvin-stage content using the same public Host header
-  and a Kvin observer. It then checks the **actual Kvin port-80
-  listener from Peanut** as a separate network client. Sensitive
-  response bodies and headers remain unlogged; reports only safe
-  status/equality/length metadata. This is anonymous routing
-  acceptance, not login, Prism WebSocket, full client or standby
-  proof. DNS is unchanged; requested virtual hosts are passed as
-  HTTP Host headers.
-- `ansible/yxorp-kvin-stage-remove.yml` independently requires
-  `yxorp_kvin_stage_remove_approved`, validates the installed
-  named Quadlet and an exact allowlist of owned configuration
-  files (including hidden entries), stops/removes **only that
-  stage service and path**, reloads systemd, then verifies the
-  stage is inactive. It **never closes HTTP/80 in firewalld**:
-  that now belongs to Maintenance's durable host policy and
-  must remain available for the future legitimate primary proxy.
-  It does not delete the image, application data, production
-  Quadlet/config, wildcard DNS or Kvar NPM.
-
-Both stage and teardown approvals default to **false** in source.
-Their flags are independent of the production
-`yxorp_production_cutover_approved: false` gate, which must not
-be changed merely to test Kvin. GitHub CI validates the source
-contract and syntax; **it is not native deployment evidence**.
-
-**Release sequence:** First Maintenance reviews and, only with
-Nova's explicit approval, applies its existing **single-owner**
-Kvin `eth0/public` host-firewall policy for HTTP/80 to both
-runtime and permanent state (tracked in
-[Maintenance issue #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6775538017);
-review planned for Thursday November 12). Then, after a
-**separate explicit Kvin stage authorization**, an operator can
-run these commands from Kvin's Services checkout:
+**Install the approved Kvin stage and then test locally** from Kvin
+using its existing Services checkout:
 
 ```bash
+cd ~/src/sanctum-services
 git pull
 ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true
 ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-probe.yml -e yxorp_kvin_stage_approved=true
 ```
 
-**These are future gated commands, not a request to execute now.**
-A failed run is not permission to change firewall or restart
-unrelated services. For authorized test cleanup, run
-`ansible/yxorp-kvin-stage-remove.yml` with explicit
-`-e yxorp_kvin_stage_remove_approved=true`; verify it is inactive.
-Do not run the production `ansible/yxorp.yml` merely to try this
-test, and do not leave the temporary stage running indefinitely
-as the unowned production proxy.
+The first play validates exact Kvin identity, explicitly supplied
+stage approval and closed production cutover, inspects existing
+stage/production Quadlets, checks for an unrelated TCP80 listener,
+and refuses unknown files before using the standard YXORP role.
+It deploys **rootful host-network Nginx on real port 80** with the
+previously qualified digest, but uses separate test-owned
+`sanctum-yxorp-kvin-stage` Quadlet, service and configuration path.
+It does not modify any firewall, DNS, Kvar or application service,
+and does not authorize production. Kvar is untouched throughout.
 
-When the Kvin stage passes, separately qualify the intended
-disabled routes and actual user-facing consumers—especially
-Nextcloud and Prism's WebSocket/session behavior—then obtain
-an explicit production/DNS cutover decision. That decision is
-separate from stage install or removal and from Maintenance's
-host firewall approval.
+The local probe queries Kvin's own `127.0.0.1:80` health endpoint
+and compares the direct Yarn backend with the **local staged
+proxy** using identical public Host headers, requiring HTTP status,
+content type and actual response body equality. Raw HTTP contents
+are suppressed. All seven legacy routes stay disabled in the
+candidate manifest; only `yarn.nexus.sanctum` is enabled. These
+tests establish **local Kvin application forwarding**, not
+reachability from another machine or consumer/browser readiness.
+
+**Later independent network acceptance** after Maintenance's
+source-managed Kvin HTTP80 runtime admission is approved/applied:
+
+```bash
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-peer-probe.yml -e yxorp_kvin_stage_approved=true
+```
+
+This separate read-only play first checks that Kvin's stage unit
+is running and `eth0/public` **runtime** firewalld admits HTTP80,
+then probes the actual listener and Yarn route **from Peanut**
+without changing DNS. For longer-term service publication,
+Maintenance also owns desired **permanent** HTTP80 policy.
+The owner handoff remains [Maintenance #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6775538017).
+Do not rerun the old Peanut trial merely to test Kvin.
+
+**Removal when the stage is no longer wanted or must be rolled
+back:** `ansible/yxorp-kvin-stage-remove.yml` requires explicit
+`-e yxorp_kvin_stage_remove_approved=true`. It validates the
+exact owned stage Quadlet and only the two known files in its
+configuration tree (including hidden entries), then stops/removes
+only stage resources and verifies inactivity. It does not remove
+images or application data, change firewalld, DNS, incumbent
+NPM, or production Quadlet/configuration. **Do not remove
+the new stage automatically after its local test**; it can
+remain available for the separately gated remote acceptance.
+
+When the staged service works locally and from an external
+client, qualify the intended disabled routes and actual
+sessions/WebSockets—particularly Nextcloud and Prism—before
+authorizing a DNS cutover or a permanent production-service
+transition. Kvin stage approval does **not** authorize that
+future cutover.
 
 ## Historical completed reversal: remove the temporary Peanut test (do not rerun)
 
