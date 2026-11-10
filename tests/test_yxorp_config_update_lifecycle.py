@@ -23,11 +23,6 @@ class YxorpUpdateLifecycle(unittest.TestCase):
             "Check the selected local-only management health endpoint",
         ):
             self.assertIn(required, names)
-        for before, after in zip(
-            names[names.index("Require Nginx configuration validation in a disposable container"):],
-            names[names.index("Require Nginx configuration validation in a disposable container") + 1:],
-        ):
-            pass
         ordered = [names.index(x) for x in (
             "Require Nginx configuration validation in a disposable container",
             "Publish validated Nginx configuration",
