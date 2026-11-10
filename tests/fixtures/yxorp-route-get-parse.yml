@@ -1,0 +1,33 @@
+---
+# Execute the same parse conditions as the read-only network-path observer
+# on synthetic route-get JSON without connecting to the private LAN.
+- name: Verify route-get JSON projection in actual Ansible
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    yxorp_yarn_route:
+      rc: 0
+      stdout: '[{"dst":"192.168.1.110","gateway":"192.168.0.1","dev":"eth0","prefsrc":"192.168.0.192"}]'
+    yxorp_arcane_control_route:
+      rc: 2
+      stdout: ''
+    yarn_route: >-
+      {{ (yxorp_yarn_route.stdout | from_json | first)
+         if (yxorp_yarn_route.rc == 0 and
+             (yxorp_yarn_route.stdout | default('')) is match('^\\s*\\['))
+         else {} }}
+    control_route: >-
+      {{ (yxorp_arcane_control_route.stdout | from_json | first)
+         if (yxorp_arcane_control_route.rc == 0 and
+             (yxorp_arcane_control_route.stdout | default('')) is match('^\\s*\\['))
+         else {} }}
+  tasks:
+    - name: Require valid route projection and safe fallback on failed lookup
+      ansible.builtin.assert:
+        that:
+          - yarn_route.gateway == '192.168.0.1'
+          - yarn_route.dev == 'eth0'
+          - yarn_route.prefsrc == '192.168.0.192'
+          - control_route == {}
+          - (control_route.gateway | default('direct_or_unreported')) == 'direct_or_unreported'
