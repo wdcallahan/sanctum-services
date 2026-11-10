@@ -1,50 +1,68 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: Kvin stage installed, Yarn transport under diagnosis
+## Current YXORP milestone — November 10: Yarn accepted on Kvin; Square stage canary next
 
-**Native service result:** Nova ran the approved Kvin
-`ansible/yxorp-kvin-stage.yml` successfully:
-**`ok=22 changed=5 unreachable=0 failed=0 skipped=8`**.
-Kvin now runs the distinct rootful host-network `0.0.0.0:80`
-Nginx **stage**. Kvar Nginx Proxy Manager remains the
-production proxy and wildcard DNS stays unchanged.
-The prior successful Peanut-only trial was already removed.
-
-**Local stage test:** Kvin's `/__yxorp_health` request
-returned 200, but the next **direct origin** request to
-`http://yarn.inner.sanctum/` with public Yarn Host
-header timed out (`status=-1`) before the test could
-send a request through the staged Yarn proxy. The
-local test recap was `ok=2 changed=0 failed=1`.
-This is **not** demonstrated proxy failure. Previous
-Kvin-origin HTTP200 and Peanut byte-identical content
-remain historical evidence; direct origin behavior
-has changed or become intermittent.
-
-**Next operator step:** The dedicated **read-only**
+**Native Kvin stage result:** Kvin's rootful host-network
+`0.0.0.0:80` Nginx stage was installed by
+`ansible/yxorp-kvin-stage.yml`: `ok=22 changed=5
+failed=0`. The later independent native
 `ansible/yxorp-kvin-yarn-transport-diagnose.yml`
-independently observes local stage health, local
-Yarn forwarding, direct backend hostname and direct
-backend numeric IP with same Host header, while also
-checking Kvin's resolver. A timeout on any URL does
-not prevent the remaining observations. Its raw
-responses are `no_log` and it never changes
-services or network state. [Source CI #42901044205](https://github.com/wdcallahan/sanctum-services/actions/runs/42901044205)
-**PASSED**, including real-Ansible synthetic report evaluation.
-See [runbook](runbooks/yxorp-reconstruction.md) for one
-chained `git pull && ansible-navigator` command.
-**Leave the new Kvin stage running** until this observation
-is interpreted.
+returned `ok=6 changed=0 failed=0` with
+stage healthy, HTTP200 through the Yarn
+virtual host and both direct Yarn paths,
+DNS matching the known backend IP,
+and **equal bodies for both direct/proxy
+comparisons**. Local Yarn forwarding is
+accepted; earlier direct-origin timeout
+did not recur and its cause is unknown.
+Kvar NPM remains the production proxy;
+wildcard DNS is unchanged. The former
+Peanut test was accepted and removed.
 
-Maintenance #20 still owns future runtime+permanent
-Kvin LAN HTTP80 admission; it is not needed to bind
-or probe `127.0.0.1:80`. The separate
-Peanut-to-Kvin network-client test, all other
-disabled routes, user sessions/WebSockets, production
-authorization, DNS cutover and permanent failover
-remain unaccepted. Do not repair the old Kvar Yarn
-route or change host routing/firewall based on
-this new direct-origin timeout without fresh evidence.
+**Source-complete next step:** A separate
+`yxorp_stage_square_approved: false`
+flag permits a **stage-only** in-memory
+promotion of `square.nexus.sanctum`
+to Kvin's Nextcloud port 8085 alongside
+the already accepted Yarn route. The
+checked-in route manifest stays
+**Yarn-only**; the other legacy routes
+stay disabled. A separate read-only
+Square comparison checks anonymous
+Nextcloud root responses and redirect
+equality among Kvin direct backend,
+incumbent Kvar NPM and the newly
+staged Kvin port80 virtual host.
+No credentials or raw redirect values
+are logged. [Actions #42903575273](https://github.com/wdcallahan/sanctum-services/actions/runs/42903575273)
+**PASSED** real-Ansible synthetic
+opt-in/default selection and report
+validation, source contracts,
+syntax and existing Nginx tests.
+See [YXORP runbook](runbooks/yxorp-reconstruction.md).
+
+**Next operator action:** On Kvin,
+the source-qualified Square opt-in
+stage reconciliation followed by
+the anonymous comparison play,
+chained with `&&` (exact
+commands in the lead handoff/runbook).
+If not opted in, ordinary stage
+reconciliation restores the
+Yarn-only candidate. No change
+to Kvar NPM or DNS is authorized.
+
+**Separate future gate:** Maintenance
+#20 owns runtime and permanent Kvin
+LAN HTTP80 admission; stage-local
+requests do not need this.
+Prism WebSockets, Nextcloud
+login/calendar through the *new*
+proxy, the remaining disabled
+routes, failover, backups/restore,
+routine updates and eventual DNS/
+production cutover are still
+pending independent acceptance.
 
 ## Nova's available-week priority — November 1–8, 2026
 
