@@ -1,5 +1,84 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Current Kvin YXORP stage — Prism accepted, Search next (November 10)
+
+**Native initial HTTP acceptance: 3 of 8 declared routes
+tested on Kvin, 3 passed.** Yarn yielded HTTP200
+and equal response bodies against the direct
+backend; Square yielded HTTP302 with identical
+Kvar NPM redirect and MIME type; Joule/Prism
+yielded HTTP200 through direct Kvin :8084,
+Kvar NPM, and Kvin stage, with equal
+status and content type. Its native stage
+reconciliation finished `ok=38 changed=3
+failed=0` and anonymous comparison
+`ok=4 changed=0 failed=0`, including
+`all_three_have_http_response=true`.
+**Prism WebSockets/streaming/chat sessions
+remain untested**; Nextcloud Calendar,
+browser authentication and remote client
+acceptance are also separate milestones.
+
+**Fourth local candidate: Search.** The
+stage-only `yxorp_stage_search_approved`
+flag defaults false. With all previous
+Kvin-stage Square and Prism opt-ins,
+the existing stage play validates
+the exact baseline manifest and
+adds **only**
+`search.nexus.sanctum` →
+`http://kvin.outer.sanctum:8083`
+as a fourth selected virtual host.
+No checked-in production route is
+enabled; all other legacy routes
+remain disabled. Kvar NPM still
+serves production and DNS, and
+Kvin firewall remains
+Maintenance-owned.
+
+`ansible/yxorp-kvin-stage-search-probe.yml`
+performs three independent anonymous
+GET / requests under the Search Host
+from Kvin to direct backend :8083,
+Kvar incumbent NPM :80 and new
+Kvin local stage :80. Each has an
+eight-second bound, `no_log`,
+nonfatal failure classification, and
+no redirect following or system proxy.
+Report contains only status/MIME
+and conditional redirect equality,
+not URL values, HTML, searches,
+credentials or error strings.
+This will not test actual search
+queries or engine results.
+
+**Next exact command on Kvin:**
+
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-search-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true
+```
+
+**Output contract:** Return only
+the two one-line `PLAY RECAP`
+results and the `msg` dictionary
+from **“Report only Search HTTP status
+and anonymous metadata parity”**.
+If failed, provide the failed task
+and its error instead. Complete
+Ansible logs waste context and
+are not needed for a passing run.
+As with prior checks, a nonfatal
+probe `failed=0` alone does not
+prove HTTP parity.
+
+Source CI can be checked in the
+latest GitHub Actions YXORP workflow.
+No actual Search stage run has
+happened yet. Production cutover,
+DNS, Kvar NPM, Maintenance-owned
+Kvin HTTP80 rules and standby
+failover are unchanged.
+
 ## Current Kvin stage — November 10: Yarn and Square passed; next Prism HTTP canary
 
 **Native local HTTP route progress:** **2 of 8 routes tested
