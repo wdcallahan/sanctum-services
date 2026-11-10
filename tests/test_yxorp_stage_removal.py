@@ -25,6 +25,9 @@ class StageRemovalContract(unittest.TestCase):
         self.assertLess(names.index("Refuse removing directories with any unknown contents"),
                         names.index("Stop the existing stage service, if active"))
         source = (ROOT / "ansible/yxorp-peanut-remove.yml").read_text()
+        self.assertIn("'Network=host' in quadlet_lines", source)
+        self.assertIn("'^PublishPort='", source)
+        self.assertIn("yxorp_active_config", source)
         self.assertNotIn("image rm", source)
         self.assertIn("firewall-cmd", source)
         self.assertIn("--remove-port=80/tcp", source)

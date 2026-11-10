@@ -6,8 +6,10 @@ Wants=network-online.target
 [Container]
 Image={{ yxorp_image }}
 ContainerName={{ yxorp_container_name }}
-Network=bridge
-PublishPort={{ yxorp_bind_address }}:{{ yxorp_host_port }}:80/tcp
+# Host networking deliberately shares the host resolver and listener
+# path on both Peanut and Kvin. Nginx's "listen 80" publishes normal HTTP
+# on all host IPv4 interfaces. Quadlet forbids PublishPort with Network=host.
+Network=host
 Volume={{ yxorp_active_config }}:/etc/nginx/nginx.conf:ro,Z
 
 [Service]

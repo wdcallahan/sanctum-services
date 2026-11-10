@@ -28,9 +28,10 @@
     fail_msg: "Unsafe or incomplete route: {{ item.hostname | default('unknown') }}"
   loop: "{{ yxorp_routes }}"
 
-# Host firewalld and DNS publication belong to Maintenance. Peanut's
-# existing HTTP 80 service/port admission is checked by the read-only
-# preflight, not created by this role.
+# DNS source and permanent firewalld are Maintenance-owned. The full-LAN
+# Peanut trial uses the host resolver and normal host listener, matching
+# Kvin's intended operational proxy networking. Only the separately authorized
+# temporary firewall admission is managed by the trial's wrapper play.
 - name: Create YXORP system configuration directory
   ansible.builtin.file:
     path: "{{ yxorp_config_dir }}"
@@ -43,7 +44,7 @@
     dest: "{{ yxorp_candidate_config }}"
     mode: "0644"
 
-- name: Check whether the declared image digest exists locally
+- name: Check whether the declared image is cached locally
   ansible.builtin.command:
     argv: [podman, image, exists, "{{ yxorp_image }}"]
   register: yxorp_image_present
@@ -51,7 +52,7 @@
   failed_when: yxorp_image_present.rc not in [0, 1]
   check_mode: false
 
-- name: Retrieve the exact pinned image if absent
+- name: Retrieve the selected image if absent
   ansible.builtin.command:
     argv: [podman, pull, "{{ yxorp_image }}"]
   when: yxorp_image_present.rc == 1
@@ -67,7 +68,7 @@
       - run
       - --rm
       - --network
-      - bridge
+      - host
       - --volume
       - "{{ yxorp_candidate_config }}:/etc/nginx/nginx.conf:ro,Z"
       - --entrypoint

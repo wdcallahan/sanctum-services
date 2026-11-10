@@ -88,7 +88,8 @@ class YxorpContractTests(unittest.TestCase):
         self.assertIn("yxorp_production_cutover_approved | bool", task_text)
         self.assertLess(task_text.index("Require a specifically selected rootful HTTP 80"),
                         task_text.index("Create YXORP system configuration directory"))
-        self.assertIn("- bridge", task_text)
+        self.assertIn("- host", task_text)
+        self.assertNotIn("- bridge", task_text)
         self.assertNotIn("firewall-cmd", task_text)
 
     def test_peanut_preflight_requires_real_lan_http(self):
@@ -124,8 +125,8 @@ class YxorpContractTests(unittest.TestCase):
     def test_quadlet_rootful_bridge_and_no_https(self):
         quadlet = (ROOT / "ansible/roles/yxorp/templates/yxorp.container.j2").read_text()
         nginx = (ROOT / "ansible/roles/yxorp/templates/nginx.conf.j2").read_text()
-        self.assertIn("Network=bridge", quadlet)
-        self.assertIn("PublishPort={{ yxorp_bind_address }}", quadlet)
+        self.assertIn("Network=host", quadlet)
+        self.assertNotIn("PublishPort=", quadlet)
         self.assertNotIn("443", quadlet)
         self.assertNotIn("ssl_certificate", nginx)
         self.assertIn("proxy_set_header Host $host", nginx)

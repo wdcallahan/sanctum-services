@@ -49,11 +49,13 @@
         that:
           - not yxorp_remove_quadlet.stat.islnk | default(false)
           - "'ContainerName=sanctum-yxorp-peanut-test' in quadlet_lines"
-          - "'PublishPort=0.0.0.0:80:80/tcp' in quadlet_lines"
-          - quadlet_lines | select('match', '^PublishPort=') | list | length == 1
+          - "'Network=host' in quadlet_lines"
+          - quadlet_lines | select('match', '^Network=') | list | length == 1
+          - quadlet_lines | select('match', '^PublishPort=') | list | length == 0
+          - "'Volume=' ~ yxorp_active_config ~ ':/etc/nginx/nginx.conf:ro,Z' in quadlet_lines
         fail_msg: >-
           Installed YXORP definition does not match the explicitly
-          selected Peanut HTTP:80 test. Investigate; do not remove.
+          selected Peanut host-network HTTP:80 test. Investigate; do not remove.
       vars:
         quadlet_lines: "{{ (yxorp_remove_quadlet_contents.content | b64decode).splitlines() }}"
       when: yxorp_remove_quadlet.stat.exists

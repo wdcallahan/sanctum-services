@@ -46,6 +46,31 @@ next operator action is running the updated `yxorp-peanut.yml` on Kvin
 and returning the result; do not ask Nova to rerun the **old, unmodified**
 read-only preflight for its own sake.
 
+## Updated YXORP Peanut native frontier — host networking selected
+
+Nova's rootful Podman bridge DNS observation passed unchanged:
+host `getent` → `192.168.1.110`, bridge-to-Peanut BIND → `REFUSED`,
+bridge-to-Kvin DNS → timeout. The authoritative BIND client ACL
+is declared by Maintenance in `data/dns.yml` as loopback and
+`192.168.0.0/16` only, with the same ACL applied to ordinary
+queries/recursion/cache. Do **not** attempt `DNS=192.168.3.3`
+alone; the attempted explicit bridge server already returned REFUSED.
+
+Chosen minimal operational correction: both twin YXORP Quadlets
+use `Network=host`, no unsupported `PublishPort`; disposable
+`nginx -t` validation also uses `--network host`. This avoids
+reconfiguring or restarting authoritative DNS and preserves
+ordinary rootful HTTP port80 exposure. It does reduce the container's
+network namespace isolation; revisit if specific needs justify
+a dedicated bridged-network DNS allowance.
+
+**Next operator:** on Kvin's Services checkout, `git pull` and
+run `~/.local/bin/ansible-navigator run ansible/yxorp-peanut.yml`.
+A temporary runtime port-80 firewall exception remains time-limited
+and managed by the wrapper. Return the native test result. If the
+trial succeeds, run `ansible/yxorp-peanut-probe.yml` from Kvin as
+an independent HTTP client. No Kvin/Kvar cutover permitted.
+
 ## Latest native boundary — rootful Podman DNS, November 9
 
 Peanut and Kvin are deliberately matched service-host twins, intended

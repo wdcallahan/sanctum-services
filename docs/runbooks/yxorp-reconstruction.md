@@ -14,7 +14,7 @@ native Peanut deployment receipt.
 | | Peanut trial | Kvin after cutover |
 | --- | --- | --- |
 | Scope | `yxorp_test` | `yxorp` |
-| Container | Rootful Podman Quadlet | Rootful Podman Quadlet |
+| Container | Rootful Podman Quadlet, host network | Rootful Podman Quadlet, host network |
 | Listener | `0.0.0.0:80` | `0.0.0.0:80` |
 | HTTP | Plain internal HTTP | Plain internal HTTP |
 | Image input | `docker.io/library/nginx:stable-alpine` | ARM64 qualified image digest, until update policy promoted |
@@ -67,7 +67,7 @@ Once the preflight passes, the ordinary Services YXORP role:
 1. validates the selected host and route inputs,
 2. renders the version-controlled Nginx configuration,
 3. checks/pulls the selected container image and validates the candidate
-   using Nginx in a disposable Podman **bridge** container,
+   using Nginx in a disposable Podman **host-network** container,
 4. installs only the trial's own Nginx configuration and system Quadlet,
 5. starts its generated systemd service and checks the local health path.
 
@@ -110,31 +110,38 @@ nginx: configuration file /etc/nginx/nginx.conf test failed
 ```
 
 The candidate container used Podman's regular `bridge` networking.
-This result does **not** prove that Peanut's host resolver is broken:
-the host and rootful container may use different resolvers, and
-Peanut's authoritative BIND listens at the documented
-`192.168.3.3`. Kvin's documented DNS peer address is
-`192.168.1.192`. Don't hardcode Yarn's host address or switch Nginx
-to host networking just to make `nginx -t` pass.
+Follow-up native observation proved **Peanut's host resolves**
+`yarn.inner.sanctum` to `192.168.1.110`, while the default
+bridge and explicit bridge-to-Peanut DNS requests returned `REFUSED`.
+Explicit DNS to Kvin timed out; it is not a demonstrated fallback.
+Maintenance's authoritative BIND template applies the same
+`sanctum_clients` ACL to `allow-query`, `allow-recursion` and
+`allow-query-cache`, and its declared list admits only
+`127.0.0.0/8` and `192.168.0.0/16`. The precise bridge source
+address was not observed, but the result strongly suggests an
+unadmitted Podman bridge source.
 
-The next native observation is intentionally bounded:
+**Chosen engineering change:** both twin proxies now use
+`Network=host` and a disposable `podman run --network host`
+for syntax validation. This preserves ordinary rootful
+`0.0.0.0:80` behavior, lets Nginx use the proven host DNS path,
+and avoids changing/restarting the authoritative BIND server solely
+for this one trial. Host networking **does** remove the container's
+network-namespace isolation, a real but bounded tradeoff for a
+rootful LAN proxy that needs host-wide port 80 and outbound network
+access. Reconsider if a concrete risk or another service needs
+bridge isolation. Do not claim the changed path passes natively
+until the normal deployment and independent client probe succeed.
 
-```bash
-cd ~/src/sanctum-services
-git pull --ff-only
-~/.local/bin/ansible-navigator run ansible/yxorp-peanut-dns-observe.yml
-```
-
-This changes no firewall or service configuration. It compares
-`getent ahostsv4` on Peanut with ephemeral Podman bridge DNS
-queries using the current default resolver, the local Peanut DNS
-peer and the Kvin DNS peer. Exact results will determine whether
-an explicit Podman/Quadlet `DNS=` is the right next source change,
-or whether the underlying internal Yarn DNS record/policy needs
-correction. **Do not rerun the original deployment until the
-resolution path is qualified.** The earlier ad hoc TCP/80 allowance
-will expire four hours after firewalld added it unless removed
-sooner by the trial-removal play. No permanent policy was changed.
+The DNS comparison finished with `ok=8 changed=0 failed=0`;
+no further repeat is requested. The next native test is the
+**changed** host-network deployment play, using the ordinary
+`ansible/yxorp-peanut.yml` entry above. Its initial admission task
+will check/reapply only the time-limited runtime firewall exception
+if needed; the original preflight remains intact. If a new failure
+occurs, preserve its exact result rather than bypassing Nginx's parser.
+The previous temporary permission expires four hours after addition
+unless removed by `ansible/yxorp-peanut-remove.yml`.
 
 ## Reversal: remove the entire temporary Peanut service
 
@@ -148,7 +155,8 @@ concludes or if an installation step aborts:
 
 It checks the actual Quadlet contains exactly
 `ContainerName=sanctum-yxorp-peanut-test` and
-`PublishPort=0.0.0.0:80:80/tcp`, inventories the known configuration
+`Network=host` with **no** `PublishPort=` (not permitted in host mode),
+plus its exact Nginx config mount, inventories the known configuration
 files including hidden entries, then stops the trial, removes its own
 Quadlet, reloads systemd and removes only its own config directory.
 Unexpected files, symlinks or altered listener scope cause refusal.

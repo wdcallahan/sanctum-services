@@ -64,6 +64,21 @@ upstream config. Do not repeat the unchanged failing deployment blindly.
 Temporary HTTP admission still expires; remove test artifacts and
 revoke the exception with `ansible/yxorp-peanut-remove.yml` when done.
 
+## YXORP bridge DNS resolved in design — November 9
+
+Nova's read-only Peanut DNS observation passed `ok=8 changed=0`.
+Host `getent` resolves Yarn `192.168.1.110`; default/Peanut-DNS
+Podman bridge probes report BIND `REFUSED`; Kvin-DNS bridge times out.
+The Maintenance BIND ACL source permits only loopback and
+`192.168.0.0/16` clients. Rather than altering the active DNS owner
+solely for an isolated proxy, Services now uses **host networking**
+for both rootful Quadlets on Peanut/Kvin, normal TCP/80 with no
+`PublishPort`. Nginx syntax validation also uses host networking.
+Next operator run is the changed `ansible/yxorp-peanut.yml`, followed
+by `ansible/yxorp-peanut-probe.yml` from Kvin if it succeeds. The
+revised test remover validates host networking and still cleans
+the temporary runtime firewall permission. No production cutover.
+
 ## Estate-wide reconstruction and future services — decisions November 8, 2026
 
 [Service estate / owner and disposition register](SERVICE-ESTATE.md) is the authoritative Services inventory across projects, including Project Joule's Prism and Maintenance's PostgreSQL rather than omitting containers not owned by this repository. Kvin was purchased years ago for the service-host role previously served by Kvar; the host transition is not a new strategic choice. Installation, data restore, proxy adoption, client acceptance and Kvar retirement still need actual qualification.
