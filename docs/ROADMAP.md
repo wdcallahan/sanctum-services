@@ -1,5 +1,44 @@
 # Sanctum Services — Roadmap
 
+## Current YXORP milestone — November 10: independent Kvin stage prepared
+
+**Accepted live evidence:** The Peanut rootful HTTP:80 Yarn-only trial
+returned byte-identical 349-byte content against the direct Yarn
+backend from the same Kvin observer. Nova then ran the scoped Peanut
+removal successfully; it is not a persistent standby. Kvin's current
+HTTP80 port is free and its known-good ARM64 Nginx digest cached,
+but `eth0/public` firewalld has **no HTTP80 admission** in
+runtime or permanent settings. Existing Kvar NPM and wildcard DNS
+remain the actual ingress.
+
+**Source milestone completed:** A distinct Kvin rootful port80
+stage, client-content/remote-peer probe and independently gated
+remover now exist. Their names and files are separate from
+production, their approval flags default false, and real-Ansible
+synthetic permission rejection plus syntax and Nginx tests passed
+[Actions #42894828289](https://github.com/wdcallahan/sanctum-services/actions/runs/42894828289).
+No live Kvin stage was run. [Full runbook](runbooks/yxorp-reconstruction.md).
+
+**Next native gates:** Maintenance #20 reviews source-managed Kvin
+HTTP80 runtime+permanent firewalld policy on Thursday November 12;
+Nova must authorize the real change. A separate Nova-approved
+Kvin stage then uses the stage play, same-client Yarn equality
+and separate Peanut client probe; independently remove the stage
+when accepted. These do **not** authorize production/DNS cutover.
+Review and test disabled route behavior and real clients, especially
+Nextcloud and Prism WebSockets, before commissioning the final
+rootful Kvin service and eventual Peanut standby.
+
+**Legacy diagnostic resolved for planning, not repaired:** Kvar host
+and its rootful NPM container timed out to Yarn `192.168.1.110:80`
+while Kvin reached it. Both hosts selected gateway
+`192.168.0.1` toward Yarn and Peanut, so no divergent gateway
+or missing route was found. Additional Kvar-only network diagnosis
+is deferred unless a wanted consumer depends on the obsolete
+`yarn.inner.sanctum` proxy entry; keep that name in migration
+inventory until separately retired. Maintenance #36's proven
+Mace/Arcane invalid-forward-drop fault remains distinct.
+
 ## Nova's available-week priority — November 1–8, 2026
 
 Nova has no class until **November 9**. His intended push before then is the
