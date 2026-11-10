@@ -17,14 +17,14 @@
 
     - name: Observe selected route to the previously accepted Yarn backend
       ansible.builtin.command:
-        argv: [ip, -4, -j, route, get, "192.168.1.110"]
+        argv: [ip, '-4', '-j', route, get, "192.168.1.110"]
       register: yxorp_yarn_route
       changed_when: false
       failed_when: false
 
     - name: Observe selected route to known Arcane peer as a control
       ansible.builtin.command:
-        argv: [ip, -4, -j, route, get, "192.168.3.3"]
+        argv: [ip, '-4', '-j', route, get, "192.168.3.3"]
       register: yxorp_arcane_control_route
       changed_when: false
       failed_when: false
