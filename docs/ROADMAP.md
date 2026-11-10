@@ -1,55 +1,59 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: 2/8 initial routes pass; Prism next
+## Current YXORP milestone — November 10: 3/8 initial HTTP routes passed; Search next
 
-**Native Kvin rootful Nginx stage** now has two
-of eight declared routes accepted for their
-initial local HTTP test: Yarn (HTTP200 with
-body equality to direct origin) and
-Square/Nextcloud (HTTP302 equal to both
-direct backend and incumbent NPM,
-including identical candidate/incumbent
-Location and content type). The
-drift-aware Podman single-file bind-mount
-fix was applied on Kvin, and the
-stage's post-reconciliation config check
-passed. Full Nextcloud sessions,
-Calendar/WebDAV, WebSocket, remote LAN
-and failover have not been accepted.
+**Rootful new Kvin stage is now locally HTTP-tested
+for three of eight candidate routes: all three
+passed their bounded first test.** Yarn
+returned HTTP200 with direct backend
+content equality. Square/Nextcloud
+returned HTTP302 with identical Kvar
+NPM redirect and MIME metadata. Prism
+returned HTTP200 through direct backend
+`kvin.outer.sanctum:8084`, Kvar NPM
+and Kvin stage, with identical status
+and MIME metadata. The native Prism
+stage reconciliation passed `ok=38
+changed=3 failed=0`, and the nonfatal
+anonymous Prism comparison returned
+`ok=4 changed=0 failed=0` with
+explicit all-three HTTP200 and
+status/content-type parity flags.
+Prism WebSocket/streaming remains
+unqualified, as do browser sessions,
+Nextcloud Calendar/WebDAV and remote
+LAN access.
 
-**Next isolated stage-only candidate:**
-Joule/Prism `joule.nexus.sanctum` →
-`kvin.outer.sanctum:8084` with
-WebSocket support. A default-off
-`yxorp_stage_prism_approved` toggle
-may enable it only alongside the
-previously accepted Yarn and Square
-Kvin stage hosts in one test invocation.
-The checked-in route manifest remains
-Yarn-only; Kvar NPM and wildcard
-DNS remain production. The new
-`ansible/yxorp-kvin-stage-prism-probe.yml`
-independently compares anonymous
-GET / status/MIME/redirect metadata
-through direct, incumbent and stage
-paths with private, bounded, nonfatal
-requests. **No Prism WebSocket/session
-qualification is implied**.
+**Fourth candidate staged separately:**
+Search `search.nexus.sanctum` →
+`kvin.outer.sanctum:8083`. Its
+new default-off
+`yxorp_stage_search_approved`
+selection requires the existing
+Square and Prism stage selections
+and enables **only Search as fourth
+Kvin stage route**. No source
+manifest, production, Kvar NPM,
+DNS or Maintenance firewalld mutation.
+A new bounded anonymous three-path
+Search HTTP observer reports
+status/content-type and optional
+redirect parity without logging
+raw application content.
 
-[Source CI #42917417401](https://github.com/wdcallahan/sanctum-services/actions/runs/42917417401)
-**PASSED** stage-scope contracts,
-real-Ansible route-selection/report
-fixtures and existing YXORP checks.
-**Next operator action** is the
-documented Kvin stage+Prism comparison
-command in the
-[YXORP runbook](runbooks/yxorp-reconstruction.md);
-ask only for the two play recap
-lines and Prism sanitized report
-`msg`, not full logs. Preserve
-Kvar, DNS, Maintenance-owned
-Kvin HTTP80 firewall and
-production cutover boundaries.
+**[Source CI #42918662531 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/42918662531)**
+source contracts, four real-Ansible
+stage-selection fixtures, synthetic
+Search report, playbook syntax,
+Nginx parser and proxy tests.
+Next action is the Kvin-stage
+reconciliation and Search probe
+with explicit opt-in as documented
+in the [YXORP runbook](runbooks/yxorp-reconstruction.md).
+Nova need send **only both play recap
+lines and the Search report `msg`**;
+never full logs for accepted runs.
+Production cutover remains closed.
 
 ## Nova's available-week priority — November 1–8, 2026
 
