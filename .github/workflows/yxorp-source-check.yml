@@ -5,6 +5,7 @@ on:
       - "ansible/roles/yxorp/**"
       - "ansible/yxorp*.yml"
       - "ansible/group_vars/yxorp.yml"
+      - "ansible/vars/yxorp-kvin-stage.yml"
       - "ansible/inventory/hosts.yml"
       - "data/yxorp-routes.yml"
       - "data/kuma-monitors.yml"
@@ -17,6 +18,7 @@ on:
       - "tests/test_yxorp_status.py"
       - "tests/test_yxorp_yarn_content.py"
       - "tests/test_yxorp_kvin_readiness.py"
+      - "tests/test_yxorp_kvin_stage.py"
       - "tests/test_yxorp_upstreams_observe.py"
       - "tests/test_yxorp_incumbent_parity.py"
       - "tests/test_yxorp_discrepancies_observe.py"
@@ -64,6 +66,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_status.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_yarn_content.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_readiness.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_upstreams_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_incumbent_parity.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_discrepancies_observe.py'
@@ -84,6 +87,8 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-yarn-content.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-readiness.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-upstreams-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-incumbent-parity.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-discrepancies-observe.yml --syntax-check
