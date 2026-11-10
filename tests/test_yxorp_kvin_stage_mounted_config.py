@@ -59,6 +59,7 @@ class KvinSquareMountObservation(unittest.TestCase):
             ["podman", "exec", "{{ yxorp_container_name }}", "cat", "/etc/nginx/nginx.conf"],
         )
         self.assertTrue(mounted["no_log"])
+        self.assertIs(mounted["ansible.builtin.command"]["strip_empty_ends"], False)
         output = next(t for t in self.tasks if t["name"].startswith("Report only"))
         fields = output["ansible.builtin.debug"]["msg"]
         for name in [
