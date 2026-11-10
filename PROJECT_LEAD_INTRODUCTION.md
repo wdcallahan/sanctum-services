@@ -1,5 +1,77 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kuma stage HTTP302 REDIRECT MISMATCH (6 attempted, 5 accepted); read-only diagnosis next
+
+**Exact native Kuma evidence received:** The Kvin staged
+YXORP reconciliation with Yarn, Square, Prism, Search,
+LinkStack and Kuma selected passed
+`ok=44 changed=3 failed=0 skipped=1`. The separate
+`ansible/yxorp-kvin-stage-kuma-probe.yml` passed its
+read-only tasks `ok=4 changed=0 failed=0` and exposed
+the intended sanitized report:
+- Direct Kvar Kuma `:3001`, Kvar NPM `:80`, and
+  new Kvin stage `127.0.0.1:80` all returned **302**,
+  with redirect present.
+- Candidate and incumbent have equal HTTP status
+  and MIME, redirect **scheme and path** match.
+- **NOT PARITY:** `candidate_redirect_equals_incumbent=false`,
+  `candidate_redirect_host_equals_incumbent=false`,
+  `candidate_redirect_port_class=other_explicit_port`,
+  while incumbent is `no_explicit_port`.
+  The actual candidate redirect hostname and port are
+  not yet classified; do not invent them.
+- Kuma still runs on **Kvar**, no application/data
+  restore onto Kvin. Do not mark sixth route accepted.
+
+**Current count: 6/8 routes attempted on Kvin,
+5/6 accepted at first local HTTP behavior:**
+Yarn, Square, Prism, Search and interim
+LinkStack. Kuma is blocked on redirect parity.
+Pi-hole and old `yarn.inner.sanctum` untested.
+Kvar NPM is still live for wildcard
+DNS; host firewalld and production cutover
+unchanged.
+
+**Next isolated read-only task:** New
+`ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml`
+(requires all earlier stage flags). This does
+**not** rerun installation or change any
+config. On Kvin it performs only bounded,
+nonfatal, no-log anonymous GET /
+requests with Kuma Host header through
+direct Kvar :3001, incumbent Kvar NPM
+and local Kvin stage. It classifies
+redirect hostname into safe categories
+(frontend / Kvar / Kvin / loopback /
+relative / other), and explicit port as
+(80 / 3001 / none / other), and
+reports whether host, path, query and
+fragment match NPM. No raw URL,
+hostname outside whitelist, query,
+cookie, response body or error is shown.
+Source includes tests of multiple
+synthetic redirect cases with actual
+Ansible/Jinja expressions.
+
+**Next command after green CI, Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+**Ask only the single one-line `PLAY RECAP`
+and `msg` from `Report only Kuma redirect
+host classes and explicit port classes`.**
+If it fails, request only the failed
+task/error. No repeated five-route
+tests, no full Ansible log. Once the
+safe categories identify cause, make
+a source-only, behavior-tested
+targeted Nginx config fix (if required)
+before another stage restart and
+re-test. Never force all routes
+on or touch Kvar, firewall, DNS or
+production cutover. Every assistant
+turn ends with an executable action.
+
 ## CURRENT — November 10: 5 of 8 Kvin initial HTTP routes accepted; Kuma sixth canary prepared
 
 **Native LinkStack initial HTTP comparison ACCEPTED.**
