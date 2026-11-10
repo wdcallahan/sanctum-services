@@ -21,6 +21,8 @@ on:
       - "tests/test_yxorp_incumbent_parity.py"
       - "tests/test_yxorp_discrepancies_observe.py"
       - "tests/test_yxorp_npm_path_diagnose.py"
+      - "tests/test_yxorp_yarn_route_observe.py"
+      - "tests/fixtures/yxorp-route-get-parse.yml"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
@@ -40,6 +42,7 @@ on:
       - "ansible/yxorp-incumbent-parity.yml"
       - "ansible/yxorp-discrepancies-observe.yml"
       - "ansible/yxorp-npm-path-diagnose.yml"
+      - "ansible/yxorp-yarn-route-observe.yml"
       - "ansible/yxorp-peanut-remove.yml"
       - "ansible/group_vars/yxorp_test.yml"
       - "ansible/yxorp-inspect-npm.yml"
@@ -65,6 +68,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_incumbent_parity.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_discrepancies_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_npm_path_diagnose.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_yarn_route_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_publication_review.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_behavior_observer.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
@@ -84,6 +88,8 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-incumbent-parity.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-discrepancies-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-npm-path-diagnose.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-yarn-route-observe.yml --syntax-check
+          ansible-playbook -i 'localhost,' tests/fixtures/yxorp-route-get-parse.yml -c local
           ansible-playbook -i 'localhost,' tests/fixtures/yxorp-redirect-urlsplit.yml -c local
           python3 - <<'PY'
           import pathlib, yaml
