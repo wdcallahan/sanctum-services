@@ -1,5 +1,6 @@
 """Production YXORP readiness is an observation, not an implicit cutover."""
 from pathlib import Path
+import re
 import unittest
 import yaml
 
@@ -20,6 +21,27 @@ class KvinReadinessContract(unittest.TestCase):
         self.assertIn("inventory_hostname == 'kvin.outer.sanctum'", checks)
         self.assertIn("not (yxorp_production_cutover_approved | bool)", checks)
         self.assertIn("yxorp_host_port | int == 80", checks)
+
+    def test_standalone_play_loads_required_role_defaults(self):
+        # Syntax checking cannot catch an undefined variable at task runtime.
+        # This play intentionally doesn't execute the role whose defaults
+        # contain the real production systemd unit and Quadlet paths.
+        self.assertEqual(
+            self.play["vars_files"], ["roles/yxorp/defaults/main.yml"])
+        role_defaults = yaml.safe_load(
+            (ROOT / "ansible/roles/yxorp/defaults/main.yml").read_text())
+        group_vars = yaml.safe_load(
+            (ROOT / "ansible/group_vars/yxorp.yml").read_text())
+        self.assertFalse(set(role_defaults) & set(group_vars),
+                         "vars_files has higher precedence; duplicate keys are unsafe")
+        variables = dict(role_defaults)
+        variables.update(group_vars)
+        referenced = set(re.findall(r"\\b(yxorp_[a-z0-9_]+)\\b", self.text))
+        missing = referenced - set(variables)
+        self.assertFalse(missing, f"Undefined YXORP variables: {sorted(missing)}")
+        self.assertEqual(
+            variables["yxorp_service_name"], "sanctum-yxorp.service")
+        self.assertIn("sanctum-yxorp.container", variables["yxorp_quadlet_file"])
 
     def test_every_task_is_read_only(self):
         allowed = {"ansible.builtin.assert", "ansible.builtin.command",
