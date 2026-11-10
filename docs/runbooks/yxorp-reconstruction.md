@@ -476,31 +476,46 @@ inside Kvar's existing rootful NPM container also returned
 that backend succeeded (200). **Do not blame NPM's proxy-host config
 yet**: the shared failure involves Kvar's path to Yarn.
 
-The next bounded observation is the actual Linux route choice,
-not a manual static-route change:
+The next bounded route-selection test **has now been run and accepted**
+on November 10. Nova executed
+`ansible/yxorp-yarn-route-observe.yml` from Kvin, with
+`ok=5 changed=0 unreachable=0 failed=0` on **each** Kvin and Kvar.
+All four kernel route lookups returned successfully.
 
-```bash
-cd ~/src/sanctum-services
-git pull --ff-only
-~/.local/bin/ansible-navigator run ansible/yxorp-yarn-route-observe.yml
-```
+| Observer | Selected route to Yarn `192.168.1.110` | Selected route to control `192.168.3.3` |
+| --- | --- | --- |
+| Kvin | `eth0`, source `192.168.0.192`, via `192.168.0.1` | `eth0`, source `192.168.0.192`, via `192.168.0.1` |
+| Kvar | `end0`, source `192.168.0.7`, via `192.168.0.1` | `end0`, source `192.168.0.7`, via `192.168.0.1` |
 
-The read-only play requires **exactly Kvin and Kvar** through the
-existing inventory (including Kvar SSH port10022). It asks each kernel
-for the selected IPv4 interface, preferred source and next hop to
-`192.168.1.110`, with the known Arcane peer `192.168.3.3` as a
-control destination. No new TCP request, service/container action,
-DNS manipulation, firewall or route change occurs. Its parsing
-logic and failed-lookup fallback have been **executed under real
-Ansible using synthetic `ip -j route get` JSON** in CI.
+There is no observed divergent next-hop choice or missing selected
+IPv4 route: both hosts use the same gateway for both destinations.
+Different interface names and source addresses are expected on
+different machines. The contrasting HTTP behavior remains real but
+unexplained. Route lookup is **not** a packet capture, firewall
+decision, TCP handshake or return-path test. Source-specific forwarding,
+filtering or return-path differences remain possibilities, not findings.
 
-An `ip route get` choice is not a successful packet trace. Use
-its actual source and gateway contrast to decide whether a further
-network/return-path observation belongs to Maintenance, or whether
-the legacy route can safely be left unrepaired until Kvar's
-retirement. The known-good new Yarn route on the rootful
-Peanut trial previously returned byte-identical application
-content from Kvin and was then completely removed.
+**Disposition:** Defer any further probes of Kvar's obsolete NPM
+`yarn.inner.sanctum` transport unless a currently required consumer
+or replacement acceptance depends on it. Do **not** silently delete
+the old hostname from the route inventory; separately review its
+consumers and accept eventual retirement. Do not infer a connection
+to Maintenance #36's independently proven Mace-to-Arcane fault.
+No host routes, firewall rules, DNS records, incumbent proxy settings
+or applications were changed during this examination.
+
+**Proceed on the actual migration path:** Review a safely isolated,
+real-`0.0.0.0:80` YXORP stage for Kvin without changing existing
+Kvar NPM or the wildcard DNS. The approved design is rootful Nginx
+on host networking with declarative route data. The last native
+Kvin readiness inspection found HTTP/80 **not admitted** in both
+runtime and permanent firewalld `eth0/public`; Maintenance
+work board #20 holds the Thursday Nov 12 owner review and future
+explicit approval. No Services-side firewall workaround, production
+deployment, DNS cutover or Peanut standby commissioning is authorized
+by these observations. Later client acceptance must cover actual
+Nextcloud, Prism/WebSockets and other intended routes rather than
+only anonymous HTTP status parity.
 
 ## Reversal: remove the entire temporary Peanut service
 
