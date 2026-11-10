@@ -40,6 +40,35 @@ class YxorpUpdateLifecycle(unittest.TestCase):
             "{{ 'restarted' if (yxorp_quadlet_publish.changed or yxorp_config_publish.changed) else 'started' }}",
         )
 
+    def test_verify_current_file_is_actually_mounted_before_health_acceptance(self):
+        names = [task["name"] for task in self.tasks]
+        start = names.index("Start or reconcile YXORP using the system service manager")
+        read_host = names.index(
+            "Read the published YXORP configuration for post-reconcile verification")
+        read_mount = names.index("Read the running container mounted YXORP configuration")
+        assert_mount = names.index(
+            "Require the running YXORP container uses the validated published file")
+        health = names.index("Check the selected local-only management health endpoint")
+        self.assertLess(start, read_host)
+        self.assertLess(read_host, read_mount)
+        self.assertLess(read_mount, assert_mount)
+        self.assertLess(assert_mount, health)
+        host = self.tasks[read_host]
+        container = self.tasks[read_mount]
+        check = self.tasks[assert_mount]
+        self.assertEqual(host["ansible.builtin.slurp"]["src"], "{{ yxorp_active_config }}")
+        self.assertTrue(host["no_log"])
+        self.assertEqual(
+            container["ansible.builtin.command"]["argv"],
+            ["podman", "exec", "{{ yxorp_container_name }}",
+             "cat", "/etc/nginx/nginx.conf"],
+        )
+        self.assertIs(container["ansible.builtin.command"]["strip_empty_ends"], False)
+        self.assertFalse(container["changed_when"])
+        self.assertTrue(container["no_log"])
+        self.assertIn("hash('sha256')", check["ansible.builtin.assert"]["that"][0])
+        self.assertTrue(check["no_log"])
+
     def test_do_not_reload_old_mounted_config_inode(self):
         self.assertNotIn("Reload running Nginx only for a validated config-only change",
                          [task["name"] for task in self.tasks])
