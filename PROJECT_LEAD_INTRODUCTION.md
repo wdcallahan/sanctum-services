@@ -1,5 +1,79 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: local Yarn accepted; controlled Square-only Kvin stage ready
+
+**Native accepted state:** The rootful Kvin
+`sanctum-yxorp-kvin-stage.service` is active on
+normal `0.0.0.0:80`. Nova's read-only
+four-target diagnostic passed `ok=6 changed=0
+failed=0`: local health 200, staged Yarn 200,
+direct hostname Yarn 200, direct literal
+`192.168.1.110` Yarn 200, DNS single IPv4
+including the literal address, both
+proxy-versus-direct body equality booleans
+**true**. The earlier origin timeout did not
+recur and has no diagnosed cause. **Do not
+repeat accepted Yarn testing**. Kvar NPM and
+wildcard DNS remain live; Maintenance firewall
+admission for remote Kvin HTTP80 still absent.
+
+**Next stage source QUALIFIED:** We selected
+Square/Nextcloud as the next independently
+needed route, not an all-routes promotion.
+The `ansible/vars/yxorp-kvin-stage.yml`
+flag `yxorp_stage_square_approved` defaults
+false. With **explicit per-invocation opt-in**,
+the same staged `ansible/yxorp-kvin-stage.yml`
+checks the eight-entry baseline manifest
+(Yarn-only enabled, Square disabled; Square
+backend `kvin.outer.sanctum:8085`, WebSocket)
+and uses only an **in-memory Ansible set_fact**
+to enable Square alongside Yarn **in this
+stage run**. It does not change checked-in
+`data/yxorp-routes.yml`, production vars,
+Kvar NPM, wildcard DNS or host firewall.
+An ordinary stage re-run without the opt-in
+returns to the source-manifest Yarn-only
+state without removing the stage.
+
+`ansible/yxorp-kvin-stage-square-probe.yml`
+performs three independent bounded
+anonymous root GETs from Kvin, with
+`Host: square.nexus.sanctum`:
+(1) Nextcloud backend `kvin:8085`;
+(2) incumbent Kvar NPM `kvar:80`;
+(3) Kvin stage `127.0.0.1:80`.
+Raw responses, redirects, bodies, cookies and
+errors are suppressed; only safe statuses
+and comparison booleans reported. It
+does not qualify login, Calendar, WebDAV,
+sessions or WebSocket behavior.
+
+**Source CI [Actions #42903575273](https://github.com/wdcallahan/sanctum-services/actions/runs/42903575273)
+PASSED**: unit contracts, actual route-selection
+tasks executed under synthetic real Ansible
+with isolated fixture hosts, report filters,
+Nginx parser and synthetic proxy tests, and
+playbook syntax. The previous CI failure
+was fixture cross-play `set_fact` persistence,
+fixed before any native Square action.
+
+**Next genuine operator action on Kvin**,
+using Nova's preferred conditional chaining:
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-square-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true
+```
+Then supply both native play recaps and
+the bounded Square report. **Do not**
+run the old Kvin Yarn acceptance probe
+again, switch wildcard DNS, deploy the
+separate production YXORP unit, open
+Kvin's firewall from Services, or
+remove Kvar NPM. Preserve the running
+Kvin stage for remaining application
+qualification. Production cutover and
+Peanut permanent standby remain closed.
+
 ## CURRENT — November 10: Kvin YXORP stage Yarn content ACCEPTED (native four-way)
 
 **Latest native operator run:** Nova executed the read-only
