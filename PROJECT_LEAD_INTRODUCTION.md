@@ -46,6 +46,33 @@ next operator action is running the updated `yxorp-peanut.yml` on Kvin
 and returning the result; do not ask Nova to rerun the **old, unmodified**
 read-only preflight for its own sake.
 
+## Latest native boundary — rootful Podman DNS, November 9
+
+Peanut and Kvin are deliberately matched service-host twins, intended
+for redundant DNS, backups, service mirrors and potential hot takeover.
+Their incidental storage-size difference is not an architectural reason
+to partition roles. Peanut is the proper real HTTP:80 YXORP trial host
+and eventual Kvin proxy standby, not an unrelated spare.
+
+Nova's retry passed the temporary firewalld port-80 admission and
+Peanut preflight, created only the trial configuration directory,
+rendered its candidate and pulled the official Alpine Nginx tag.
+It failed **at the disposable rootful Podman bridge nginx -t**,
+`host not found in upstream "yarn.inner.sanctum"`. **No Quadlet
+was installed and no persistent proxy started.** The runtime-only
+Peanut firewall opening expires automatically after four hours
+(or via the scoped trial cleanup).
+
+**Next actual native action:** run
+`ansible/yxorp-peanut-dns-observe.yml` from the existing Kvin Services
+checkout. This read-only scoped check compares Peanut's host getent
+and the unchanged Podman bridge resolver with bridge queries explicitly
+using both canonical DNS peers, `192.168.3.3` and `192.168.1.192`.
+Do not assume this is an Nginx template bug or rush into hardcoded
+Yarn addresses, host networking or new firewall rules. After actual
+output, choose the minimal correct DNS fix and continue the same
+Peanut port-80 trial.
+
 ## Current decision — Peanut is the realistic HTTP:80 YXORP trial (Nov 9)
 
 Nova explicitly rejected the repeated localhost/18080 workaround. **The

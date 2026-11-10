@@ -48,6 +48,22 @@ a meaningful retry after changing the originally blocked policy condition. [Tria
 The Peanut test tag follows a maintained Nginx channel but automatic
 updates/rollback remain a separately measured lifecycle decision.
 
+## Peanut YXORP HTTP:80 trial — native DNS boundary, November 9
+
+The first actual Peanut port-80 preflight found the firewall closed;
+Nova authorized a four-hour temporary runtime exception and cleanup.
+The subsequent selected trial advanced: permission/preflight passed,
+Peanut trial config directory/candidate rendered, official maintained
+Nginx Alpine image pulled. It then **failed before persistent install**
+because `nginx -t` in Podman's rootful bridge container could not
+resolve `yarn.inner.sanctum`. This is **not** an Nginx syntax or
+application failure. [Bounded DNS comparison playbook](../ansible/yxorp-peanut-dns-observe.yml)
+is the next native operator step from Kvin; compare the host and bridge
+queries (default, Peanut DNS, Kvin DNS) before changing resolver or
+upstream config. Do not repeat the unchanged failing deployment blindly.
+Temporary HTTP admission still expires; remove test artifacts and
+revoke the exception with `ansible/yxorp-peanut-remove.yml` when done.
+
 ## Estate-wide reconstruction and future services — decisions November 8, 2026
 
 [Service estate / owner and disposition register](SERVICE-ESTATE.md) is the authoritative Services inventory across projects, including Project Joule's Prism and Maintenance's PostgreSQL rather than omitting containers not owned by this repository. Kvin was purchased years ago for the service-host role previously served by Kvar; the host transition is not a new strategic choice. Installation, data restore, proxy adoption, client acceptance and Kvar retirement still need actual qualification.

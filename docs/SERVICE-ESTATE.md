@@ -4,6 +4,16 @@
 
 ## Settled operating intentions (Nova, November 8)
 
+- **Kvin and Peanut are deliberately matched Pi 5 service-host twins:** Same
+  processor and substantially the same capabilities; their storage size
+  difference was incidental, not a functional split. Peanut is Kvin's
+  second host for redundant services (such as DNS1/DNS2), backups,
+  failover and hot spares. The eventual YXORP network proxy on Kvin
+  should have a Peanut counterpart capable of assuming reverse-proxy
+  service if Kvin is lost. **Failover publication/control and verified
+  automatic or manual promotion are not currently implemented.** Peanut's
+  2026-11-09 rootful HTTP:80 trial tests the real candidate and must
+  remain distinguished from permanent failover readiness.
 - **Kvin's longstanding role:** Kvin was acquired years ago to take over Kvar's service-host duties. Moving the intended survivors is fulfillment of that existing design, not a new destination decision. The actual migration remains subject to evidence, restore testing, and independent operator authorization.
 - **Pi-hole: RETAIN for ad blocking.** It is **not** the general/authoritative Sanctum DNS service or the DHCP-advertised network resolver. It still serves ad filtering, including whatever DNS-filtering interface its clients use. Record current clients and the future host; do **not** reinterpret absence of general DNS duties as permission to retire Pi-hole. Peanut provides the verified general DHCP DNS path per Maintenance's current observations.
 - **OpenWebUI: RETIRED in favor of Prism.** **Endlessh: RETIRED.** Its former SSH-tarpit role was relevant when a host had a public-facing SSH entry point; that rationale no longer applies. Neither is in the intended reconstruction set. There is **no requirement to uninstall each retired container from Kvar**. Kvar remains unchanged until all wanted services are restored and accepted on Kvin; then Kvar is taken offline and reformatted as a separate approved host-retirement action.

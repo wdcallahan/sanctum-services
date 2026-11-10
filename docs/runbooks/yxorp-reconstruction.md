@@ -93,6 +93,49 @@ points to Kvar; direct client testing should send the desired Host header
 or use a temporary per-request URL-to-address override, not reconfigure
 authoritative DNS.
 
+## Native failure, November 9 — DNS in the Podman bridge
+
+Nova's updated `ansible/yxorp-peanut.yml` run crossed the temporary
+runtime-only firewall gate and read-only preflight, created the
+Peanut-specific configuration directory and rendered the candidate,
+and retrieved the maintained `nginx:stable-alpine` image. It **stopped
+at Nginx parser validation** before installing any system Quadlet or
+starting a persistent listener.
+
+Exact error:
+
+```text
+[emerg] host not found in upstream "yarn.inner.sanctum"
+nginx: configuration file /etc/nginx/nginx.conf test failed
+```
+
+The candidate container used Podman's regular `bridge` networking.
+This result does **not** prove that Peanut's host resolver is broken:
+the host and rootful container may use different resolvers, and
+Peanut's authoritative BIND listens at the documented
+`192.168.3.3`. Kvin's documented DNS peer address is
+`192.168.1.192`. Don't hardcode Yarn's host address or switch Nginx
+to host networking just to make `nginx -t` pass.
+
+The next native observation is intentionally bounded:
+
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-peanut-dns-observe.yml
+```
+
+This changes no firewall or service configuration. It compares
+`getent ahostsv4` on Peanut with ephemeral Podman bridge DNS
+queries using the current default resolver, the local Peanut DNS
+peer and the Kvin DNS peer. Exact results will determine whether
+an explicit Podman/Quadlet `DNS=` is the right next source change,
+or whether the underlying internal Yarn DNS record/policy needs
+correction. **Do not rerun the original deployment until the
+resolution path is qualified.** The earlier ad hoc TCP/80 allowance
+will expire four hours after firewalld added it unless removed
+sooner by the trial-removal play. No permanent policy was changed.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
