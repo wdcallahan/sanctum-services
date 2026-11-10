@@ -134,6 +134,35 @@
     # interrupt an already-running service.
     state: "{{ 'restarted' if (yxorp_quadlet_publish.changed or yxorp_config_publish.changed) else 'started' }}"
 
+# The generator input is mounted as an individual file. Explicitly
+# verify the running container sees the exact content Ansible published;
+# parser success + local Nginx health alone do not prove that after a
+# config update. Do not output raw service configuration or hash values.
+- name: Read the published YXORP configuration for post-reconcile verification
+  ansible.builtin.slurp:
+    src: "{{ yxorp_active_config }}"
+  register: yxorp_active_config_readback
+  no_log: true
+
+- name: Read the running container mounted YXORP configuration
+  ansible.builtin.command:
+    argv: [podman, exec, "{{ yxorp_container_name }}", cat, /etc/nginx/nginx.conf]
+    strip_empty_ends: false
+  register: yxorp_mounted_config_readback
+  changed_when: false
+  no_log: true
+
+- name: Require the running YXORP container uses the validated published file
+  ansible.builtin.assert:
+    that:
+      - >-
+        (yxorp_active_config_readback.content | b64decode | hash('sha256')) ==
+        (yxorp_mounted_config_readback.stdout | hash('sha256'))
+    fail_msg: >-
+      YXORP's container is not reading the current published Nginx
+      configuration; do not accept this deployment or cut over.
+  no_log: true
+
 - name: Check the selected local-only management health endpoint
   ansible.builtin.uri:
     url: "http://127.0.0.1:80/__yxorp_health"
