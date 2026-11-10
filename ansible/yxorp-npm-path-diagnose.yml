@@ -1,0 +1,181 @@
+---
+# Narrow, read-only follow-up from the November 10 incumbent parity results.
+# Separate app redirect-port differences from Yarn's stalled Kvar NPM path.
+# Never output Location values, page bodies, cookies, NPM env or raw errors.
+- name: Classify Kuma and Pi-hole redirect authority differences from Kvin
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - ../data/yxorp-routes.yml
+  vars:
+    yxorp_redirect_targets: >-
+      {{ yxorp_routes
+         | selectattr('hostname', 'in', ['kuma.nexus.sanctum', 'pihole.nexus.sanctum'])
+         | list }}
+  tasks:
+    - name: Require exact Kvin observer, two disabled routes and closed cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+          - (yxorp_redirect_targets | map(attribute='hostname') | list | sort) == ['kuma.nexus.sanctum', 'pihole.nexus.sanctum']
+          - (yxorp_redirect_targets | selectattr('enabled', 'equalto', true) | list | length) == 0
+
+    - name: Observe direct backend redirect only at the previously tested path
+      ansible.builtin.uri:
+        url: "http://{{ item.upstream_host }}:{{ item.upstream_port }}{{ '/admin/' if item.hostname == 'pihole.nexus.sanctum' else '/' }}"
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        timeout: 6
+        status_code: [200]
+      loop: "{{ yxorp_redirect_targets }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_direct_port_observations
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Observe same request through the existing Kvar NPM HTTP route
+      ansible.builtin.uri:
+        url: "http://kvar.outer.sanctum{{ '/admin/' if item.hostname == 'pihole.nexus.sanctum' else '/' }}"
+        method: GET
+        headers:
+          Host: "{{ item.hostname }}"
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        timeout: 6
+        status_code: [200]
+      loop: "{{ yxorp_redirect_targets }}"
+      loop_control:
+        label: "{{ item.hostname }}"
+      register: yxorp_incumbent_port_observations
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Report authority-component equality without disclosing URLs
+      ansible.builtin.debug:
+        msg:
+          route: "{{ item.0.item.hostname }}"
+          path_tested: "{{ '/admin/' if item.0.item.hostname == 'pihole.nexus.sanctum' else '/' }}"
+          direct_http_status: "{{ item.0.status | default(-1) }}"
+          incumbent_http_status: "{{ item.1.status | default(-1) }}"
+          direct_port_class: "{{ 'no_explicit_port' if dport is none else ('declared_backend_port' if dport | int == item.0.item.upstream_port | int else 'other_explicit_port') }}"
+          incumbent_port_class: "{{ 'no_explicit_port' if nport is none else ('declared_backend_port' if nport | int == item.0.item.upstream_port | int else 'other_explicit_port') }}"
+          explicit_ports_equal: "{{ dport == nport }}"
+          authority_equal: "{{ (dlocation | urlsplit('netloc')) == (nlocation | urlsplit('netloc')) }}"
+          fragments_equal: "{{ (dlocation | urlsplit('fragment')) == (nlocation | urlsplit('fragment')) }}"
+          usernames_equal: "{{ (dlocation | urlsplit('username')) == (nlocation | urlsplit('username')) }}"
+          passwords_equal: "{{ (dlocation | urlsplit('password')) == (nlocation | urlsplit('password')) }}"
+          locations_equal: "{{ dlocation == nlocation }}"
+          raw_redirects_exposed: false
+      vars:
+        dlocation: "{{ item.0.location | default('') }}"
+        nlocation: "{{ item.1.location | default('') }}"
+        dport: "{{ dlocation | urlsplit('port') }}"
+        nport: "{{ nlocation | urlsplit('port') }}"
+      loop: "{{ yxorp_direct_port_observations.results | zip(yxorp_incumbent_port_observations.results) | list }}"
+      loop_control:
+        label: "{{ item.0.item.hostname }}"
+
+- name: Observe old Yarn routing from Kvar host and NPM's own container namespace
+  hosts: npm_proxy_legacy
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Require exact incumbent Kvar, real NPM observer and normal execution
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - not ansible_check_mode
+          - "'npm_proxy_legacy' in group_names"
+
+    - name: Probe old Yarn origin from Kvar host without contacting NPM
+      ansible.builtin.uri:
+        url: http://192.168.1.110/
+        method: GET
+        headers:
+          Host: yarn.inner.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200]
+        timeout: 6
+      register: yxorp_kvar_host_yarn
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Probe same origin from existing rootful NPM network namespace using Node HTTP
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - nginx-proxman
+          - node
+          - -e
+          - |
+            const http = require('node:http');
+            let finished = false;
+            function report(outcome, http_status) {
+              if (finished) return;
+              finished = true;
+              console.log(JSON.stringify({outcome, http_status}));
+            }
+            const request = http.request({
+              hostname: '192.168.1.110', port: 80, path: '/', method: 'GET',
+              headers: {Host: 'yarn.inner.sanctum'},
+              timeout: 6000, agent: false,
+            }, response => {
+              report('http_response', response.statusCode);
+              response.destroy();
+            });
+            request.on('timeout', () => request.destroy(
+              Object.assign(new Error('timeout'), {code: 'ETIMEDOUT'})));
+            request.on('error', error => {
+              const code = String(error.code || '');
+              const outcome = code === 'ETIMEDOUT' ? 'timeout' :
+                ['ECONNREFUSED', 'EHOSTUNREACH', 'ENETUNREACH'].includes(code)
+                ? 'connect_failure' :
+                ['ENOTFOUND', 'EAI_AGAIN'].includes(code) ? 'dns_failure' :
+                ['ECONNRESET', 'EPIPE'].includes(code) ? 'receive_failure' : 'other';
+              report(outcome, -1);
+            });
+            request.end();
+      register: yxorp_npm_namespace_yarn
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Report safe host-versus-container Yarn reachability observations
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          backend: 192.168.1.110:80
+          host_http_status: "{{ yxorp_kvar_host_yarn.status | default(-1) }}"
+          container_probe_executed: "{{ yxorp_npm_namespace_yarn.rc == 0 }}"
+          container_http_status: "{{ node_probe.http_status }}"
+          container_outcome: "{{ node_probe.outcome }}"
+          raw_errors_or_bodies_exposed: false
+          configuration_changed: false
+          note: >-
+            Host success plus container failure suggests NPM namespace or
+            forwarding trouble. Both success with a stalled legacy frontend
+            points toward NPM proxy configuration or behavior. A missing Node
+            executable is unknown, not evidence of origin reachability.
+      vars:
+        node_probe: >-
+          {{ (yxorp_npm_namespace_yarn.stdout | from_json)
+             if (yxorp_npm_namespace_yarn.rc == 0 and
+                 (yxorp_npm_namespace_yarn.stdout | default('')) is
+                   match('^\{"outcome":"(http_response|timeout|connect_failure|dns_failure|receive_failure|other)","http_status":(-1|[1-5][0-9]{2})\}$'))
+             else {'outcome':'not_observed', 'http_status': -1} }}
