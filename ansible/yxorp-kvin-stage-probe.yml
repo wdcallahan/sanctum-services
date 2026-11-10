@@ -1,0 +1,143 @@
+---
+# Read-only application content/remote-client acceptance of the Kvin stage.
+# Must only be run after an explicitly authorized stage exists on Kvin.
+# Uses Host headers without modifying wildcard DNS or Kvar NPM.
+- name: Compare direct Yarn and Kvin stage responses from one Kvin observer
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+  tasks:
+    - name: Require exact new stage context and closed production cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_host_port | int == 80
+
+    - name: Confirm the new Kvin stage responds at its own health endpoint
+      ansible.builtin.uri:
+        url: http://127.0.0.1:80/__yxorp_health
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 6
+      register: kvin_stage_local_health
+      changed_when: false
+      no_log: true
+
+    - name: Fetch accepted Yarn origin with the new public Host header
+      ansible.builtin.uri:
+        url: http://yarn.inner.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 10
+      register: kvin_stage_yarn_origin
+      changed_when: false
+      no_log: true
+
+    - name: Fetch Kvin stage Yarn route with identical Host header
+      ansible.builtin.uri:
+        url: http://kvin.outer.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 10
+      register: kvin_stage_yarn_proxied
+      changed_when: false
+      no_log: true
+
+    - name: Require correct local health and same-client Yarn body
+      ansible.builtin.assert:
+        that:
+          - "'yxorp-ready' in (kvin_stage_local_health.content | default(''))"
+          - kvin_stage_yarn_origin.status == kvin_stage_yarn_proxied.status
+          - (kvin_stage_yarn_origin.content_type | default('')) == (kvin_stage_yarn_proxied.content_type | default(''))
+          - (kvin_stage_yarn_origin.content | default('')) == (kvin_stage_yarn_proxied.content | default(''))
+        fail_msg: >-
+          New Kvin stage has not reproduced the accepted anonymous Yarn
+          content; investigate before any route cutover.
+
+    - name: Report only sanitized Kvin origin-versus-stage evidence
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          stage_host: kvin.outer.sanctum
+          frontend: yarn.nexus.sanctum
+          local_health_ok: "{{ 'yxorp-ready' in (kvin_stage_local_health.content | default('')) }}"
+          direct_http_status: "{{ kvin_stage_yarn_origin.status }}"
+          stage_http_status: "{{ kvin_stage_yarn_proxied.status }}"
+          same_content_type: "{{ (kvin_stage_yarn_origin.content_type | default('')) == (kvin_stage_yarn_proxied.content_type | default('')) }}"
+          same_body: "{{ (kvin_stage_yarn_origin.content | default('')) == (kvin_stage_yarn_proxied.content | default('')) }}"
+          body_length: "{{ (kvin_stage_yarn_proxied.content | default('')) | length }}"
+          changed: false
+          limitation: >-
+            No client login, WebSocket, failover or DNS migration qualified.
+
+- name: Verify separate Peanut client reaches the new Kvin real-port listener
+  hosts: yxorp_test
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require exact remote client and no Peanut test deployment
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - not (yxorp_production_cutover_approved | bool)
+
+    - name: Query Kvin stage health from a different network host
+      ansible.builtin.uri:
+        url: http://kvin.outer.sanctum/__yxorp_health
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 8
+      register: kvin_stage_peer_health
+      changed_when: false
+      no_log: true
+
+    - name: Query new Yarn route from a different network host
+      ansible.builtin.uri:
+        url: http://kvin.outer.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 8
+      register: kvin_stage_peer_yarn
+      changed_when: false
+      no_log: true
+
+    - name: Require remote health and actual Yarn response
+      ansible.builtin.assert:
+        that:
+          - "'yxorp-ready' in (kvin_stage_peer_health.content | default(''))"
+          - kvin_stage_peer_yarn.status == 200
+
+    - name: Report remote client result without leaking response content
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          target: kvin.outer.sanctum
+          frontend: yarn.nexus.sanctum
+          stage_health_ok: "{{ 'yxorp-ready' in (kvin_stage_peer_health.content | default('')) }}"
+          yarn_http_status: "{{ kvin_stage_peer_yarn.status }}"
+          yarn_body_length: "{{ (kvin_stage_peer_yarn.content | default('')) | length }}"
+          changed: false
+          limitation: >-
+            A reachable network peer and anonymous GET do not prove
+            other client subnets, sessions or WebSocket behavior.
