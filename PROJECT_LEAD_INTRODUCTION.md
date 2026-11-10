@@ -40,7 +40,16 @@ Bunny Inner rule-20 defect (Maintenance #36) distinct.
 
 **Next Services work:** prepare and review the independently testable
 Kvin real-port-80 YXORP stage and route/consumer acceptance sequence,
-keeping incumbent Kvar NPM and authoritative DNS untouched. The
+keeping incumbent Kvar NPM and authoritative DNS untouched. **Source
+finding:** `ansible/yxorp.yml` currently uses the `kvin_production`
+role scope, whose guard requires
+`yxorp_production_cutover_approved=true`; do **not** flip that
+production authorization merely to stage a test. Prepare an independent
+Kvin-stage entry point with explicit stage-only approval, exact port-80
+ownership/firewall preflight, and scoped removal/recovery before
+requesting any live execution. The already accepted Peanut trial and
+its cleanup show the appropriate pattern, but must not be rerun.
+The
 **Maintenance-owned** Kvin `eth0/public` runtime+permanent HTTP/80
 allowance is still absent per the last native readiness check; the
 review and explicit approval gate is tracked in Maintenance #20
