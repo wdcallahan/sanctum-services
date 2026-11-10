@@ -1,5 +1,68 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kvin rootful YXORP STAGE INSTALLED; direct Yarn origin timed out
+
+**Latest actual native operator report:** Nova ran the authorized
+`ansible/yxorp-kvin-stage.yml` on Kvin: **`ok=22 changed=5
+unreachable=0 failed=0 skipped=8`**. This installed the separately
+named rootful Nginx Quadlet/systemd **stage on Kvin real HTTP:80**.
+Kvar's NPM remains the **production** reverse proxy, and
+wildcard DNS, host firewall, existing application services and
+production cutover gate remain untouched. **Do not tell Nova
+the replacement is still only on Peanut or that Kvin has no
+Nginx**; the actual Kvin stage is now installed.
+
+The immediately subsequent local
+`ansible/yxorp-kvin-stage-probe.yml` run passed its exact Kvin
+and closed-cutover assertions and **returned 200 for the local
+`http://127.0.0.1:80/__yxorp_health` stage health check**.
+However, the very next `ansible.builtin.uri` request to
+**`http://yarn.inner.sanctum/`** with
+`Host: yarn.nexus.sanctum` timed out, no HTTP response
+(`status=-1`), after the configured 10-second timeout.
+Local probe recap **`ok=2 changed=0 failed=1`**. The
+playbook stopped **before testing the proxy's Yarn route**;
+it is **not** evidence the proxy route itself failed, or that
+the Nginx stage broke the origin. Do not repeat the failing
+serial acceptance probe before diagnosing. Earlier accepted
+Kvin origin and Peanut-proxy HTTP200/349-byte parity and
+Kvin-to-192.168.1.110 selected route remain historical
+evidence, not proof the origin is reachable *now*.
+
+**New source-only read-only diagnostic:**
+`ansible/yxorp-kvin-yarn-transport-diagnose.yml`:
+(1) validates actual stage-scope approval, closed production
+cutover and exact Kvin identity; (2) observes whether the
+stage unit is active, bounded 5-second
+`getent ahostsv4 yarn.inner.sanctum` match against
+accepted origin `192.168.1.110`; (3) independently
+GETs stage local health, stage Yarn with correct Host
+header on **127.0.0.1:80**, direct Yarn **hostname**,
+and direct Yarn **literal IP 192.168.1.110**, all
+anonymous, private, bounded 7 seconds, redirects disabled
+and **nonfatal**. Raw responses/errors are `no_log`;
+output includes only numeric status, outcome categories,
+DNS-to-prior-IP check and body equality **only if
+both HTTP200**. No DNS/firewall/service/route mutation.
+Unit tests, syntax and real-Ansible synthetic result-report
+fixture run in CI; [Actions #42901044205](https://github.com/wdcallahan/sanctum-services/actions/runs/42901044205).
+
+**Next exact operator command on Kvin**, once latest source CI
+is accepted; chain the update and run with Nova's preferred
+shell conditional operator:
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-yarn-transport-diagnose.yml -e yxorp_kvin_stage_approved=true
+```
+Ask Nova for the **single sanitized report and play recap**.
+Leave Kvin stage installed; do not restart it or change
+host firewalls, router rules, Kvar NPM or DNS to
+explain the origin timeout. Kvin LAN HTTP80 admission
+still separately belongs to Maintenance #20 and
+production/DNS cutover remains unapproved.
+This is a fresh observed regression on the Kvin origin
+path, not a reason to reopen deferred Kvar-origin
+legacy Yarn path diagnostics blindly.
+
 ## CURRENT — November 10: Kvin staging AUTHORIZED, local test can proceed before firewall change
 
 **Operator clarification:** Nova expected YXORP already on Kvin, but
