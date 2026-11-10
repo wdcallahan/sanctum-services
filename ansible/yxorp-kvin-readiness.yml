@@ -6,6 +6,12 @@
   hosts: yxorp
   gather_facts: true
   become: true
+  # This play does not execute the yxorp role, so Ansible will not load
+  # roles/yxorp/defaults/main.yml implicitly. Reuse that exact source
+  # for the production unit and Quadlet paths; do not duplicate them.
+  # The production group vars and role defaults have disjoint keys.
+  vars_files:
+    - roles/yxorp/defaults/main.yml
   tasks:
     - name: Require the intended Kvin production host and closed cutover gate
       ansible.builtin.assert:
