@@ -3,7 +3,11 @@
 **Current source state, November 9, 2026:** Peanut is the explicitly selected
 full-port, full-LAN trial host. Kvin remains the intended production host.
 Kvar's incumbent Nginx Proxy Manager (NPM) remains online until a separate
-accepted cutover. Source CI is not a native Peanut deployment receipt.
+accepted cutover. Peanut is **Kvin's intended service peer and standby**:
+once Xyorp is accepted and its persistent standby publication is deliberately
+commissioned, Peanut can assume the reverse-proxy role if Kvin fails.
+This ad hoc test is not yet that failover mechanism. Source CI is not a
+native Peanut deployment receipt.
 
 ## Same service architecture in trial and production
 
@@ -18,10 +22,16 @@ accepted cutover. Source CI is not a native Peanut deployment receipt.
 | Existing traffic | Unchanged; test via Peanut hostname + Host header | Separate reviewed DNS cutover required |
 
 There is **no localhost-only or high-port workaround**. The trial really
-binds TCP/80 on Peanut, subject to Peanut's existing Maintenance-managed
-firewall policy. Nothing here changes the firewall or DNS to make it
-reachable. Test and production target groups are separate, so running the
-Peanut playbook cannot target Kvin.
+binds TCP/80 on Peanut. Nova explicitly approved an **ad hoc runtime-only**
+firewall exception for this test after the native preflight observed
+firewalld running in `public`, no listener on 80, and both service/port
+admission disabled. The trial adds only `80/tcp` in zone `public`, with
+a **four-hour expiration**; the permanent Maintenance-owned firewall
+configuration is unchanged. The test-removal playbook takes down that
+exception and checks the result. Firewall reload, daemon restart or reboot
+also discards the temporary runtime permission. Test and production
+target groups are separate, so running the Peanut playbook cannot target
+Kvin.
 
 The checked-in route list [`data/yxorp-routes.yml`](../../data/yxorp-routes.yml)
 currently enables only the newly proposed
@@ -39,13 +49,18 @@ git pull
 ~/.local/bin/ansible-navigator run ansible/yxorp-peanut.yml
 ```
 
-The first imported play is a **read-only preflight**. It checks Peanut's
-identity, that TCP/80 is unoccupied or belongs to its existing trial service,
-and that the active firewall's Ethernet interface zone admits `http` or
-`80/tcp`. If a port or firewall gate fails, **the deployment play is not
-reached**. Do not stop an unrelated service or bypass Maintenance firewall
-ownership to make this test run. The independent read-only
-`ansible/yxorp-peanut-preflight.yml` may also be run alone for diagnosis.
+The **first imported play** is
+`ansible/yxorp-peanut-trial-firewall.yml`: it verifies the exact Peanut
+identity, checks port ownership and current firewalld zone, records a
+root-only cleanup marker in `/run`, and adds a **runtime-only**
+`public` zone TCP/80 exception using `--timeout=4h` **only if not
+already admitted**. Nothing is added to the permanent firewall policy.
+The original **read-only preflight** runs next and must confirm that
+Peanut is ready, followed by the ordinary rootful deployment role.
+A wrong zone, listener or unexpectedly changed marker aborts the
+operation without relaxing the firewall. If preflight or deployment
+fails after the exception was opened, run the bounded remover below;
+the temporary rule also expires independently.
 
 Once the preflight passes, the ordinary Services YXORP role:
 
@@ -81,13 +96,25 @@ authoritative DNS.
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
-**Peanut only**. It checks the actual Quadlet contains exactly
+**Peanut only**. Run it from Kvin's Services checkout when the test
+concludes or if an installation step aborts:
+
+```bash
+~/.local/bin/ansible-navigator run ansible/yxorp-peanut-remove.yml
+```
+
+It checks the actual Quadlet contains exactly
 `ContainerName=sanctum-yxorp-peanut-test` and
 `PublishPort=0.0.0.0:80:80/tcp`, inventories the known configuration
 files including hidden entries, then stops the trial, removes its own
 Quadlet, reloads systemd and removes only its own config directory.
 Unexpected files, symlinks or altered listener scope cause refusal.
-It leaves the cached image, Kvar, DNS, firewalls and app data intact.
+It leaves the cached image, Kvar, DNS, **permanent firewall policy** and
+application data intact. It checks the exact `/run` cleanup marker
+and removes only the test's runtime `public:80/tcp` admission, if still
+active. It verifies that the explicit runtime port allowance has gone
+and deletes the marker. If the four-hour timeout or a reboot already
+cleared the rule, cleanup still removes any remaining marker.
 
 The trial's scoped remove authorization is present because Nova chose
 this test. Removing **production** YXORP later is a separate operation

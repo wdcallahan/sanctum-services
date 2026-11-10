@@ -35,11 +35,16 @@ production cutover gate remains false. There is **no** DNS or firewall
 mutation inside Services. Peanut's active firewalld is Maintenance-owned,
 so a missing port-80 policy requires cross-project coordination.
 
-**Native blocker:** run the ordinary Peanut play from Kvin, after source
-CI passes. Preflight must accept Peanut's real port and firewall policy
-*before* any files or service are changed. If its port-80 admission test
-fails, ask Maintenance to reconcile its own policy rather than quietly
-changing it in Services. [Trial and rollback runbook](runbooks/yxorp-reconstruction.md).
+**Native result:** Nova ran Peanut's read-only preflight from Kvin:
+`ok=11 changed=0 failed=1`. Exact Peanut and free port-80 assertions
+passed; firewalld `public` refused both `http` and `80/tcp`.
+Nova explicitly authorized an **ad hoc runtime-only trial exception**
+with cleanup. Source now records and applies a four-hour expiring port-80
+exception before repeating the original preflight and trial; the matching
+trial removal play revokes only that runtime exception. No permanent
+firewall or DNS change, no Kvar or Kvin production change.
+**Next terminal step** is the updated Peanut test play on Kvin; this is
+a meaningful retry after changing the originally blocked policy condition. [Trial and rollback runbook](runbooks/yxorp-reconstruction.md).
 The Peanut test tag follows a maintained Nginx channel but automatic
 updates/rollback remain a separately measured lifecycle decision.
 

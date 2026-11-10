@@ -1,7 +1,8 @@
 ---
 # The reverse operation for an explicitly selected Peanut HTTP 80 trial.
 # This never removes the cached Nginx image, application data, Kvar's proxy,
-# DNS entries, firewalld rules or other service's units.
+# DNS entries, Maintenance's permanent firewalld policy or other units.
+# Only an explicitly owned, expiring runtime HTTP exception is withdrawn.
 - name: Remove only the bounded YXORP Peanut HTTP 80 trial instance
   hosts: yxorp_test
   gather_facts: true
@@ -146,7 +147,7 @@
     - name: Confirm that this marker owns only the recorded public TCP 80 test rule
       ansible.builtin.assert:
         that:
-          - (peanut_trial_cleanup_owner.content | b64decode) == 'peanut.arcane.sanctum public 80/tcp runtime 4h yxorp\n'
+          - (peanut_trial_cleanup_owner.content | b64decode | trim) == 'peanut.arcane.sanctum public 80/tcp runtime 4h yxorp'
         fail_msg: Ownership token does not match this trial; investigate.
       when: peanut_trial_cleanup_marker.stat.exists
 
@@ -212,7 +213,7 @@
           app_data_removed: false
           kvar_npm_changed: false
           dns_changed: false
-          firewall_temporary_rule_reverted: true
+          firewall_temporary_rule_reverted_or_expired: true
           firewall_permanent_policy_changed: false
           external_cleanup: >-
             This removes the Peanut trial and restores its runtime-only port admission. A production service

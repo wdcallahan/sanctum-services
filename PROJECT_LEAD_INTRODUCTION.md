@@ -27,6 +27,25 @@
   dependency reconciliation (Maintenance DNS, proxy routes, client
   consumers, monitors, data retention) beyond removing a Quadlet.
 
+**November 9 firewall gate resolved for the test only:** Nova executed the
+native Peanut read-only port/firewall preflight on Kvin: `ok=11 changed=0
+failed=1`, with exact target and free port80 verified, active firewalld
+zone `public` but `http` service and TCP/80 denied. Nova authorized
+**an ad hoc runtime-only exception** so the test needn't wait for
+Maintenance's normal work to resume; he requires restoration afterward.
+New `ansible/yxorp-peanut-trial-firewall.yml` adds only
+`public:80/tcp` with `--timeout=4h` (no `--permanent`), records a
+cleanup marker in `/run`, and is imported **before** the original
+read-only preflight in `ansible/yxorp-peanut.yml`. The matching
+`ansible/yxorp-peanut-remove.yml` removes the trial and its verified
+runtime-only exception, and leaves Maintenance's permanent policy,
+Kvar and DNS untouched. Peanut is Kvin's intended peer/future proxy
+standby, not a disposable clone. The standby promotion/failover workflow
+is later regular maintenance work, distinct from this test. The real
+next operator action is running the updated `yxorp-peanut.yml` on Kvin
+and returning the result; do not ask Nova to rerun the **old, unmodified**
+read-only preflight for its own sake.
+
 ## Current decision — Peanut is the realistic HTTP:80 YXORP trial (Nov 9)
 
 Nova explicitly rejected the repeated localhost/18080 workaround. **The

@@ -26,7 +26,14 @@ class StageRemovalContract(unittest.TestCase):
                         names.index("Stop the existing stage service, if active"))
         source = (ROOT / "ansible/yxorp-peanut-remove.yml").read_text()
         self.assertNotIn("image rm", source)
-        self.assertNotIn("firewall-cmd", source)
+        self.assertIn("firewall-cmd", source)
+        self.assertIn("--remove-port=80/tcp", source)
+        self.assertIn("/run/sanctum-yxorp-peanut-http80-trial-owned", source)
+        self.assertIn("Confirm that this marker owns only the recorded public TCP 80 test rule",
+                      names)
+        self.assertLess(names.index("Remove only the temporary public TCP 80 runtime rule we added"),
+                        names.index("Remove only the verified trial ownership marker"))
+        self.assertNotIn("--permanent", source)
         self.assertNotIn("dnscmd", source)
 
 

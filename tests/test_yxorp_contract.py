@@ -104,6 +104,23 @@ class YxorpContractTests(unittest.TestCase):
         self.assertNotIn("state: started", source)
         self.assertNotIn("firewall-cmd --add", source)
 
+    def test_temporary_http_exception_is_owned_expires_and_is_undone(self):
+        src = (ROOT / "ansible/yxorp-peanut-trial-firewall.yml").read_text()
+        rule = yaml.safe_load(src)
+        self.assertEqual(len(rule), 1)
+        self.assertEqual(rule[0]["hosts"], "yxorp_test")
+        self.assertTrue(rule[0]["become"])
+        assert_guard = rule[0]["tasks"][0]["ansible.builtin.assert"]["that"]
+        self.assertIn("yxorp_peanut_test_approved | bool", assert_guard)
+        self.assertIn("not (yxorp_production_cutover_approved | bool)", assert_guard)
+        self.assertIn("--add-port=80/tcp", src)
+        self.assertIn("--timeout=4h", src)
+        self.assertNotIn("--permanent", src)
+        self.assertIn("/run/sanctum-yxorp-peanut-http80-trial-owned", src)
+        peanut = yaml.safe_load((ROOT / "ansible/yxorp-peanut.yml").read_text())
+        self.assertEqual(peanut[0]["import_playbook"], "yxorp-peanut-trial-firewall.yml")
+        self.assertEqual(peanut[1]["import_playbook"], "yxorp-peanut-preflight.yml")
+
     def test_quadlet_rootful_bridge_and_no_https(self):
         quadlet = (ROOT / "ansible/roles/yxorp/templates/yxorp.container.j2").read_text()
         nginx = (ROOT / "ansible/roles/yxorp/templates/nginx.conf.j2").read_text()
