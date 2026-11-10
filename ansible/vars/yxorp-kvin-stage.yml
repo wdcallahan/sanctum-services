@@ -1,0 +1,22 @@
+---
+# A distinct, removable Kvin HTTP:80 stage. This is NOT production approval.
+# Play vars_file overrides group_vars/yxorp.yml only for the stage play.
+# No DNS change, host firewall mutation, or Kvar NPM operation occurs.
+yxorp_deployment_scope: kvin_stage
+yxorp_kvin_stage_approved: false
+yxorp_kvin_stage_remove_approved: false
+yxorp_production_cutover_approved: false
+yxorp_image: "docker.io/library/nginx@sha256:564a09935b00f058ca1b28c742169ba817499baa0479807bf7f373fe2804fbf7"
+yxorp_bind_address: "0.0.0.0"
+yxorp_host_port: 80
+
+# Deliberately disjoint from production's /etc/sanctum-services/yxorp and
+# /etc/containers/systemd/sanctum-yxorp.container. The two cannot run
+# simultaneously because they both bind the real host TCP/80.
+yxorp_config_dir: /etc/sanctum-services/yxorp-kvin-stage
+yxorp_candidate_config: "{{ yxorp_config_dir }}/nginx.conf.candidate"
+yxorp_active_config: "{{ yxorp_config_dir }}/nginx.conf"
+yxorp_quadlet_dir: /etc/containers/systemd
+yxorp_quadlet_file: "{{ yxorp_quadlet_dir }}/sanctum-yxorp-kvin-stage.container"
+yxorp_service_name: sanctum-yxorp-kvin-stage.service
+yxorp_container_name: sanctum-yxorp-kvin-stage
