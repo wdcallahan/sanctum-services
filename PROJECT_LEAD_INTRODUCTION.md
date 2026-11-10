@@ -45,10 +45,10 @@ output includes only numeric status, outcome categories,
 DNS-to-prior-IP check and body equality **only if
 both HTTP200**. No DNS/firewall/service/route mutation.
 Unit tests, syntax and real-Ansible synthetic result-report
-fixture run in CI; [Actions #42901044205](https://github.com/wdcallahan/sanctum-services/actions/runs/42901044205).
+fixture **PASSED** in [Actions #42901044205](https://github.com/wdcallahan/sanctum-services/actions/runs/42901044205), including the corrected DNS-address regex.
 
-**Next exact operator command on Kvin**, once latest source CI
-is accepted; chain the update and run with Nova's preferred
+**Next exact operator command on Kvin**, now that source CI
+has passed; chain the update and run with Nova's preferred
 shell conditional operator:
 ```bash
 cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-yarn-transport-diagnose.yml -e yxorp_kvin_stage_approved=true
