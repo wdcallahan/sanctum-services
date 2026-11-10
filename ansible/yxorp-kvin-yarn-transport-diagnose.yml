@@ -1,0 +1,109 @@
+---
+# Post-install Yarn timeout: independent bounded read-only observations.
+# Do not abort after one failed URL. No Kvar, DNS, router, firewall or
+# service changes. Same approved frontend Host header in every request.
+- name: Classify new Kvin YXORP versus origin Yarn transport after stage installation
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+  tasks:
+    - name: Require exact Kvin staging observer and unchanged production authority
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_host_port | int == 80
+        fail_msg: >-
+          Read-only diagnosis is only for Nova's authorized Kvin
+          staging scope, not production, Kvar or other hosts.
+
+    - name: Observe already installed Kvin stage unit without changing it
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: kvin_yarn_diag_stage_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Look up actual Yarn backend A records through Kvin's host resolver
+      ansible.builtin.command:
+        argv: [getent, ahostsv4, yarn.inner.sanctum]
+      register: kvin_yarn_diag_dns
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Independently probe stage health, stage Yarn, and two forms of direct Yarn
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        method: GET
+        headers:
+          Host: "{{ item.host_header }}"
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200]
+        timeout: 7
+      loop:
+        - name: stage_health
+          url: http://127.0.0.1:80/__yxorp_health
+          host_header: kvin.outer.sanctum
+        - name: stage_yarn
+          url: http://127.0.0.1:80/
+          host_header: yarn.nexus.sanctum
+        - name: origin_hostname
+          url: http://yarn.inner.sanctum/
+          host_header: yarn.nexus.sanctum
+        - name: origin_literal_ip
+          url: http://192.168.1.110/
+          host_header: yarn.nexus.sanctum
+      loop_control:
+        label: "{{ item.name }}"
+      register: kvin_yarn_diag_responses
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require the complete fixed four-target diagnostic result set
+      ansible.builtin.assert:
+        that:
+          - kvin_yarn_diag_responses.results | length == 4
+          - (kvin_yarn_diag_responses.results | map(attribute='item.name') | list) == ['stage_health', 'stage_yarn', 'origin_hostname', 'origin_literal_ip']
+
+    - name: Report only known-target results and non-sensitive comparison metadata
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          stage_unit_active: "{{ kvin_yarn_diag_stage_unit.rc == 0 }}"
+          stage_health_status: "{{ health.status | default(-1) }}"
+          stage_health_ready: "{{ health.status | default(-1) | int == 200 and 'yxorp-ready' in (health.content | default('')) }}"
+          stage_yarn_status: "{{ proxy.status | default(-1) }}"
+          direct_hostname_status: "{{ host.status | default(-1) }}"
+          direct_literal_ip_status: "{{ ip.status | default(-1) }}"
+          stage_yarn_outcome: "{{ 'http_response' if (proxy.status | default(-1) | int) >= 100 else ('timeout' if 'timed out' in (proxy.msg | default('') | lower) or 'timeout' in (proxy.msg | default('') | lower) else 'no_http_response') }}"
+          direct_hostname_outcome: "{{ 'http_response' if (host.status | default(-1) | int) >= 100 else ('timeout' if 'timed out' in (host.msg | default('') | lower) or 'timeout' in (host.msg | default('') | lower) else 'no_http_response') }}"
+          direct_literal_ip_outcome: "{{ 'http_response' if (ip.status | default(-1) | int) >= 100 else ('timeout' if 'timed out' in (ip.msg | default('') | lower) or 'timeout' in (ip.msg | default('') | lower) else 'no_http_response') }}"
+          host_resolution_succeeded: "{{ kvin_yarn_diag_dns.rc == 0 }}"
+          host_resolution_includes_previously_accepted_ip: "{{ '192.168.1.110' in dns_addresses }}"
+          host_resolution_unique_ipv4_count: "{{ dns_addresses | length }}"
+          stage_and_direct_hostname_bodies_equal_if_both_200: "{{ (proxy.content | default('')) == (host.content | default('')) if (proxy.status | default(-1) | int == 200 and host.status | default(-1) | int == 200) else 'not_comparable' }}"
+          stage_and_direct_ip_bodies_equal_if_both_200: "{{ (proxy.content | default('')) == (ip.content | default('')) if (proxy.status | default(-1) | int == 200 and ip.status | default(-1) | int == 200) else 'not_comparable' }}"
+          configuration_changed: false
+          meaning: >-
+            Four independent requests isolate host-local Nginx health,
+            Nginx-to-Yarn forwarding, hostname origin and literal-IP origin.
+            A backend timeout after staging is not proof of Nginx causation.
+            This is not a packet trace, DNS cutover, session or client test.
+      vars:
+        health: "{{ kvin_yarn_diag_responses.results[0] }}"
+        proxy: "{{ kvin_yarn_diag_responses.results[1] }}"
+        host: "{{ kvin_yarn_diag_responses.results[2] }}"
+        ip: "{{ kvin_yarn_diag_responses.results[3] }}"
+        dns_addresses: >-
+          {{ (kvin_yarn_diag_dns.stdout_lines | default([])
+               | map('regex_search', '^[0-9]+(?:\\.[0-9]+){3}')
+               | reject('equalto', None) | unique | list)
+             if kvin_yarn_diag_dns.rc == 0 else [] }}
