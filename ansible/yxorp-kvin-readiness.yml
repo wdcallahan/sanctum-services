@@ -1,0 +1,123 @@
+---
+# Production readiness observation ONLY. Kvar continues to own the live
+# *.nexus.sanctum service names until separately approved migration.
+# No unit/Quadlet, firewall, DNS, container, image or Kvar writes.
+- name: Observe Kvin YXORP host-port and rootful image readiness without deployment
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Require the intended Kvin production host and closed cutover gate
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - yxorp_image is match('^docker.io/library/nginx@sha256:[a-f0-9]{64}$')
+
+    - name: Observe all current host TCP 80 listeners and owners
+      ansible.builtin.command:
+        argv: [ss, -H, -ltnp, "sport = :80"]
+      register: kvin_yxorp_port80
+      changed_when: false
+
+    - name: Observe whether production YXORP already has a systemd service
+      ansible.builtin.command:
+        argv: [systemctl, is-active, "{{ yxorp_service_name }}"]
+      register: kvin_yxorp_existing_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Check whether the exact production rootful image is cached
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ yxorp_image }}"]
+      register: kvin_yxorp_image_present
+      changed_when: false
+      failed_when: false
+
+    - name: Observe whether a production Quadlet file already exists
+      ansible.builtin.stat:
+        path: "{{ yxorp_quadlet_file }}"
+        follow: false
+      register: kvin_yxorp_quadlet
+
+    - name: Observe current live firewalld state
+      ansible.builtin.command:
+        argv: [firewall-cmd, --state]
+      register: kvin_yxorp_firewall
+      changed_when: false
+      failed_when: false
+
+    - name: Read current Kvin wired LAN firewall zone
+      ansible.builtin.command:
+        argv: [firewall-cmd, --get-zone-of-interface=eth0]
+      register: kvin_yxorp_zone
+      changed_when: false
+      failed_when: false
+      when: kvin_yxorp_firewall.rc == 0
+
+    - name: Observe runtime admission for ordinary HTTP service
+      ansible.builtin.command:
+        argv: [firewall-cmd, "--zone={{ kvin_yxorp_zone.stdout }}", --query-service=http]
+      register: kvin_yxorp_http_service_runtime
+      changed_when: false
+      failed_when: false
+      when:
+        - kvin_yxorp_firewall.rc == 0
+        - kvin_yxorp_zone.rc | default(1) == 0
+
+    - name: Observe runtime admission for TCP port 80
+      ansible.builtin.command:
+        argv: [firewall-cmd, "--zone={{ kvin_yxorp_zone.stdout }}", --query-port=80/tcp]
+      register: kvin_yxorp_port_runtime
+      changed_when: false
+      failed_when: false
+      when:
+        - kvin_yxorp_firewall.rc == 0
+        - kvin_yxorp_zone.rc | default(1) == 0
+
+    - name: Observe permanent admission for ordinary HTTP service
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, "--zone={{ kvin_yxorp_zone.stdout }}", --query-service=http]
+      register: kvin_yxorp_http_service_permanent
+      changed_when: false
+      failed_when: false
+      when:
+        - kvin_yxorp_firewall.rc == 0
+        - kvin_yxorp_zone.rc | default(1) == 0
+
+    - name: Observe permanent admission for TCP port 80
+      ansible.builtin.command:
+        argv: [firewall-cmd, --permanent, "--zone={{ kvin_yxorp_zone.stdout }}", --query-port=80/tcp]
+      register: kvin_yxorp_port_permanent
+      changed_when: false
+      failed_when: false
+      when:
+        - kvin_yxorp_firewall.rc == 0
+        - kvin_yxorp_zone.rc | default(1) == 0
+
+    - name: Report pre-cutover facts without opening the proxy or its listener
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          cutover_authorized: false
+          architecture: "{{ ansible_facts['architecture'] }}"
+          existing_tcp80_listeners: "{{ kvin_yxorp_port80.stdout_lines }}"
+          yxorp_service_already_active: "{{ kvin_yxorp_existing_unit.rc == 0 }}"
+          yxorp_quadlet_already_present: "{{ kvin_yxorp_quadlet.stat.exists | default(false) }}"
+          qualified_rootful_image_cached: "{{ kvin_yxorp_image_present.rc == 0 }}"
+          firewalld_running: "{{ kvin_yxorp_firewall.rc == 0 }}"
+          lan_zone: "{{ kvin_yxorp_zone.stdout | default('unknown') }}"
+          runtime_http_service_admitted: "{{ kvin_yxorp_http_service_runtime.rc | default(-1) == 0 }}"
+          runtime_tcp80_port_admitted: "{{ kvin_yxorp_port_runtime.rc | default(-1) == 0 }}"
+          permanent_http_service_admitted: "{{ kvin_yxorp_http_service_permanent.rc | default(-1) == 0 }}"
+          permanent_tcp80_port_admitted: "{{ kvin_yxorp_port_permanent.rc | default(-1) == 0 }}"
+          read_only: true
+          interpretation: >-
+            An already occupied port 80 requires owner inspection before any
+            deployment. Absent HTTP admission requires a separate reviewed
+            host-firewall owner action. Neither condition is changed here.
+            The exact image being cached does not authorize production cutover.
