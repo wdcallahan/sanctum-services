@@ -142,6 +142,33 @@
              not (kvin_stage_quadlet.stat.islnk | default(false)))
         fail_msg: TCP 80 is occupied by an unidentified listener; do not stage.
 
+    # Square is a separately selected *stage-only* candidate. The
+    # checked-in production route manifest remains Yarn-only. Do not
+    # activate other legacy hosts just because they were in Kvar NPM.
+    - name: Require approved Square staging and the exact retained manifest state
+      ansible.builtin.assert:
+        that:
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[1].hostname == 'square.nexus.sanctum'
+          - not (yxorp_routes[1].enabled | bool)
+          - yxorp_routes[1].upstream_scheme == 'http'
+          - yxorp_routes[1].upstream_host == 'kvin.outer.sanctum'
+          - yxorp_routes[1].upstream_port | int == 8085
+          - yxorp_routes[1].websocket | bool
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum']
+        fail_msg: >-
+          Square test requires the explicitly selected Nextcloud backend
+          and the intact Yarn-only baseline. Do not adopt a different
+          manifest or enable all proxy hosts.
+      when: yxorp_stage_square_approved | default(false) | bool
+
+    - name: Enable only Square alongside Yarn in this Kvin stage invocation
+      ansible.builtin.set_fact:
+        yxorp_routes: "{{ [yxorp_routes[0], (yxorp_routes[1] | combine({'enabled': true}))] + yxorp_routes[2:] }}"
+      when: yxorp_stage_square_approved | default(false) | bool
+
     # Host firewalld is intentionally not a deployment prerequisite:
     # its LAN admission is independently owned by Maintenance. A local
     # HTTP:80 stage can bind and be accepted on Kvin without opening
