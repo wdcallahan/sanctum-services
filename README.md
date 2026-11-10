@@ -69,24 +69,11 @@ reconciles approved apps only after the web installer completes. Unlisted apps
 are preserved, not silently uninstalled. No current test uploads are treated
 as irreplaceable data; eventual data recovery is a separate qualification.
 
-## YXORP staging and monitoring requests (source-only, November 8)
+## YXORP Peanut trial and monitoring (November 10, 2026)
 
-- [YXORP replacement runbook](docs/runbooks/yxorp-reconstruction.md) and
-  [Ansible role](ansible/roles/yxorp/tasks/main.yml): rootful plain Nginx
-  with a loopback-only staging default (`127.0.0.1:18080`), route
-  declarations in [`data/yxorp-routes.yml`](data/yxorp-routes.yml),
-  candidate `nginx -t` validation and Quadlet reconciliation. **Not
-  deployed or yet source-qualified on Kvin.** The image digest remains
-  intentionally unset, and existing NPM route parity remains to be verified.
-  Kvar, DNS and the live host firewall have not been changed.
-- [Declared Kuma monitors](data/kuma-monitors.yml) and
-  [Kuma monitoring runbook](docs/runbooks/kuma-monitoring.md) preserve
-  Project Joule's exact **Wicket Ollama**
-  `http://wicket.arcane.sanctum:11435/healthz` monitor request,
-  [issue #4](https://github.com/wdcallahan/sanctum-services/issues/4).
-  Only the retained and properly managed Kuma instance may receive it;
-  the actual **Up** state remains to be verified.
+- [YXORP replacement runbook](docs/runbooks/yxorp-reconstruction.md) and [Ansible role](ansible/roles/yxorp/tasks/main.yml): rootful plain Nginx, host networking, HTTP on normal `0.0.0.0:80`, declarative routes in [`data/yxorp-routes.yml`](data/yxorp-routes.yml), candidate `nginx -t` and Quadlet service reconciliation. The **Peanut trial is installed and its local health check passed** (November 9). Kvin independently reached Peanut and received HTTP 200 through the enabled Yarn route. Neither result authorizes replacing Kvar NPM; the production gate on Kvin remains closed, other routes disabled, and client-browser/standby acceptance incomplete.
+- [Read-only Peanut trial status](ansible/yxorp-peanut-status.yml) checks local service health, the expiring four-hour firewall admission, and Kvin peer reachability without changing the listener, firewall or DNS. This helps distinguish an expired runtime HTTP exception from a dead service. A scoped [trial cleanup playbook](ansible/yxorp-peanut-remove.yml) is available when testing concludes.
+- **Mace → Peanut direct HTTP and SSH are blocked by the independently A/B/A-proven Bunny Inner forwarding policy issue** ([Maintenance #36](https://github.com/wdcallahan/sanctum-maintenance/issues/36)). This does not invalidate the accepted Kvin client test. The permanent router/source correction belongs to Bunny Factory/Maintenance, not YXORP.
+- [Declared Kuma monitors](data/kuma-monitors.yml) and [Kuma monitoring runbook](docs/runbooks/kuma-monitoring.md) preserve Project Joule's exact **Wicket Ollama** `http://wicket.arcane.sanctum:11435/healthz` monitor request ([issue #4](https://github.com/wdcallahan/sanctum-services/issues/4)). Only the retained, properly managed Kuma instance may receive it; actual Up state remains to be verified.
 
-See [YXORP and Kuma source checks](.github/workflows/yxorp-source-check.yml)
-for syntax, data-contract and controller-only rendering tests. These checks
-are not substitutes for native Podman, live endpoint or recovery acceptance.
+See [YXORP and Kuma source checks](.github/workflows/yxorp-source-check.yml) for syntax, data-contract, and loopback synthetic HTTP tests. These do not substitute for live Podman, end-to-end application behavior, or a clean-host recovery trial.
