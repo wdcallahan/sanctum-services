@@ -1,0 +1,68 @@
+---
+# Compare real Yarn origin content with the new Peanut YXORP HTTP route.
+# This is not login/session/browser acceptance or a DNS cutover. Neither
+# response body is logged; only safe metadata is reported to the operator.
+- name: Compare Yarn origin and Peanut YXORP route from the same Kvin client
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require the already authorized private-network trial context
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_production'
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+
+    - name: Fetch actual Yarn origin using the requested public Host header
+      ansible.builtin.uri:
+        url: http://yarn.inner.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200, 201, 202, 204, 301, 302, 303, 307, 308, 401, 403]
+        timeout: 10
+      register: yxorp_yarn_origin
+      changed_when: false
+      no_log: true
+
+    - name: Fetch the same Yarn path and Host header through Peanut
+      ansible.builtin.uri:
+        url: http://peanut.arcane.sanctum/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: true
+        status_code: [200, 201, 202, 204, 301, 302, 303, 307, 308, 401, 403]
+        timeout: 10
+      register: yxorp_yarn_proxied
+      changed_when: false
+      no_log: true
+
+    - name: Report only response equivalence metadata, never application content
+      ansible.builtin.debug:
+        msg:
+          client: "{{ inventory_hostname }}"
+          requested_host: yarn.nexus.sanctum
+          origin: yarn.inner.sanctum
+          trial_proxy: peanut.arcane.sanctum
+          origin_status: "{{ yxorp_yarn_origin.status }}"
+          proxied_status: "{{ yxorp_yarn_proxied.status }}"
+          status_equal: "{{ yxorp_yarn_origin.status == yxorp_yarn_proxied.status }}"
+          origin_content_type: "{{ yxorp_yarn_origin.content_type | default('absent') }}"
+          proxied_content_type: "{{ yxorp_yarn_proxied.content_type | default('absent') }}"
+          content_type_equal: "{{ (yxorp_yarn_origin.content_type | default('')) == (yxorp_yarn_proxied.content_type | default('')) }}"
+          origin_body_length: "{{ (yxorp_yarn_origin.content | default('')) | length }}"
+          proxied_body_length: "{{ (yxorp_yarn_proxied.content | default('')) | length }}"
+          body_equal: "{{ (yxorp_yarn_origin.content | default('')) == (yxorp_yarn_proxied.content | default('')) }}"
+          changed: false
+          interpretation: >-
+            Equal status, MIME type and body are strong source/route evidence.
+            Dynamic timestamps, sessions, absolute URLs, and forwarded headers
+            can make legitimate content differ. This remains an anonymous
+            request comparison, not browser/login/WebSocket acceptance.
