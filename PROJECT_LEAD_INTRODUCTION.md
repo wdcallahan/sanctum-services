@@ -1,5 +1,90 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Yarn and Square accepted; Prism HTTP canary prepared
+
+**Updated native Kvin progress: 2 of 8 declared routes
+tested, both passing *initial local HTTP*
+acceptance.** Yarn forwarded HTTP200 with
+identical direct origin response bodies.
+Square/Nextcloud's anonymous GET / returned
+HTTP302 through direct Kvin :8085,
+incumbent Kvar NPM, and new Kvin stage;
+candidate status, full Location and
+content type matched Kvar NPM. The
+drift-aware single-file mount repair ran
+successfully on Kvin `ok=36 changed=1
+failed=0` with the mandatory mounted
+config readback; the subsequent Square
+comparison `ok=4 changed=0 failed=0`
+has an explicit native sanitized report
+with all status/redirect parity flags true.
+**Do not request the Square report again
+or re-run these accepted checks.**
+
+**Next source work:** The stage-only
+`yxorp_stage_prism_approved: false`
+flag is added to
+`ansible/vars/yxorp-kvin-stage.yml`.
+If both Square and Prism opt-ins are
+passed, `ansible/yxorp-kvin-stage.yml`
+verifies the exact Yarn+Square stage
+projection and the existing disabled
+Prism upstream
+`joule.nexus.sanctum` →
+`http://kvin.outer.sanctum:8084`,
+WebSocket true. It enables **only Prism
+in addition to Yarn and Square for that
+single stage run**, without changing
+`data/yxorp-routes.yml` or production
+authorization. The corrected shared
+YXORP role handles safe validated
+config replacement, mounted-file drift
+and exact stage-only service reconciliation.
+
+**Read-only candidate acceptance:**
+`ansible/yxorp-kvin-stage-prism-probe.yml`
+performs three bounded anonymous GET /
+requests with `Host: joule.nexus.sanctum`
+from Kvin: direct :8084, Kvar NPM:80,
+and local Kvin stage :80. It returns
+sanitized HTTP statuses, incumbent/stage
+status and MIME equality, redirect
+presence/equality when applicable;
+raw bodies/URLs/errors/cookies remain
+suppressed. Real Prism WebSocket/session
+and browser use are **separate gates**.
+The three-way check is deliberately
+nonfatal and must be interpreted from
+its `Report only Prism HTTP status and
+response equivalence metadata` task,
+not only the play recap.
+
+**Native operator command on Kvin,
+after source CI passes:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-prism-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true
+```
+**Ask Nova ONLY for two one-line play recaps
+and the sanitized `msg` dictionary of the
+Prism report task**. If an execution fails,
+ask only for that task's error.
+Do not request complete Ansible logs,
+to conserve the conversation context.
+Each response should end with a concrete
+next executable step, never only a
+status summary.
+
+**Other boundaries:** Kvar NPM and
+wildcard DNS remain live production;
+Kvin LAN HTTP80 firewalld still
+Maintenance-owned; do not alter it,
+cut over production, deploy Peanut
+permanent standby, accept real
+Nextcloud sessions/Calendar/WebDAV
+or Prism WebSocket from this GET-only
+test. Six routes remain untested
+on Kvin *before* Prism run.
+
 ## CURRENT — November 10: 2/8 Kvin routes tested, 1 accepted; Square bind-mount lifecycle repaired in source
 
 **Native accepted routes:** On the Kvin rootful HTTP80
