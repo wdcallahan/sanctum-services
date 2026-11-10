@@ -1,0 +1,90 @@
+---
+# Bounded, anonymous acceptance of the opt-in Square route on Kvin's stage.
+# Three independent vantage points on Kvin: direct Nextcloud backend,
+# incumbent Kvar NPM with the same Host header, and new staged Nginx.
+# No browser credentials, cookies, raw redirects or bodies are logged.
+- name: Compare Square Nextcloud redirects through Kvin stage and incumbent
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact authorized Kvin Square-only stage context
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[1].hostname == 'square.nexus.sanctum'
+          - not (yxorp_routes[1].enabled | bool)
+          - yxorp_routes[1].upstream_host == 'kvin.outer.sanctum'
+          - yxorp_routes[1].upstream_port | int == 8085
+        fail_msg: >-
+          This is only the separate Square/Nextcloud trial on the
+          authorized Kvin stage; production route policy is unchanged.
+
+    - name: Independently request Nextcloud root through all three paths
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        method: GET
+        headers:
+          Host: square.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200, 301, 302, 303, 307, 308, 401, 403, 404]
+        timeout: 8
+      loop:
+        - name: direct_backend
+          url: http://kvin.outer.sanctum:8085/
+        - name: incumbent_kvar_npm
+          url: http://kvar.outer.sanctum/
+        - name: candidate_kvin_stage
+          url: http://127.0.0.1:80/
+      loop_control:
+        label: "{{ item.name }}"
+      register: yxorp_square_stage_responses
+      failed_when: false
+      changed_when: false
+      no_log: true
+
+    - name: Require exact comparison set before reporting
+      ansible.builtin.assert:
+        that:
+          - yxorp_square_stage_responses.results | length == 3
+          - (yxorp_square_stage_responses.results | map(attribute='item.name') | list) == ['direct_backend', 'incumbent_kvar_npm', 'candidate_kvin_stage']
+
+    - name: Report only Square status, location-equality and coarse response metadata
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          frontend: square.nexus.sanctum
+          direct_backend: kvin.outer.sanctum:8085
+          incumbent_npm: kvar.outer.sanctum:80
+          candidate_stage: 127.0.0.1:80
+          direct_status: "{{ direct.status | default(-1) }}"
+          incumbent_status: "{{ incumbent.status | default(-1) }}"
+          candidate_status: "{{ candidate.status | default(-1) }}"
+          all_three_have_http_response: "{{ (direct.status | default(-1) | int) >= 100 and (incumbent.status | default(-1) | int) >= 100 and (candidate.status | default(-1) | int) >= 100 }}"
+          direct_and_incumbent_status_equal: "{{ direct.status | default(-1) == incumbent.status | default(-1) }}"
+          candidate_and_incumbent_status_equal: "{{ candidate.status | default(-1) == incumbent.status | default(-1) }}"
+          candidate_and_direct_status_equal: "{{ candidate.status | default(-1) == direct.status | default(-1) }}"
+          incumbent_location_present: "{{ incumbent.location | default('') | length > 0 }}"
+          candidate_location_present: "{{ candidate.location | default('') | length > 0 }}"
+          candidate_location_equals_incumbent: "{{ candidate.location | default('') == incumbent.location | default('') if (candidate.status | default(-1) | int) >= 300 and (candidate.status | default(-1) | int) < 400 and (incumbent.status | default(-1) | int) >= 300 and (incumbent.status | default(-1) | int) < 400 else 'not_comparable' }}"
+          candidate_content_type_equals_incumbent: "{{ (candidate.content_type | default('')) == (incumbent.content_type | default('')) if (candidate.status | default(-1) | int) >= 100 and (incumbent.status | default(-1) | int) >= 100 else 'not_comparable' }}"
+          configuration_changed: false
+          limitation: >-
+            Anonymous root GET only. Redirect URL values, cookies,
+            bodies, login/session, Calendar, WebSockets, production DNS
+            and host firewall behavior have not been accepted here.
+      vars:
+        direct: "{{ yxorp_square_stage_responses.results[0] }}"
+        incumbent: "{{ yxorp_square_stage_responses.results[1] }}"
+        candidate: "{{ yxorp_square_stage_responses.results[2] }}"
