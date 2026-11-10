@@ -1,25 +1,41 @@
 ---
-# Real Ansible filter execution with synthetic redirects; no Sanctum host used.
-- name: Qualify the redirect parsing filters used by the YXORP observer
+# Execute the *real* Ansible urlsplit filters, not merely a Python/Jinja parser.
+# All redirect values are synthetic; no Sanctum host is contacted.
+- name: Qualify redirect component filters used by the YXORP observer
   hosts: localhost
   connection: local
   gather_facts: false
   vars:
     direct_location: http://kvar.outer.sanctum:3001/dashboard?q=synthetic
-    incumbent_location: /dashboard?q=synthetic
+    incumbent_location: http://kvar.outer.sanctum/dashboard?q=synthetic
+    relative_location: /dashboard?q=synthetic
     frontend_hostname: kuma.nexus.sanctum
     declared_backend: kvar.outer.sanctum
     direct_host: "{{ (direct_location | urlsplit('hostname')) | default('', true) }}"
     incumbent_host: "{{ (incumbent_location | urlsplit('hostname')) | default('', true) }}"
   tasks:
-    - name: Prove host, scheme, path and query classification really renders
+    - name: Prove that same-host redirects can differ only in explicit port
       ansible.builtin.assert:
         that:
           - direct_host == declared_backend
-          - incumbent_host == ''
+          - incumbent_host == declared_backend
           - (direct_location | urlsplit('scheme')) == 'http'
-          - (incumbent_location | urlsplit('scheme')) == ''
+          - (incumbent_location | urlsplit('scheme')) == 'http'
+          - (direct_location | urlsplit('port') | int) == 3001
+          - (incumbent_location | urlsplit('port')) is none
+          - (direct_location | urlsplit('netloc')) != (incumbent_location | urlsplit('netloc'))
           - (direct_location | urlsplit('path')) == (incumbent_location | urlsplit('path'))
           - (direct_location | urlsplit('query')) == (incumbent_location | urlsplit('query'))
+          - (direct_location | urlsplit('fragment')) == (incumbent_location | urlsplit('fragment'))
+          - (direct_location | urlsplit('username')) is none
+          - (incumbent_location | urlsplit('password')) is none
           - direct_location != incumbent_location
           - direct_host != frontend_hostname
+
+    - name: Prove truly relative redirect components remain distinguishable
+      ansible.builtin.assert:
+        that:
+          - (relative_location | urlsplit('hostname')) is none
+          - (relative_location | urlsplit('port')) is none
+          - (relative_location | urlsplit('path')) == '/dashboard'
+          - (relative_location | urlsplit('scheme')) == ''
