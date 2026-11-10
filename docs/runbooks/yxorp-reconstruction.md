@@ -408,6 +408,54 @@ redirect merely because it is different, enable unqualified routes,
 modify the host HTTP/80 policy or treat a browser session as accepted
 from anonymous root-page status alone.
 
+## Inspect redirect ports and old Yarn from Kvar's NPM namespace — November 10
+
+Nova's follow-up `ansible/yxorp-discrepancies-observe.yml` passed
+`kvin.outer.sanctum ok=7 changed=0 failed=0`. With the direct
+backend and Kvar NPM requests using the same Host header:
+
+- **Kuma `/`** and **Pi-hole `/admin/`** each returned 302 on
+  both paths. Both Location values were absolute HTTP URLs, both
+  identified the **declared backend hostname**, and path and query
+  components were equal. The full redirect values still differed.
+  That narrows the question to an authority/port, fragment or
+  other URL-component difference; do not claim a broken application
+  or invent a redirect rewrite from the current evidence.
+- **Legacy `yarn.inner.sanctum`** through Kvar NPM timed out:
+  curl exit **28**, HTTP **000**, rather than a deliberately empty
+  reply (52). The declared backend itself answered 200 from Kvin.
+  These are different network paths; do not infer that Kvar NPM
+  reached Yarn's backend.
+
+The next read-only boundary is:
+
+```bash
+cd ~/src/sanctum-services
+git pull --ff-only
+~/.local/bin/ansible-navigator run ansible/yxorp-npm-path-diagnose.yml
+```
+
+The first play, on **Kvin**, classifies only the port/authority and
+fragment components of Kuma/Pi-hole redirects. It never displays
+raw Location URLs, query contents, unexpected hostnames or cookies.
+The second play uses **Kvar's existing SSH10022 inventory path**
+and established rootful NPM container name to request old Yarn's
+upstream from (1) the Kvar host and (2) the NPM container network
+namespace, using the container's own Node HTTP runtime. It prints
+only HTTP status and a safe timeout/connect/receive/unknown
+category; if Node or the container isn't accessible, that branch
+is reported **not observed** rather than wrongly assumed down.
+All probes are bounded by six seconds and do not edit the
+container, host firewall, DNS, routes or application state.
+
+Host reachable but container unreachable suggests an NPM
+container/bridge routing or filtering problem; both reachable but
+the public NPM route still timing out narrows attention to NPM's
+reverse-proxy configuration or its interaction with the upstream.
+Neither outcome justifies adding client-side static routes,
+changing Bunny policy here, modifying NPM, or commissioning
+Kvin before the separately controlled port-80 application.
+
 ## Reversal: remove the entire temporary Peanut service
 
 The separately named `ansible/yxorp-peanut-remove.yml` targets
