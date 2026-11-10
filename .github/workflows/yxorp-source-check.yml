@@ -15,6 +15,7 @@ on:
       - "tests/test_yxorp_contract.py"
       - "tests/test_yxorp_stage_removal.py"
       - "tests/test_yxorp_status.py"
+      - "tests/test_yxorp_yarn_content.py"
       - "tests/test_yxorp_publication_review.py"
       - "tools/review-yxorp-publication.py"
       - "tools/observe-yxorp-npm-behavior.py"
@@ -27,6 +28,7 @@ on:
       - "ansible/yxorp-peanut-dns-observe.yml"
       - "ansible/yxorp-peanut-trial-firewall.yml"
       - "ansible/yxorp-peanut-probe.yml"
+      - "ansible/yxorp-peanut-yarn-content.yml"
       - "ansible/yxorp-peanut-remove.yml"
       - "ansible/group_vars/yxorp_test.yml"
       - "ansible/yxorp-inspect-npm.yml"
@@ -46,6 +48,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_status.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_yarn_content.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_publication_review.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_behavior_observer.py'
           python3 -m unittest discover -s tests -p 'test_kuma_desired.py'
@@ -59,6 +62,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-trial-firewall.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-probe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-yarn-content.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-status.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-qualify-image.yml --syntax-check
