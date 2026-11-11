@@ -1,141 +1,301 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: restore existing NPM routes; seventh stage pass, eighth pending
+## Active execution plan — Wednesday, November 11, 2026
 
-**Corrected scope after Nova's review:** Rebuild the existing
-Kvar NPM *application* proxy hosts under reproducible, plain
-Nginx on Kvin. Preserve their routing inventory, rather
-than treating the last one as an optional service-retirement
-decision. Seven incumbent app hosts appear in the
-Nov 9 eight-host NPM inventory; only the old
-`yxorp.nexus` NPM graphical administration UI is
-intentionally excluded from the plain-Nginx replacement.
-The newly requested `yarn.nexus` is an addition.
-The Services route manifest therefore covers seven
-existing proxy-app names plus that new Yarn name.
+**Commissioned outcome, SS-ROOT (in progress):** Replace Kvar's wanted
+services with reproducible, usable, recoverable services on Kvin, backed
+by an owned plain-Nginx YXORP and correct named client access; preserve
+Kvar production until separate acceptance and approved cutover. Peanut's
+future standby/failover is a related recovery outcome, not an excuse
+to call a single Kvin proxy install complete. The operational
+[completion standard](https://github.com/wdcallahan/engineering-standards/blob/main/Operational-Project-Completion-Standard.md)
+applies: mechanism, state, repeatability, client consumption, backup/restore,
+operations, reversal and discovery all need appropriate evidence.
 
-**Seven of eight Kvin stage routes passed their
-bounded anonymous local HTTP checks:** Yarn new name,
-Square, Prism, Search, LinkStack, Kuma and Pi-hole.
-The eighth existing `yarn.inner.sanctum` proxy
-route remains default-off **solely because it
-has not been staged/qualified on Kvin**. Previous
-proposal to omit it because DNS already points
-straight at the Yarn origin is withdrawn.
-A DNS A/PTR mapping is not a proxy-migration
-policy decision. No name-change vote is needed.
+**Planning doctrine from Nova, November 10:** NO arbitrary task time limits.
+Work continues until the required outcome is correctly evidenced, or
+there is a *specific* genuine blocker, safety/permission boundary or a
+more valuable independent assignment. A short positive probe never
+magically proves full application acceptance. Conversely, no extra
+diagnostics simply because more could be collected. Every investigation
+must identify the concrete decision/repair its result enables.
+Pixel owns source, tests, CI, issue/roadmap reconciliation and
+technical choices within authorized scope. Nova participates in
+meaningful learning and executes exact native commands when source
+tests cannot substitute for actual Kvin/Kvar observations. Do not
+make Nova relay trivial, sequential probes or repeatedly redo
+already accepted tests. Do not hide private-network IPs when they
+are useful operational evidence; keep passwords, tokens, cookies and
+unnecessary raw content private.
 
-**Last diagnostic facts:** Kvar NPM access-log
-host 11 contains six recent requests, three from
-Kvin `192.168.0.192`, three from
-`192.168.0.104`. Nova confirmed the latter
-is `hop.inner.sanctum`, Inner's NAT egress
-which can aggregate requests from any Inner
-clients. Individual clients require historical
-connection/NAT data at the request timestamps;
-reverse DNS alone cannot identify them. Kvar
-host and NPM container both previously timed
-out to Yarn, whereas Kvin direct/new-stage
-HTTP worked. That old Kvar transport problem
-does not prove the route should be dropped.
+### SS-YX — Finish a faithful and operable YXORP
 
-**Next Services work:** qualify the eighth
-existing Yarn virtual host on isolated Kvin
-with explicit guarded staging, including raw
-wire headers/body where appropriate. Then
-continue app-level recovery and state
-migration (LinkStack, Kuma, Pi-hole),
-LAN firewall acceptance with Maintenance,
-and separately approved production
-cutover. The current Kvar NPM and wildcard
-DNS remain production; do not edit them
-or tear down the old proxy.
+- **SS-YX-1 — [accepted, limited] Seven Kvin stage virtual hosts.**
+  `yarn.nexus`, `square.nexus`, `joule.nexus`,
+  `search.nexus`, `dir.nexus`, `kuma.nexus`, and
+  `pihole.nexus` have each passed the initial **anonymous local HTTP**
+  checks. Their exact approvals were used to reconcile the **rootful
+  Podman/Quadlet Nginx** on Kvin HTTP:80; the last Pi-hole
+  native reconcile was `ok=46 changed=3 failed=0`, and its
+  raw-wire `/` and `/admin/` probe was
+  `ok=4 changed=0 failed=0`. The old Kuma redirect
+  mismatch was **an Ansible URI normalization artifact**, not
+  a real Location difference. This evidence is banked: do
+  NOT re-run seven individual canaries merely for reassurance.
+  It does **not** qualify browser sessions, WebSockets,
+  app state, LAN firewall reachability, production or cutover.
 
-## Current YXORP milestone — November 10: 7 HTTP routes accepted; legacy Yarn IPs next
+- **SS-YX-2 — [open; first executable assignment] Eighth existing
+  NPM virtual host `yarn.inner.sanctum`.**
+  Reuse the checked-in eight-route manifest; the existing old
+  `yarn.inner` proxy host in original `11.conf`
+  targets `http://192.168.1.110:80`.
+  The distinct new `yarn.nexus` route is already qualified.
+  Implement **one default-off, exact Kvin-stage-only eighth-route
+  opt-in**, following the proven seven-route progression.
+  Preserve the source manifest's stage-disabled defaults and
+  retain the exact old backend/Host mapping. Before native
+  invocation, add source-contract tests, actual Nginx synthetic
+  Host routing and backend-parity tests, Ansible syntax, and
+  validate CI. After green CI, give Nova **one consolidated
+  Kvin stage-reconcile + read-only probe command**, guarded
+  against Kvar/DNS/firewall/production writes. Check HTTP 200,
+  stable content/metadata equality against the directly
+  reachable origin for `Host: yarn.inner.sanctum`, distinct
+  old/new vhost selection and unknown-Host refusal;
+  use **raw Location** where redirects exist. If dynamic
+  body bytes prevent strict equality, prove an explicit
+  stable representative rather than invent a pass.
+  The old Kvar NPM path **times out**, including earlier
+  Kvar-host and NPM-container origin attempts, so a
+  nonexistent incumbent HTTP response must NOT be
+  called a parity mismatch or a passing comparison.
+  Investigate only the specific failure that blocks Kvin.
+  **Exit:** Eight route names have their intended isolated
+  Kvin-stage vhost and the eighth has native local-backend
+  acceptance. Do not infer production/client acceptance.
+  **Owner:** Services. **Do not** revisit keeping the
+  ordinary Yarn DNS hostname: the old NPM route is a
+  migration requirement, not a discretionary deletion.
 
-**Seven of eight Kvin staged
-YXORP names passed initial
-local anonymous HTTP routing
-checks:** Yarn, Square,
-Prism, Search, interim
-LinkStack, Kuma, Pi-hole.
-Their broader application
-sessions, data, persistent
-state and production client
-acceptance remain separate.
-The last legacy
-`yarn.inner.sanctum`
-remains disabled on Kvin
-and unresolved for retirement.
+- **SS-YX-3 — [open; after SS-YX-2] Close meaningful proxy
+  behavior gaps, rather than multiplying synthetic probes.**
+  Reuse the Nov 9 read-only NPM `5.conf` through
+  `11.conf` generated-host evidence, existing source
+  route comparison, CI's real Nginx synthetic
+  Host/header/WebSocket tests, and native HTTP evidence.
+  One bounded source-to-live review must account for
+  the **eight intended application vhosts**, upstream
+  scheme/host/port, relevant custom locations,
+  upstream Host and forwarded headers, path handling,
+  redirects, WebSocket Upgrade where apps use it,
+  default-deny behavior and restart/remount idempotence.
+  The old NPM *administration UI* `yxorp.nexus`
+  is the single explicitly justified exclusion; plain
+  Nginx has no equivalent GUI. If an essential NPM
+  behavior is not yet evidenced, inspect that specific
+  incumbent behavior and add only the missing regression.
+  Treat immutable Nginx image digest, staged configuration
+  convergence and source-controlled lifecycle as
+  accepted where native evidence already supports them.
+  **Exit:** All eight vhosts are represented in the
+  source/renderer; material routing behavior has
+  source+native evidence or an explicit real
+  application-client acceptance gate; install,
+  update/reload and reversal are documented. This
+  finishes **proxy mechanism** only, not app
+  migrations or Kvin LAN publication. **Owner:** Services.
 
-A Kvin-only direct/old-NPM
-observation found Yarn responds
-HTTP200 via literal origin
-IP, origin DNS name, both
-old/new Host headers and
-new Kvin YXORP frontend,
-but the old Kvar NPM
-route times out. Earlier
-direct Kvar host and NPM
-container requests both
-failed to reach that
-same origin, despite
-selected routes being
-present; not an isolated
-NPM configuration defect.
-Old Kvar-path repairs
-remain deferred.
+### SS-APPS — Replace the services still depending on Kvar
 
-**Recent bounded NPM
-access evidence:** Exactly
-six requests in one current
-log, all last week.
-The next native source-category
-check (`ok=5 changed=0 failed=0`)
-identified **three logged
-source requests from Kvin's
-known observer address,
-and three from other IP
-addresses**; none from
-Kvar host/loopback or
-unknown log format.
-Those three do not necessarily
-represent separate clients,
-and sources can be NAT/proxies.
-No consumer/retirement
-decision yet.
+- **SS-APPS-1 — [open; first application build after YXORP
+  route fidelity] Uptime Kuma clean retained Kvin instance.**
+  Operator-approved earlier: old Kvar Kuma was a
+  proof of concept; preserving its entire historical
+  SQLite database is **not required**. Reuse
+  `data/kuma-monitors.yml` and
+  `docs/runbooks/kuma-monitoring.md`; Project Joule's
+  **Wicket Ollama** monitor must actually display
+  **Up** at `http://wicket.arcane.sanctum:11435/healthz`.
+  Build an ordinary, source-managed ARM64 Kvin install,
+  version-appropriate stable monitor reconciliation,
+  persistent state, backup/restore, upgrades,
+  status and removal. Avoid duplicate notifications
+  while an old/test instance exists. Then test
+  actual login/monitor visibility, restart and
+  independent restore before changing the
+  `kuma.nexus` upstream from Kvar to Kvin.
+  **Exit:** The wanted monitors live on Kvin, the
+  Wicket monitor is Up, repeat converges,
+  and recovered state is demonstrably usable.
+  **Owners:** Services for Kuma; Project Joule for
+  the monitored endpoint. This is a practical
+  first migration because a clean install is
+  already authorized; no speculative old-DB
+  recovery task is needed.
 
-Nova requested that useful
-source IP addresses **not
-be unnecessarily redacted**
-in his own infrastructure
-diagnostics. A new read-only
-Kvar NPM observer
-`ansible/yxorp-kvar-legacy-yarn-source-addresses.yml`
-will return **exact source
-IPs and counts** (not raw
-HTTP log lines, paths,
-queries, credentials,
-cookies or tokens).
-[Source CI #42955380159 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/42955380159)
-with local synthetic parsing
-and safety tests.
-See the [YXORP runbook](runbooks/yxorp-reconstruction.md)
-for the exact single Kvin
-command and short output
-contract.
+- **SS-APPS-2 — [open] LinkStack with actual directory
+  data.** The existing rootless Kvar
+  `linkstack` volume is mounted at `/htdocs`.
+  Preserve the *live* rootless instance; do
+  not adopt the historical failed rootful
+  duplicate. Define a durable, verified
+  backup of its actual pages, configuration,
+  assets and secrets, implement ordinary
+  Kvin rootless Quadlet/Ansible setup,
+  restore into Kvin and test named links,
+  page assets, login/editing as applicable,
+  repeat convergence and an independent
+  recovery procedure. Only then point
+  `dir.nexus` at the accepted Kvin app.
+  **Exit:** User-recognizable directory content
+  works through the intended named route
+  and can be restored after a host loss.
+  **Owner:** Services.
 
-No old legacy route enable/
-disable/retirement, Kvar
-NPM/DNS, firewall or
-production cutover change
-is authorized by these
-observations. LinkStack,
-Kuma and Pi-hole still need
-actual Kvin application/data
-restores. Kvar retirement
-remains a distinct approval.
+- **SS-APPS-3 — [open; independent opt-in service] Pi-hole
+  for ad blocking, not the LAN's general DNS.**
+  Kvar Pi-hole has two known writable
+  volumes (Pi-hole and dnsmasq config).
+  Maintenance's Nov 8/9 evidence plus
+  Nova's confirmation already established
+  that **no current client is intentionally
+  using Pi-hole** after the DHCP DNS swap.
+  Do not spend another session finding
+  dormant clients, nor hijack the Peanut
+  authoritative resolver or DHCP.
+  Build a restorable Kvin instance,
+  coordinate local port53/owner constraints
+  with Maintenance, test filtering from
+  **one deliberately opted-in client**,
+  restore the wanted configuration,
+  and test update/recovery before
+  changing `pihole.nexus` upstream.
+  **Exit:** Working opt-in filtering,
+  backed-up/recoverable state, correct
+  UI, no changes to general Sanctum
+  DNS or unselected clients.
+  **Owners:** Services for Pi-hole;
+  Maintenance for host DNS/firewall
+  and client publication dependencies.
 
+- **SS-APPS-4 — [open; separate ownership and recovery
+  gates] Already-on-Kvin services.** Nextcloud's
+  October 21 bidirectional Calendar ↔ GNOME
+  Calendar interaction is accepted; do not
+  repeat it merely to fill a checklist.
+  Its full backup/restore and broad
+  application lifecycle still remain.
+  Search/SearXNG has a separate
+  EyesOnly owner and known divergent
+  old/new settings/theme: do not
+  blindly overwrite the intended Kvin
+  instance. Prism belongs to Project
+  Joule, not Services; qualify the
+  integration route and consume its
+  owner's restore proof. PostgreSQL
+  host service belongs to Maintenance.
+  **Exit:** Each required consumer and
+  restore dependency is accepted by
+  its actual owning project, not
+  silently reimplemented by Services.
+
+### SS-PUB — Deliver real named client use and a reversible handoff
+
+- **SS-PUB-1 — [blocked on SS-YX and relevant SS-APPS
+  acceptance] Independent client acceptance.**
+  Existing Kvin stage is locally
+  reachable on HTTP:80; it is **not**
+  a LAN published service yet.
+  Maintenance owns Kvin HTTP:80
+  firewalld admission. Agree the
+  exact rule with that owner, then
+  exercise actual trusted Outer
+  and Inner clients with the selected
+  route Host headers while existing
+  Kvar NPM and wildcard DNS remain
+  production. Test useful browser
+  operation, authentication where
+  needed, websocket/long-lived
+  connections for relevant apps,
+  data and monitor/filtering outcomes,
+  and explicit rollback.
+  **Exit:** Intended real clients
+  complete their tasks on Kvin
+  independently of same-host curl,
+  with verified revert and no
+  public inbound exposure.
+  **Owners:** Services client/application
+  tests; Maintenance firewall/DNS;
+  Bunny Factory inner/outer routing.
+
+- **SS-PUB-2 — [held for explicit live authorization]
+  Production migration and Kvar retirement.**
+  A reviewed cutover must preserve
+  authoritative DNS, source-managed
+  Nginx, named access, retained app
+  data, functional clients and
+  revertability. Change Kvar-facing
+  app upstreams to accepted Kvin
+  backends through the owning
+  source, not hand edits. Reconcile
+  wildcard/explicit DNS with
+  Maintenance only after test
+  and operator approval. Then
+  independently qualify service
+  restart/repeat, backup restoration,
+  failback paths and eventually
+  Peanut standby/failover as the
+  separately recorded resilience
+  outcome. **Only after every wanted
+  service and recovery path is accepted**
+  may Kvar be taken offline and
+  reformatted under Maintenance's
+  **separate destructive approval**.
+  No permission for this exists
+  in an overnight planning document.
+  **Exit:** Kvin takes over user
+  service duties without data or
+  naming regressions; Kvar is
+  redundant and safe for the
+  separately authorized retirement.
+
+### Immediate next work and reporting contract
+
+**Tonight:** No native actions. This is a committed source
+plan, not an asynchronous promise or a hidden host mutation.
+
+**Tomorrow's order:** First implement and source-test
+SS-YX-2, give Nova the *one* guarded native Kvin
+eighth-route trial after CI, interpret its bounded
+result and record the exact acceptance. Then finish
+SS-YX-3's **material** routing gaps using existing
+evidence as much as possible. Begin SS-APPS-1
+Kuma's actual reproducible install/monitor
+recovery implementation once the proxy
+mechanism is source-qualified; move through
+SS-APPS-2, SS-APPS-3 and the other
+known restore gates by their real dependencies,
+not by arbitrary clock or a daily checkbox quota.
+
+**Every handoff:** State (1) the capability gained,
+(2) proof level — source test, native local,
+real client, or restored recovery, (3) what
+remains to achieve its parent outcome,
+(4) one concrete next executable task or
+specific blocker. Nova gets **only**
+the native action that cannot be
+completed through connected source/CI
+tools; keep ordinary follow-up output
+requests narrow and meaningful. If
+a task fails, fix the bounded cause
+or report the genuine dependency;
+do not launch a self-perpetuating
+diagnostic chain. Do not promise a
+given number of tasks will fit into
+a day. Done means done right.
+
+---
 
 ## Nova's available-week priority — November 1–8, 2026
 
