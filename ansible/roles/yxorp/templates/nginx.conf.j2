@@ -45,6 +45,13 @@ http {
             proxy_set_header X-Forwarded-Host $host;
             proxy_set_header X-Forwarded-Proto $scheme;
             proxy_set_header X-Forwarded-Scheme $scheme;
+{% if route.redirect_strip_upstream_port | default(false) %}
+            # Legacy Kuma Kvar NPM normalizes absolute upstream redirects to
+            # the same backend hostname without the explicit service port.
+            # This also prevents default proxy_redirect from publishing the
+            # loopback stage request authority (127.0.0.1:80).
+            proxy_redirect {{ route.upstream_scheme }}://{{ route.upstream_host }}:{{ route.upstream_port }}/ {{ route.upstream_scheme }}://{{ route.upstream_host }}/;
+{% endif %}
 {% if route.websocket %}
             proxy_set_header Upgrade $http_upgrade;
             proxy_set_header Connection $yxorp_upgrade;
