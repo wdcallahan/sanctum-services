@@ -1,5 +1,11 @@
 # Sanctum Services — Roadmap
 
+## CURRENT — November 11: Mace Firefox Kuma WebSocket upgrade 101 ACCEPTED; Kuma initial production client gate CLOSED
+
+**Actual Mace Firefox evidence:** Nova supplied the Firefox DevTools Network **WS** screenshot for `kuma.nexus.sanctum`, showing `GET /socket.io/?EIO=4&transport=websocket&sid=...` with **HTTP 101 Switching Protocols**. This is the actual browser's successful Engine.IO/Socket.IO WebSocket upgrade through Kvin production YXORP. Earlier on the same production named route, Mace resolver returned `192.168.0.192`, the existing `sanctum-admin` application login succeeded, and the `Wicket Ollama` dashboard monitor visibly reported **Up / 100% uptime**.
+
+**Acceptance:** Kuma **initial named-client production browser/login/meaningful monitor/WebSocket upgrade** gate is accepted. The 101 directly proves protocol upgrade, not indefinite session stability or every Socket.IO message; no gratuitous further probe necessary to accept this bounded gate. Continue later with other Nexus application name/session checks, full application estate recovery, and Maintenance-main reconciliation of source DNS aliases (old broad-renumber source still assumes Kvar). **Do not retire Kvar NPM.** Existing separately prepared DNS rollback candidate remains available for separately gated use if genuine regression appears. Do not copy a screenshot's Socket.IO session-id/query data into issue notes.
+
 ## CURRENT — November 11: Mace Kuma dashboard monitor UP at 100%; live browser Socket.IO still to verify
 
 **New user-visible browser acceptance:** From the normal Mace Firefox session already authenticated through Kvin YXORP at `http://kuma.nexus.sanctum`, Nova confirms the **`Wicket Ollama` monitor is visible and reports Up with 100% uptime**. Combined with Mace name resolution to `192.168.0.192` and the successful `sanctum-admin` login, this accepts **named-client DNS, real proxy/browser authentication, and meaningful monitor state being displayed**. The 100% displayed figure is the app's uptime metric, **not proof that the Socket.IO WebSocket upgrade occurred or stays connected**; require an observed client-side WebSocket exchange for that specific remaining gate. Preserve Kvar NPM as rollback; no source or live infrastructure mutation requested by this browser observation.
