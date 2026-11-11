@@ -45,7 +45,13 @@ CI #43098976225 passed](https://github.com/wdcallahan/sanctum-services/actions/r
 No native production promotion yet.
 Maintenance's supported Kvin firewall
 source now adds TCP80 (commit
-`873c9c6`); no live firewall apply yet.
+`873c9c6`) and [its own full source CI
+#43100611079 PASSED](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43100611079);
+no live firewall apply yet.
+The separate Maintenance cutover-candidate
+CI currently reports an unrelated prior
+Kvin DNS baseline mismatch, which must
+not be disguised as a TCP80 policy failure.
 The owner-managed DNS source still
 points the five explicit relevant Nexus
 aliases plus wildcard at Kvar.

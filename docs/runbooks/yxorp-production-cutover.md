@@ -35,40 +35,16 @@ verify Kuma and Yarn forwarding over Kvin HTTP80.
 This operation does **not** edit DNS,
 Kvar NPM, firewall or application data.
 
-## Phase 1 — publish Kvin TCP80 with Maintenance
+**Production listener first:** It is safe to retire Kvin's staging
+unit and start Kvin's real production Nginx before changing
+Maintenance's firewall or DNS, because clients still reach
+the incumbent Kvar. That lets us observe an actual production
+listener and defer the DNS change until both remaining
+owner-managed prerequisites are satisfied.
 
-Maintenance owns Kvin's `eth0`/`public` firewalld policy.
-[Maintenance source commit
-`873c9c6`](https://github.com/wdcallahan/sanctum-maintenance/commit/873c9c6fdb7f4ac8a7b56181a957eb03a89005a9)
-adds ordinary `80/tcp` to the existing,
-strictly reviewed `5432/8084/8085` entries.
-It has **not yet been applied on Kvin**.
+## Phase 1 — scoped stage removal and production service start
 
-After this owner-source CI passes, use
-`~/src/sanctum-maintenance` and its
-existing `tools/run-ansible-logged` workflow,
-with `sanctum_service_firewall_source_revision`
-set to the exact reviewed commit. First
-run `playbooks/configure-kvin-firewall.yml`
-in `--check --diff` to inspect the bounded
-runtime/permanent policy delta. Then run
-the same approved owner play with
-`sanctum_service_firewall_apply=true`
-and a no-change repeat. Do not bypass
-this with an ad hoc firewalld command.
-The existing Kvin staging Nginx may
-remain active throughout.
-
-The source firewall role protects all
-unrelated zone, policy and PostgreSQL
-settings. Do not apply from a stale
-controller checkout or an unreviewed
-revision.
-
-## Phase 2 — scoped stage removal and production service start
-
-Only after Services production/source CI
-has passed, use this single Bash chain
+**[Full Services CI #43098976225 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43098976225).** Use this single Bash chain
 from **Kvin**. It deliberately has two
 different opt-ins; approval for removing
 the stage does not implicitly authorize
@@ -101,6 +77,36 @@ A fatal failure in the second play leaves
 Kvar's current DNS and NPM service untouched,
 so client fallback remains possible while
 the local production candidate is repaired.
+
+## Phase 2 — publish Kvin TCP80 with Maintenance
+
+Maintenance owns Kvin's `eth0`/`public` firewalld policy.
+[Maintenance source commit
+`873c9c6`](https://github.com/wdcallahan/sanctum-maintenance/commit/873c9c6fdb7f4ac8a7b56181a957eb03a89005a9)
+adds ordinary `80/tcp` to the existing,
+strictly reviewed `5432/8084/8085` entries.
+It has **not yet been applied on Kvin**. DNS remains at Kvar while this is done.
+
+**[Maintenance's scoped firewall CI #43100611079 passed](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43100611079).** After Kvin's production proxy listener is locally qualified, use
+`~/src/sanctum-maintenance` and its
+existing `tools/run-ansible-logged` workflow,
+with `sanctum_service_firewall_source_revision`
+set to the exact reviewed commit. First
+run `playbooks/configure-kvin-firewall.yml`
+in `--check --diff` to inspect the bounded
+runtime/permanent policy delta. Then run
+the same approved owner play with
+`sanctum_service_firewall_apply=true`
+and a no-change repeat. Do not bypass
+this with an ad hoc firewalld command.
+The existing Kvin staging Nginx may
+remain active throughout.
+
+The source firewall role protects all
+unrelated zone, policy and PostgreSQL
+settings. Do not apply from a stale
+controller checkout or an unreviewed
+revision.
 
 ## Phase 3 — owner-managed Nexus DNS change
 

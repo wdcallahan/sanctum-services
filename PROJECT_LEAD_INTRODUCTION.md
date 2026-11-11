@@ -61,6 +61,38 @@ separate production/reversal gates.
 **[FULL Services CI #43098976225 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43098976225).**
 No native stage-to-production handoff has happened.
 
+**Source CI status:** [Services #43098976225
+PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43098976225);
+[Maintenance scoped firewall CI #43100611079
+PASSED](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43100611079).
+A *separate* Maintenance candidate-cutover
+workflow currently has unrelated, preexisting
+Kvin DNS baseline mismatch failures;
+do not modify Kvin host/DNS identity to silence
+that test. The firewall's own exact source
+contract and real-Ansible synthetic test passed.
+
+**Preferred next operator step (Services only, before DNS/firewall):**
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-remove.yml \
+  -e yxorp_kvin_stage_remove_approved=true &&
+~/.local/bin/ansible-navigator run ansible/yxorp.yml \
+  -e yxorp_production_cutover_approved=true
+```
+Ask ONLY two native PLAY RECAP rows and the
+safe `Report bounded Kvin YXORP production listener readiness`
+msg or failure. Kvar NPM and DNS stay live.
+If production succeeds, proceed with the
+Maintenance firewall owner source reviewed
+commit and authoritative DNS publication;
+if it fails, Kvar remains effective fallback.
+This ordering is safe without LAN HTTP80
+being open, because external clients' Nexus
+names still point to Kvar.
+[Exact release and rollback guide](docs/runbooks/yxorp-production-cutover.md).
+
 **Maintenance-owned firewall source:** Updated
 `wdcallahan/sanctum-maintenance` at commit
 [`873c9c6`](https://github.com/wdcallahan/sanctum-maintenance/commit/873c9c6fdb7f4ac8a7b56181a957eb03a89005a9)
