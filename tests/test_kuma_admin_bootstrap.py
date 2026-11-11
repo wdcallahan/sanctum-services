@@ -81,7 +81,8 @@ class KumaAdminBootstrapTest(unittest.TestCase):
                        "socket.disconnect()"):
             self.assertIn(marker, self.source)
         assert "require(\"node:fs\").readFileSync(0" in self.source
-        assert "if (needsSetup)" in self.source
+        assert 'if (mode === "bootstrap" && needsSetup)' in self.source
+        assert 'if (mode === "verify" && needsSetup)' in self.source
 
     def test_no_local_generator_is_part_of_supported_design(self):
         self.assertFalse((ROOT / "tools/kuma-generate-admin-secret.py").exists())
