@@ -28,6 +28,7 @@ on:
       - "tests/test_yxorp_kuma_redirect_policy.py"
       - "tests/test_yxorp_kuma_wire_observe.py"
       - "tests/test_yxorp_kvin_stage_pihole.py"
+      - "tests/test_yxorp_kvin_stage_yarn_inner.py"
       - "tests/test_yxorp_legacy_yarn_observe.py"
       - "tests/test_yxorp_kvar_legacy_yarn_consumer_signal.py"
       - "tests/test_yxorp_kvar_legacy_yarn_source_classes.py"
@@ -50,6 +51,7 @@ on:
       - "tests/fixtures/verify-yxorp-kvin-kuma-stage.py"
       - "tests/fixtures/verify-yxorp-kuma-redirect-diagnose.py"
       - "tests/fixtures/verify-yxorp-kvin-pihole-stage.py"
+      - "tests/fixtures/verify-yxorp-kvin-yarn-inner-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py"
       - "tests/fixtures/verify-yxorp-config-update-lifecycle.py"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
@@ -59,6 +61,7 @@ on:
       - "tools/test-yxorp-http.py"
       - "tools/observe-yxorp-kuma-wire.py"
       - "tools/observe-yxorp-pihole-wire.py"
+      - "tools/observe-yxorp-kvin-stage-yarn-inner.py"
       - "tools/observe-yxorp-legacy-yarn.py"
       - "tools/observe-yxorp-kvar-yarn-usage.js"
       - "tools/observe-yxorp-kvar-yarn-source-classes.js"
@@ -109,6 +112,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_kuma_redirect_policy.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kuma_wire_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_pihole.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_yarn_inner.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_legacy_yarn_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvar_legacy_yarn_consumer_signal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvar_legacy_yarn_source_classes.py'
@@ -147,6 +151,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-kuma-wire-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-pihole-probe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-yarn-inner-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-legacy-yarn-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvar-legacy-yarn-consumer-signal.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvar-legacy-yarn-source-classes.yml --syntax-check
@@ -168,6 +173,7 @@ jobs:
           python3 tests/fixtures/verify-yxorp-kvin-dir-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-kuma-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-pihole-stage.py
+          python3 tests/fixtures/verify-yxorp-kvin-yarn-inner-stage.py
           python3 tests/fixtures/verify-yxorp-kuma-redirect-diagnose.py
           python3 tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py
           python3 tests/fixtures/verify-yxorp-config-update-lifecycle.py
