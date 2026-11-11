@@ -1,0 +1,42 @@
+---
+# Peer vantage, not a controller-local HTTP check. Old Nexus DNS still
+# resolves to Kvar, so use both competing Kvin address contracts directly.
+- name: Observe actual production Kvin YXORP from independent Peanut client
+  hosts: yxorp_test
+  become: false
+  gather_facts: true
+  tasks:
+    - name: Require exact Peanut non-Kvin observer
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+        fail_msg: Only the existing Peanut Arcane peer qualifies for this probe.
+
+    - name: Observe production Kuma and Yarn using both known Kvin addresses
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-kvin-from-peanut.py') }}"
+      register: yxorp_peanut_to_kvin
+      changed_when: false
+      no_log: true
+
+    - name: Require bounded read-only outside-client response contract
+      ansible.builtin.assert:
+        that:
+          - (yxorp_peanut_to_kvin.stdout | from_json).observer == 'peanut.arcane.sanctum'
+          - (yxorp_peanut_to_kvin.stdout | from_json).kvin_name_resolution.outcome in ['resolved', 'failed']
+          - (yxorp_peanut_to_kvin.stdout | from_json).qualified_peer_client_addresses | difference(['192.168.0.192', '192.168.1.192']) | length == 0
+          - (yxorp_peanut_to_kvin.stdout | from_json).proven_non_kvin_http_reachability is boolean
+          - not ((yxorp_peanut_to_kvin.stdout | from_json).configuration_changed | bool)
+          - not ((yxorp_peanut_to_kvin.stdout | from_json).kvar_or_dns_or_firewall_changed | bool)
+          - not ((yxorp_peanut_to_kvin.stdout | from_json).raw_headers_bodies_credentials_exposed | bool)
+        fail_msg: Kvin production peer observation returned an unsafe or unexpected result.
+
+    - name: Report safe Peanut LAN reachability and exact Kvin address candidates
+      ansible.builtin.debug:
+        msg: "{{ yxorp_peanut_to_kvin.stdout | from_json }}"
