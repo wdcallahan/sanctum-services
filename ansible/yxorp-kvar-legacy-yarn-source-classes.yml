@@ -1,0 +1,53 @@
+---
+# Only read fixed older Yarn NPM access log aggregates to classify source
+# buckets. Never expose client IP, requests or log bodies. No route changes.
+- name: Classify old Yarn recorded requests into anonymous known-test-source buckets
+  hosts: npm_proxy_legacy
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require incumbent Kvar and old Yarn route still disabled on Kvin
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - "'npm_proxy_legacy' in group_names"
+          - not ansible_check_mode
+          - not (yxorp_production_cutover_approved | default(false) | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[7].hostname == 'yarn.inner.sanctum'
+          - not (yxorp_routes[7].enabled | bool)
+          - yxorp_routes[7].upstream_host == '192.168.1.110'
+          - yxorp_routes[7].upstream_port | int == 80
+        fail_msg: >-
+          Only read-only old Yarn access-log classification from Kvar
+          is authorized. No retirement or production mutation is approved.
+
+    - name: Read only bounded legacy Yarn log metadata inside existing NPM
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - nginx-proxman
+          - node
+          - -e
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-kvar-yarn-source-classes.js') }}"
+      register: yxorp_yarn_sources
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require the safe classification command completed
+      ansible.builtin.assert:
+        that:
+          - yxorp_yarn_sources.rc == 0
+          - yxorp_yarn_sources.stdout | length > 0
+        fail_msg: Legacy Yarn source classes unavailable; leave old route undecided.
+
+    - name: Report only old Yarn NPM client-source classes and sample coverage
+      ansible.builtin.debug:
+        msg: "{{ yxorp_yarn_sources.stdout | from_json }}"
