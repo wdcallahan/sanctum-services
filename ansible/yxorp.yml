@@ -110,3 +110,47 @@
 
   roles:
     - yxorp
+
+  post_tasks:
+    - name: Verify production proxy actually reaches source-owned Kvin Kuma
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        headers:
+          Host: kuma.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        status_code: [200, 302]
+        timeout: 8
+      register: yxorp_production_kuma_frontend
+      changed_when: false
+      no_log: true
+
+    - name: Verify production proxy still reaches original Yarn service
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        headers:
+          Host: yarn.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        status_code: [200]
+        timeout: 8
+      register: yxorp_production_yarn_frontend
+      changed_when: false
+      no_log: true
+
+    - name: Report bounded Kvin YXORP production listener readiness
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          production_service: sanctum-yxorp.service
+          produced_route_count: "{{ yxorp_routes | length }}"
+          kuma_target: 127.0.0.1:13001
+          kuma_frontend_http_response: "{{ yxorp_production_kuma_frontend.status | int }}"
+          yarn_frontend_http_response: "{{ yxorp_production_yarn_frontend.status | int }}"
+          local_production_listener_accepted: true
+          kvars_existing_npm_changed: false
+          dns_changed: false
+          firewall_changed: false
+          real_named_lan_client_accepted: false
+          websocket_sessions_accepted: false
+          next_gate: Maintenance TCP80 and DNS publication, real named-client browsing/WebSockets, rollback
