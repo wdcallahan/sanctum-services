@@ -1,5 +1,111 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Legacy Yarn old name: healthy from Kvin, Kvar transport broken; usage evidence next (November 10)
+
+**Native Kvin-only observation complete:**
+`ansible/yxorp-kvin-legacy-yarn-observe.yml`
+returned `ok=4 changed=0 failed=0`.
+Direct old Yarn backend by literal
+`192.168.1.110:80` and by DNS
+`yarn.inner.sanctum` both gave
+HTTP200 to the legacy Host header.
+The old origin IP also answered
+HTTP200 with the newer
+`yarn.nexus.sanctum` Host, and
+the already accepted Kvin stage's
+new Yarn name returned HTTP200.
+All observed media types present,
+no redirects. But Kvar NPM's
+existing frontend for
+`yarn.inner.sanctum` **timed out**
+from Kvin (HTTP status unavailable).
+This test left the old eighth
+route disabled and made no changes.
+
+**Previously established Kvar transport
+failure must not be overlooked:**
+The earlier Services native Kvar
+diagnosis separately tested origin
+`192.168.1.110:80` from Kvar
+HOST and Kvar NPM's own rootful
+container namespace; **both failed
+to receive HTTP**, including a
+container Node request classified
+as **timeout**. Thus the shared
+failure is Kvar's path/source/
+return behavior, not demonstrated
+to be an NPM configuration problem.
+Later `ip route get` succeeded
+on Kvar and Kvin, showing the
+same selected gateway with
+different source IPs and no
+explanation of packet delivery.
+The decision was to **defer
+repair of this obsolete Kvar
+transport path unless an actual
+client needs it**. [Native
+Kvar finding](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6777002547)
+and [route comparison/deferral](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6777997059).
+
+**Current count: seven Kvin names
+initially accepted of eight
+manifest entries**. The last old
+`yarn.inner.sanctum` is neither
+accepted nor activated on Kvin.
+Do not enable or retire it merely
+to get 8/8. Need client usage
+and route policy decision. The
+new `yarn.nexus.sanctum` route
+is independently accepted.
+
+**Next privacy-preserving evidence:**
+`ansible/yxorp-kvar-legacy-yarn-consumer-signal.yml`
+targets only Kvar's known
+`npm_proxy_legacy` and uses
+the existing `nginx-proxman`
+container's Node runtime to
+examine at most 1MiB each from
+current and one rotated old
+`proxy-host-11_access.log`.
+No live NPM config, DNS, backend,
+routing, firewall or container
+state is changed. The result
+reports the existence of
+generated config/logging, file
+coverage, whether rotations/truncation
+make the sample incomplete,
+parsed timestamp count and
+aggregate samples in the last
+7/30 days. The play suppresses
+raw config/log content, requests,
+host IPs, query strings,
+cookies, errors and credentials.
+
+**Do not overinterpret a count:**
+our repeated operator requests
+may appear in those access logs;
+the current log may be absent or
+disabled, rotated samples incomplete,
+and direct clients bypass NPM.
+Even 0 records cannot prove
+the old name is unused. The
+script always reports
+`current_client_use_proven=false`
+and `safe_to_retire_proven=false`.
+
+**Next native command from Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvar-legacy-yarn-consumer-signal.yml
+```
+Return just **Kvar's one-line
+`PLAY RECAP`** and `msg` from
+**“Report only old Yarn NPM
+access-log coverage and aggregate
+counts.”** If a task fails,
+only its failed task/error.
+No long logs. No old Kvar network
+repair or eighth route activation.
+
 ## Latest native Pi-hole check accepted (7/8); old Yarn alias remains disabled — November 10
 
 **Seven of eight YXORP route names have passed
