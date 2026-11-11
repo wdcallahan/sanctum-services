@@ -1,0 +1,64 @@
+---
+# Kvin-only, read-only three-way Pi-hole HTTP check for both / and /admin/.
+# http.client captures the actual wire Location, not Ansible URI's
+# request-address-normalized representation. No DNS/resolver operation.
+- name: Compare interim Pi-hole UI route through Kvin YXORP and incumbent Kvar NPM
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact Kvin Pi-hole stage and unchanged production authority
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - yxorp_stage_dir_approved | bool
+          - yxorp_stage_kuma_approved | bool
+          - yxorp_stage_pihole_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum']
+          - yxorp_routes[6].hostname == 'pihole.nexus.sanctum'
+          - not (yxorp_routes[6].enabled | bool)
+          - yxorp_routes[6].upstream_scheme == 'http'
+          - yxorp_routes[6].upstream_host == 'kvar.outer.sanctum'
+          - yxorp_routes[6].upstream_port | int == 82
+          - not (yxorp_routes[6].websocket | bool)
+        fail_msg: >-
+          Pi-hole UI compatibility test is only for the authorized Kvin
+          stage and exact Kvar port 82 backend. Production remains unchanged.
+
+    - name: Observe bounded Pi-hole wire status and redirect for root and admin
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-pihole-wire.py') }}"
+          - kvar.outer.sanctum
+          - "82"
+          - kvar.outer.sanctum
+          - "80"
+          - 127.0.0.1
+          - "80"
+      register: yxorp_pihole_wire
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Require the bounded Pi-hole wire observer ran successfully
+      ansible.builtin.assert:
+        that:
+          - yxorp_pihole_wire.rc == 0
+          - yxorp_pihole_wire.stdout | length > 0
+        fail_msg: Pi-hole wire observer failed; no route is accepted from this run.
+
+    - name: Report only Pi-hole root and admin HTTP parity metadata
+      ansible.builtin.debug:
+        msg: "{{ (yxorp_pihole_wire.stdout | from_json) | combine({'observer': inventory_hostname}) }}"
