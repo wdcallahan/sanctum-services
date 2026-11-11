@@ -1,0 +1,123 @@
+---
+# Guarded, read-only native Kvin acceptance for existing old NPM host 11.
+# The incumbent Kvar NPM route is known to time out; this intentionally
+# compares the staged Kvin old Host against the LIVE direct Yarn origin,
+# not a nonexistent incumbent HTTP response. Never follows redirects.
+- name: Accept eighth original Yarn NPM vhost through isolated Kvin YXORP
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact Kvin-only eight-route stage and closed cutover
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - yxorp_stage_dir_approved | bool
+          - yxorp_stage_kuma_approved | bool
+          - yxorp_stage_pihole_approved | bool
+          - yxorp_stage_yarn_inner_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_config_dir == '/etc/sanctum-services/yxorp-kvin-stage'
+          - yxorp_container_name == 'sanctum-yxorp-kvin-stage'
+          - yxorp_routes | length == 8
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum']
+          - yxorp_routes[0].upstream_host == 'yarn.inner.sanctum'
+          - yxorp_routes[7].hostname == 'yarn.inner.sanctum'
+          - not (yxorp_routes[7].enabled | bool)
+          - yxorp_routes[7].upstream_scheme == 'http'
+          - yxorp_routes[7].upstream_host == '192.168.1.110'
+          - yxorp_routes[7].upstream_port | int == 80
+          - not (yxorp_routes[7].websocket | bool)
+        fail_msg: >-
+          Eighth Yarn acceptance requires the exact old NPM host
+          on the isolated Kvin stage. Production and DNS must stay untouched.
+
+    - name: Read only the validated staged host Nginx file privately
+      ansible.builtin.slurp:
+        src: /etc/sanctum-services/yxorp-kvin-stage/nginx.conf
+      become: true
+      register: yxorp_yarn_eighth_host_config
+      no_log: true
+
+    - name: Read only the active mounted Nginx file privately
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - sanctum-yxorp-kvin-stage
+          - cat
+          - /etc/nginx/nginx.conf
+      become: true
+      register: yxorp_yarn_eighth_container_config
+      changed_when: false
+      no_log: true
+
+    - name: Classify the installed eighth Yarn route without disclosing config
+      ansible.builtin.set_fact:
+        yxorp_yarn_eighth_configuration:
+          published_equals_container_mount: >-
+            {{ (yxorp_yarn_eighth_host_config.content | b64decode) ==
+               yxorp_yarn_eighth_container_config.stdout }}
+          old_vhost_present_once: >-
+            {{ (yxorp_yarn_eighth_container_config.stdout |
+                regex_findall('server_name yarn\\.inner\\.sanctum;') | length) == 1 }}
+          new_vhost_present_once: >-
+            {{ (yxorp_yarn_eighth_container_config.stdout |
+                regex_findall('server_name yarn\\.nexus\\.sanctum;') | length) == 1 }}
+          exact_old_backend_present_once: >-
+            {{ (yxorp_yarn_eighth_container_config.stdout |
+                regex_findall('proxy_pass http://192\\.168\\.1\\.110:80;') | length) == 1 }}
+      no_log: true
+
+    - name: Collect bounded real-wire old-Yarn candidate and direct-origin result
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-kvin-stage-yarn-inner.py') }}"
+      register: yxorp_yarn_eighth_wire
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Require the read-only Yarn wire observer completed
+      ansible.builtin.assert:
+        that:
+          - yxorp_yarn_eighth_wire.rc == 0
+          - yxorp_yarn_eighth_wire.stdout | length > 0
+        fail_msg: >-
+          Bounded Yarn wire observer did not run; do not accept the eighth route.
+
+    - name: Report only eighth Yarn route configuration and wire acceptance metadata
+      ansible.builtin.debug:
+        msg: >-
+          {{ (yxorp_yarn_eighth_wire.stdout | from_json) |
+             combine({'mounted_config':
+              yxorp_yarn_eighth_configuration}) }}
+
+    - name: Require real eighth route behavior and mounted config acceptance
+      ansible.builtin.assert:
+        that:
+          - yxorp_yarn_eighth_configuration.published_equals_container_mount | bool
+          - yxorp_yarn_eighth_configuration.old_vhost_present_once | bool
+          - yxorp_yarn_eighth_configuration.new_vhost_present_once | bool
+          - yxorp_yarn_eighth_configuration.exact_old_backend_present_once | bool
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.old_origin_http_200 == true
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.old_stage_http_200 == true
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.new_stage_http_200 == true
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.old_status_equals_direct == true
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.old_media_type_equals_direct == true
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.old_complete_body_identical_to_direct == true
+          - (yxorp_yarn_eighth_wire.stdout | from_json).checks.unknown_host_denied_without_http_response == true
+        fail_msg: >-
+          Existing Yarn eighth vhost has not passed real Kvin stage
+          HTTP/content/config isolation. The sanitized report above
+          identifies which acceptance predicate failed. Production unchanged.
