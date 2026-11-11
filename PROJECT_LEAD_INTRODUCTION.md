@@ -1,100 +1,66 @@
 # Sanctum Services — Session Continuation
 
-## CURRENT — November 11: eighth Kvin stage deployed; false acceptance regex fixed, probe-only rerun next
+## CURRENT — November 11: SS-YX-2 ACCEPTED, all eight initial Kvin HTTP hosts; Kuma next
 
-**Newest native evidence supplied by Nova:**
-`ansible/yxorp-kvin-stage.yml` with all eight stage
-approvals finished **Kvin ok=48 changed=3
-failed=0 skipped=1**. This is the
-**successful isolated eight-route stage
-reconciliation**; do not repeat the
-deployment simply to test the probe.
-The following **read-only** eighth Yarn
-probe completed `ok=7 changed=0 failed=1`
-only because its acceptance assertion
-`old_vhost_present_once` evaluated
-false. This does NOT establish that
-the old Yarn vhost is absent or the
-stage has failed. The sanitized
-metadata printed before the failure
-was not provided in Nova's paste;
-do not infer the other checks' states.
+**Latest native eighth-Yarn acceptance supplied by Nova:** Kvin ran the corrected
+`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`, finishing
+**`ok=8 changed=0 unreachable=0 failed=0 skipped=0`**.
+The exact mounted configuration equals its published source, and each
+old/new Yarn `server_name` occurs once with the exact old upstream.
+The original `yarn.inner.sanctum` direct backend and Kvin stage
+both returned **HTTP 200**, the **complete 349-byte body was identical**,
+media type/status matched, and no redirect was observed.
+`yarn.nexus.sanctum` independently returned **200** with
+349 body bytes; unknown-Host connections were refused.
+Every acceptance assertion passed. `old_redirect_exact_wire_equals_direct`
+is `not_comparable` because neither response redirected,
+**not an acceptance failure**. The old Kvar NPM route remains
+broken/unqualified, and has never been treated as an accepted comparison.
+This native evidence **closes SS-YX-2** at the agreed bounded anonymous
+HTTP/loopback and mounted-config level, not browser, login,
+LAN or production. **Do not rerun eighth probe or earlier seven canaries.**
 
-**Root cause confirmed locally:**
-`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
-used `regex_findall('server_name
-yarn\\\\.inner\\\\.sanctum;')` and
-similar double-escaped patterns.
-Those look for literal slash content
-and **fail to match** ordinary
-Nginx `server_name
-yarn.inner.sanctum;` text.
-The same bug affected new vhost
-and backend regex counts, though
-the assertion stopped at the
-first false. Source fixed by
-replacing all three expressions
-with exact equality counts of
-**trimmed config lines** (no regex).
-No Nginx template, staged route,
-DNS, host, Kvar NPM, firewalld or
-live configuration was changed
-by the correction.
+**SS-YX-3 evidence decision (source review):** Reuse existing
+[Nov 9 NPM behavioral observation](docs/review/2026-11-09-yxorp-behavior-observation.md)
+and [default upstream mapping](docs/review/2026-11-09-yxorp-default-route-comparison.md).
+All incumbent NPM app hosts had **one ordinary location and no
+non-default locations**; no nonempty global custom snippets were observed.
+Synthetic real-Nginx tests cover Host isolation/default-deny, forwarded
+headers, raw relative redirects, Upgrade and route change/removal.
+The YXORP role validates the generated config, reconciles stale Podman
+single-file mounts and verifies the live readback. Prism's observed
+legacy HTTPS directives are an intentional difference under the already
+accepted private HTTP policy, not a surprise new TLS workstream.
+No new source-only proxy behavior blocker has been identified.
+**App-specific real browser/login, WebSocket/Socket.IO, data restore,
+client/LAN reachability and replay/rollback gates remain open** and
+belong to SS-APPS and SS-PUB. Do not claim full NPM/runtime behavior
+equivalence, current LAN publication or production cutover.
 
-**Regression that prevents recurrence:**
-New `tests/fixtures/verify-yxorp-kvin-yarn-inner-config.py`
-executes the **actual source Ansible
-set_fact classifier** against Jinja-rendered
-eight-route synthetic Nginx configuration,
-as well as missing old/new host,
-duplicate old host, wrong upstream and
-host/container drift cases. Real
-Ansible asserts every expected Boolean.
-Full source CI **PASSED**:
-[GitHub Actions #43053056244](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244);
-its job logs explicitly show
-`PASS: real Ansible exact Yarn line
-counts, missing/duplicate routes,
-wrong upstream and host/container drift`.
-Other Ansible source tests, Nginx syntax,
-real Nginx loopback HTTP checks and
-image inspection passed.
+**Now execute SS-APPS-1 (first real application migration):** Kvar Kuma
+was a proof of concept and a **clean retained Kvin installation is
+already approved**. Source skeleton already exists at `ansible/kuma.yml`,
+`ansible/group_vars/kuma.yml`,
+`ansible/roles/kuma/tasks/main.yml`, and
+`ansible/roles/kuma/templates/kuma.container.j2`, but
+`kuma_image` is still empty (explicit guard): it has not deployed.
+First establish a verifiable **ARM64 Kuma 2 image digest** and
+version-compatible monitor management interface without manual
+database edits. Build/qualify a new **rootless, loopback-only Kvin Kuma
+candidate** using existing safe-approval gates. Persist and restore
+its own volume, verify live UI and desired `Wicket Ollama` monitor
+(`http://wicket.arcane.sanctum:11435/healthz`) actually **Up**,
+reconcile an unchanged repeat and keep old/test alerts from duplicating.
+Only after app acceptance move `kuma.nexus.sanctum` upstream off Kvar
+and prove actual client use. Nova supplies native commands only when
+Kvin evidence is indispensable; Pixel handles source/CI/docs itself.
+No arbitrary time limits or speculative additional probes.
 
-**ONLY NEXT OPERATOR ACTION:** From Kvin
-`git pull`, then rerun **only**
-`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
-with all eight source stage approvals
-`yxorp_kvin_stage_approved=true`,
-`yxorp_stage_square_approved=true`,
-`yxorp_stage_prism_approved=true`,
-`yxorp_stage_search_approved=true`,
-`yxorp_stage_dir_approved=true`,
-`yxorp_stage_kuma_approved=true`,
-`yxorp_stage_pihole_approved=true`,
-`yxorp_stage_yarn_inner_approved=true`.
-The probe is read-only, and stage
-reconciliation should NOT be rerun.
-Request the one `PLAY RECAP` and
-`msg` from **“Report only eighth Yarn
-route configuration and wire acceptance
-metadata”**, or the failed task
-and error. No full logs, DNS debate,
-or repeat of prior canaries.
-
-**Current acceptance:** Seven original
-Kvin local anonymous HTTP routes
-accepted; eighth stage successfully
-installed, **native eighth HTTP/
-content/config acceptance still
-pending the corrected probe**.
-After acceptance resume SS-YX-3
-meaningful proxy equivalence and
-the source-owned Kvin app migrations
-(Kuma clean retained first). The
-[November 11 outcome plan](docs/ROADMAP.md#active-execution-plan--wednesday-november-11-2026)
-is the source of truth. No
-arbitrary timeboxes or tangential
-diagnostic cascades.
+**Production still unchanged:** Kvar NPM and DNS remain authoritative,
+Maintenance owns Kvin LAN firewall, no production cutover is approved,
+Kvar-hosted Kuma/LinkStack/Pi-hole applications and data are not yet
+migrated. 8/8 is **bounded proxy acceptance**, not project completion.
+Follow the [November 11 outcome roadmap](docs/ROADMAP.md#active-execution-plan--wednesday-november-11-2026).
 
 ## CURRENT — Wednesday, November 11: eighth existing Yarn NPM stage coded, real-Nginx CI pending
 
