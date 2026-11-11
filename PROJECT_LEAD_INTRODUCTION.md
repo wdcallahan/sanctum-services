@@ -45,19 +45,12 @@
   selection and refusal of illegal eighth-only
   approval. CI workflow includes these.
 
-**Source CI:** [GitHub Actions run #43048429592](https://github.com/wdcallahan/sanctum-services/actions/runs/43048429592).
-The source contract and Ansible syntax parts passed.
-At writing, runner is still performing Nginx package
-installation/syntax/real HTTP checks. **Check final
-conclusion before giving operator the command.**
-Don't pretend a green interim step is full CI
-acceptance. The newest source commit includes
+**Source CI PASSED:** [GitHub Actions run #43049835644](https://github.com/wdcallahan/sanctum-services/actions/runs/43049835644) completed successfully: full source contract tests, Ansible syntax, generated Nginx syntax, actual loopback Nginx HTTP integration and image-candidate checks. The earlier run's failure was external GitHub runner DNS resolution of Ubuntu package mirrors, not a source-test failure. The newest source commit includes
 `strip_empty_ends:false` when reading container
 Nginx config so the host-versus-mount byte equality
 does not fail solely on a stripped trailing newline.
 
-**Single intended native operator action, ONLY AFTER
-latest CI fully green:** from Kvin run the standard
+**Next native operator action — full CI green:** from Kvin run the standard
 eight-route stage reconciliation with all seven
 previous stage flags plus
 `-e yxorp_stage_yarn_inner_approved=true`,
