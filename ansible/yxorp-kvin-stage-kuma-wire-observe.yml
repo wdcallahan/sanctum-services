@@ -1,0 +1,111 @@
+---
+# No state mutation. Separate the real HTTP Location header from Ansible's
+# URI presentation and establish what config is actually mounted on Kvin.
+- name: Diagnose Kuma on-the-wire redirect and stage-mounted Nginx rule
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact preapproved Kvin Kuma stage with closed production gate
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - yxorp_stage_dir_approved | bool
+          - yxorp_stage_kuma_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[5].hostname == 'kuma.nexus.sanctum'
+          - not (yxorp_routes[5].enabled | bool)
+          - yxorp_routes[5].upstream_host == 'kvar.outer.sanctum'
+          - yxorp_routes[5].upstream_port | int == 3001
+          - yxorp_routes[5].redirect_strip_upstream_port | default(false) | bool
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum']
+        fail_msg: No unapproved route, host, backend or cutover may be inspected.
+
+    - name: Read the exact published Kvin stage Nginx config privately
+      ansible.builtin.slurp:
+        src: /etc/sanctum-services/yxorp-kvin-stage/nginx.conf
+      become: true
+      register: yxorp_kuma_wire_host_config
+      no_log: true
+
+    - name: Read the exact running container's mounted config privately
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - sanctum-yxorp-kvin-stage
+          - cat
+          - /etc/nginx/nginx.conf
+        strip_empty_ends: false
+      become: true
+      register: yxorp_kuma_wire_mounted_config
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require the stage container config can be inspected
+      ansible.builtin.assert:
+        that:
+          - yxorp_kuma_wire_mounted_config.rc == 0
+        fail_msg: Could not read the precise owned stage container config.
+
+    - name: Observe the actual Kuma redirect headers without URI normalization
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-kuma-wire.py') }}"
+          - kvar.outer.sanctum
+          - "3001"
+          - kvar.outer.sanctum
+          - "80"
+          - 127.0.0.1
+          - "80"
+      register: yxorp_kuma_wire_http
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require the bounded wire header classifier completed
+      ansible.builtin.assert:
+        that:
+          - yxorp_kuma_wire_http.rc == 0
+          - yxorp_kuma_wire_http.stdout | length > 0
+        fail_msg: The read-only Kuma raw-header classifier did not complete.
+
+    - name: Report only Kuma wire classes and mounted Nginx rule presence
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          stage_container_config_readable: "{{ yxorp_kuma_wire_mounted_config.rc == 0 }}"
+          published_equals_container_mount: "{{ active_text == yxorp_kuma_wire_mounted_config.stdout }}"
+          mounted_config_has_kuma_virtual_host: "{{ 'server_name kuma.nexus.sanctum;' in yxorp_kuma_wire_mounted_config.stdout }}"
+          mounted_config_has_exact_kuma_redirect_rule: "{{ rule in yxorp_kuma_wire_mounted_config.stdout }}"
+          mounted_config_exact_redirect_rule_count: "{{ yxorp_kuma_wire_mounted_config.stdout.count(rule) }}"
+          direct_wire: "{{ observed.direct_wire }}"
+          incumbent_wire: "{{ observed.incumbent_wire }}"
+          candidate_wire: "{{ observed.candidate_wire }}"
+          direct_with_proxy_headers_wire: "{{ observed.direct_with_proxy_headers_wire }}"
+          candidate_wire_equals_incumbent_wire: "{{ observed.candidate_wire_equals_incumbent_wire }}"
+          candidate_wire_equals_direct_wire: "{{ observed.candidate_wire_equals_direct_wire }}"
+          direct_changes_when_forwarded_headers_present: "{{ observed.direct_changes_when_forwarded_headers_present }}"
+          raw_location_values_exposed: false
+          configuration_changed: false
+          limitation: >-
+            Read-only raw HTTP response-header classifications and owned
+            mounted config presence. Does not claim Kuma redirect parity,
+            loaded-master reload validation, WebSockets, client sessions,
+            restored data, DNS/firewall readiness or production cutover.
+      vars:
+        active_text: "{{ yxorp_kuma_wire_host_config.content | b64decode }}"
+        observed: "{{ yxorp_kuma_wire_http.stdout | from_json }}"
+        rule: "proxy_redirect http://kvar.outer.sanctum:3001/ http://kvar.outer.sanctum/;"
