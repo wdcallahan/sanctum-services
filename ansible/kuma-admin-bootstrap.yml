@@ -1,0 +1,197 @@
+---
+# A separate, explicitly authorized, non-destructive administrator bootstrap.
+# Only touches the private wdc2 credential file and Kuma's own user setup API.
+# Existing unknown administrators are NEVER overwritten or reset.
+- name: Initialize and verify the retained Kvin Kuma administrator safely
+  hosts: kuma
+  become: false
+  gather_facts: true
+  vars:
+    kuma_admin_secret_dir: /home/wdc2/.config/sanctum-services/secrets
+    kuma_admin_secret_file: /home/wdc2/.config/sanctum-services/secrets/kuma-admin.json
+    kuma_admin_container: sanctum-kuma
+    kuma_admin_quadlet: /home/wdc2/.config/containers/systemd/sanctum-kuma.container
+    kuma_admin_expected_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+    kuma_admin_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-admin-init.js') }}"
+  tasks:
+    - name: Require exact Kvin and explicit first-account bootstrap approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - not ansible_check_mode
+          - kuma_admin_bootstrap_approved | default(false) | bool
+          - not (kuma_stage_remove_approved | default(false) | bool)
+          - kuma_image == kuma_admin_expected_image
+          - kuma_data_volume == 'sanctum-kuma-data'
+          - kuma_bind_address == '127.0.0.1'
+          - kuma_host_port | int == 13001
+          - kuma_db_type == 'sqlite'
+        fail_msg: >-
+          Refusing unapproved Kuma administrator changes outside the single
+          rootless, local-only, exact-image Kvin instance.
+
+    - name: Stat the source-owned Kuma user Quadlet without following symlinks
+      ansible.builtin.stat:
+        path: "{{ kuma_admin_quadlet }}"
+        follow: false
+      register: kuma_admin_quadlet_stat
+
+    - name: Require a regular, non-symlinked owned Quadlet
+      ansible.builtin.assert:
+        that:
+          - kuma_admin_quadlet_stat.stat.isreg | default(false)
+          - not (kuma_admin_quadlet_stat.stat.islnk | default(false))
+
+    - name: Privately inspect Kuma candidate Quadlet
+      ansible.builtin.slurp:
+        src: "{{ kuma_admin_quadlet }}"
+      register: kuma_admin_quadlet_source
+      no_log: true
+
+    - name: Require exact image, port, volume and declared SQLite before socket access
+      ansible.builtin.assert:
+        that:
+          - "('Image=' ~ kuma_admin_expected_image) in kuma_admin_quadlet_lines"
+          - "'ContainerName=sanctum-kuma' in kuma_admin_quadlet_lines"
+          - "'PublishPort=127.0.0.1:13001:3001/tcp' in kuma_admin_quadlet_lines"
+          - "'Volume=sanctum-kuma-data:/app/data' in kuma_admin_quadlet_lines"
+          - "'Environment=UPTIME_KUMA_DB_TYPE=sqlite' in kuma_admin_quadlet_lines"
+          - "kuma_admin_quadlet_lines | select('match', '^Image=') | list | length == 1"
+          - "kuma_admin_quadlet_lines | select('match', '^PublishPort=') | list | length == 1"
+          - "kuma_admin_quadlet_lines | select('match', '^Volume=') | list | length == 1"
+        fail_msg: Refusing to bootstrap a non-source-owned Kuma candidate.
+      vars:
+        kuma_admin_quadlet_lines: "{{ (kuma_admin_quadlet_source.content | b64decode).splitlines() }}"
+
+    - name: Privately check whether installed Kuma requests initial administrator
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --workdir
+          - /app
+          - "{{ kuma_admin_container }}"
+          - node
+          - -e
+          - "{{ kuma_admin_js }}"
+          - status
+      register: kuma_admin_status
+      changed_when: false
+      no_log: true
+
+    - name: Require an actual recognized Kuma 2.5.9 setup response
+      ansible.builtin.assert:
+        that:
+          - (kuma_admin_status.stdout | from_json).needs_setup is boolean
+        fail_msg: The local Socket.IO server returned an unexpected setup response.
+
+    - name: Check for an existing local admin secret without following symlinks
+      ansible.builtin.stat:
+        path: "{{ kuma_admin_secret_file }}"
+        follow: false
+      register: kuma_admin_existing_secret
+
+    - name: Refuse replacing an independently initialized administrator
+      ansible.builtin.assert:
+        that:
+          - (kuma_admin_status.stdout | from_json).needs_setup | bool
+            or kuma_admin_existing_secret.stat.isreg | default(false)
+        fail_msg: >-
+          Kuma already has an administrator but the owned private credential
+          file is missing. Refusing to create a second/unknown administrator
+          or reset any existing login. Adopt the account separately.
+
+    - name: Check the private secret directory without following symlinks
+      ansible.builtin.stat:
+        path: "{{ kuma_admin_secret_dir }}"
+        follow: false
+      register: kuma_admin_existing_dir
+      when: (kuma_admin_status.stdout | from_json).needs_setup
+
+    - name: Refuse symlinked or non-directory private credential storage
+      ansible.builtin.assert:
+        that:
+          - kuma_admin_existing_dir.stat.isdir | default(false)
+          - not (kuma_admin_existing_dir.stat.islnk | default(false))
+      when:
+        - (kuma_admin_status.stdout | from_json).needs_setup
+        - kuma_admin_existing_dir.stat.exists | default(false)
+
+    - name: Ensure protected rootless Kuma secret directory for new administrator
+      ansible.builtin.file:
+        path: "{{ kuma_admin_secret_dir }}"
+        state: directory
+        mode: "0700"
+      when: (kuma_admin_status.stdout | from_json).needs_setup
+
+    - name: Generate the administrator secret once, without displaying it
+      ansible.builtin.script: "{{ playbook_dir }}/../tools/kuma-generate-admin-secret.py {{ kuma_admin_secret_file }}"
+      args:
+        creates: "{{ kuma_admin_secret_file }}"
+      when: (kuma_admin_status.stdout | from_json).needs_setup
+      no_log: true
+
+    - name: Verify regular private credential file with restrictive mode
+      ansible.builtin.stat:
+        path: "{{ kuma_admin_secret_file }}"
+        follow: false
+      register: kuma_admin_secret_stat
+
+    - name: Refuse missing, symlinked or exposed administrator secret
+      ansible.builtin.assert:
+        that:
+          - kuma_admin_secret_stat.stat.isreg | default(false)
+          - not (kuma_admin_secret_stat.stat.islnk | default(false))
+          - kuma_admin_secret_stat.stat.mode == '0600'
+        fail_msg: Admin secret must be a regular 0600 file; refusing to use it.
+
+    - name: Read secret privately for the single localhost Socket.IO operation
+      ansible.builtin.slurp:
+        src: "{{ kuma_admin_secret_file }}"
+      register: kuma_admin_private_secret
+      no_log: true
+
+    - name: Initialize missing administrator through Kuma's own Socket.IO and verify login
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - "{{ kuma_admin_container }}"
+          - node
+          - -e
+          - "{{ kuma_admin_js }}"
+          - bootstrap
+        stdin: "{{ kuma_admin_private_secret.content | b64decode }}"
+        stdin_add_newline: false
+      register: kuma_admin_bootstrap_result
+      changed_when: (kuma_admin_status.stdout | from_json).needs_setup
+      no_log: true
+
+    - name: Assert verified bootstrap without publishing credentials
+      ansible.builtin.assert:
+        that:
+          - (kuma_admin_bootstrap_result.stdout | from_json).administrator_login_verified | bool
+          - ((kuma_admin_bootstrap_result.stdout | from_json).administrator_created | bool)
+            == ((kuma_admin_status.stdout | from_json).needs_setup | bool)
+        fail_msg: Native Kuma administrator creation or login did not verify.
+
+    - name: Report only safe administrator bootstrap acceptance
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          administrator_username: sanctum-admin
+          administrator_created_this_run: "{{ (kuma_admin_status.stdout | from_json).needs_setup | bool }}"
+          administrator_login_verified: true
+          private_credentials_stored: true
+          private_credentials_not_logged: true
+          credential_file_requires_off_host_backup: true
+          monitors_reconciled: false
+          backup_restore_accepted: false
+          production_or_proxy_changed: false
+          next_gate: test authenticated version-specific monitor reconciliation and recoverable backup
