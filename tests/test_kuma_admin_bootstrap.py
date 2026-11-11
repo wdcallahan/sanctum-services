@@ -33,8 +33,10 @@ class KumaAdminBootstrapTest(unittest.TestCase):
                        "kuma_admin_bootstrap_approved | default(false) | bool",
                        "kuma_db_type == 'sqlite'"):
             self.assertIn(clause, checks)
-        self.assertIn("vault_password_file = /home/wdc2/.config/sanctum-services/secrets/vault.key",
-                      CONFIG.read_text(encoding="utf-8"))
+        self.assertNotIn("vault_password_file =", CONFIG.read_text(encoding="utf-8"))
+        # Vault inputs are explicitly mounted only for secret-consuming runs,
+        # not as global navigator mounts that would break Peanut or CI.
+        self.assertNotIn("volume-mounts:", NAV.read_text(encoding="utf-8"))
         self.assertIn("podman", str(self.tasks))
         self.assertNotIn("UPDATE user", self.source)
         self.assertNotIn("INSERT INTO user", self.source)

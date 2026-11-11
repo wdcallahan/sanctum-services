@@ -10,17 +10,17 @@ owner-readable only (0600); its separate encrypted files each contain
 different per-service passwords. Ansible Vault is encryption at rest, not
 a defense against a compromised controller that can also read the key.
 
-The project `ansible.cfg` points at the existing key. The
-`ansible-navigator.yml` execution environment deliberately does
-**not** mount this private directory for every unrelated playbook:
-the real controller on Kvin and the EE are different filesystems.
-For **Vault-aware commands only**, pass `--eev` with a
-scoped explicit mount of that private directory. The directory
-must already exist on the host. Podman on SELinux-enforcing Fedora
-may require a relabel (`:Z`), which changes SELinux context
-on the files beneath that directory. Do not apply `:Z` to an
-arbitrary home directory or a broadly shared secret store.
-The separate Kvin-only secret directory is intentionally small.
+The project does **not** configure a global Vault password
+source. Ordinary Services playbooks, CI and controllers that
+lack the private Vault key must remain operational.
+Vault-aware Navigator commands explicitly set
+`ANSIBLE_VAULT_PASSWORD_FILE` inside the EE and mount
+**only the two required files**, read-only, not the entire
+secret directory. Podman on SELinux-enforcing Fedora may
+require `:Z` relabeling: it changes the SELinux context of
+the mounted file. Never apply `:Z` to an entire home
+directory or unrelated credentials. No secret file is
+committed to this repository.
 
 ## One-time operator action: create the encrypted Kuma password variable
 
@@ -35,19 +35,23 @@ Run it from the project directory:
 ```bash
 cd ~/src/sanctum-services
 umask 077
+set -C
 vault_dir="$HOME/.config/sanctum-services/secrets"
-test -r "$vault_dir/vault.key" || { echo "Existing Vault key missing" >&2; false; }
+test -r "$vault_dir/vault.key" || { echo "Existing Vault key missing" >&2; exit 1; }
+test ! -e "$vault_dir/kuma-admin.vault.yml" || { echo "Kuma Vault file already exists; refusing overwrite" >&2; exit 1; }
 read -rsp 'Choose Kuma admin password: ' kuma_password
 printf '\n'
-printf %s "$kuma_password" |
+printf '%s' "$kuma_password" |
   ~/.local/bin/ansible-navigator exec \
-    --eev "$vault_dir:$vault_dir:ro,Z" \
+    --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
     --exec-shell false -- \
     ansible-vault encrypt_string \
       --vault-password-file "$vault_dir/vault.key" \
       --stdin-name vault_kuma_admin_password > "$vault_dir/kuma-admin.vault.yml"
 unset kuma_password
 chmod 600 "$vault_dir/kuma-admin.vault.yml"
+grep -q '^vault_kuma_admin_password: !vault |' "$vault_dir/kuma-admin.vault.yml" &&
+  echo 'Kuma Vault variable created (value not shown)'
 ```
 
 Check the output file format **without decrypting or printing its
@@ -73,15 +77,19 @@ password when planning rotations.
 ## Native Kvin bootstrap (after encrypted file exists)
 
 The Ansible Navigator command mounts the existing secret
-directory read-only into the selected EE and uses
-`ansible.cfg`'s Vault password file:
+key and encrypted Kuma credential file read-only into the
+selected EE, sets its Vault password source only for this
+run, and disables playbook artifact generation:
 
 ```bash
 cd ~/src/sanctum-services &&
 git pull &&
 vault_dir="$HOME/.config/sanctum-services/secrets" &&
 ~/.local/bin/ansible-navigator run ansible/kuma-admin-bootstrap.yml \
-  --eev "$vault_dir:$vault_dir:ro,Z" \
+  --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
+  --eev "$vault_dir/kuma-admin.vault.yml:$vault_dir/kuma-admin.vault.yml:ro,Z" \
+  --senv "ANSIBLE_VAULT_PASSWORD_FILE=$vault_dir/vault.key" \
+  --pae false \
   -e kuma_admin_bootstrap_approved=true
 ```
 
