@@ -153,7 +153,29 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — actual Vault-backed Kuma administrator native ACCEPTED:**
+  **November 11 — exact Kuma 2.5.9 Wicket reconciler source CI ACCEPTED:**
+  Added `ansible/kuma-monitors.yml` and
+  `tools/kuma-reconcile-monitors.js` after reviewing
+  the exact upstream 2.5.9 Socket.IO monitor APIs.
+  Explicit `kuma_monitors_approved=true` and
+  exact Kvin, image, rootless user Quadlet and
+  Vault guards limit writes to `data/kuma-monitors.yml`'s
+  single wanted `Wicket Ollama` HTTP monitor.
+  Reconcile by stable name; refuse duplicate names
+  or preexisting attached notifications; verify
+  persistence and report nonsecret metadata. Synthetic
+  Socket.IO integration tests cover first create,
+  no-op repeat, config edit and guarded failures.
+  [Full CI #43082780801 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43082780801).
+  **No native monitor operation, actual Up, or
+  monitor-level repeat has happened.**
+  Next operate the approved admin no-change repeat
+  followed by first monitor reconcile using the
+  one Kvin chain in [Kuma runbook](runbooks/kuma-monitoring.md).
+  Production unchanged; remaining actual Up and
+  independent restore gates are open.
+
+  **Historical first native administrator acceptance:**
   Nova's native approved bootstrap finished **`ok=12 changed=1
   failed=0`**, with `administrator_created_this_run:true`
   and `administrator_login_verified:true`. The

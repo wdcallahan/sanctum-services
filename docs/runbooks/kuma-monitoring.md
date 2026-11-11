@@ -1,5 +1,74 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
+## November 11 — Wicket monitor reconciliation source green; native test next
+
+Native Kuma administrator creation and Vault-backed login
+are accepted (`ok=12 changed=1 failed=0`,
+`administrator_created_this_run:true`,
+`administrator_login_verified:true`). The separate
+unchanged admin repeat has not yet been run.
+
+An explicit, default-off monitor playbook now exists:
+`ansible/kuma-monitors.yml`, backed by
+`tools/kuma-reconcile-monitors.js`. It uses the
+actual tagged **Kuma 2.5.9** authenticated
+Socket.IO methods to create, read or update only
+the `Wicket Ollama` monitor already declared in
+`data/kuma-monitors.yml`; it refuses duplicates
+and preexisting attached notifications. No
+new alert subscriptions, SQLite direct changes,
+proxy routing, firewall or Kvar changes are part
+of this playbook. It reports the verified saved
+configuration, not a fabricated Up status.
+[Full source CI #43082780801 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43082780801).
+The monitor has **not** been natively created.
+
+### Next Kvin operator action — admin repeat + first Wicket reconcile
+
+From Kvin, use this one Bash chain. It reads
+the **same existing** Vault key and encrypted
+Kuma credential file without exposing secrets.
+The first play should finish unchanged and
+verify login; the second explicitly authorizes
+only the wanted Wicket monitor.
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+vault_dir="$HOME/.config/sanctum-services/secrets" &&
+nav="$HOME/.local/bin/ansible-navigator" &&
+options=(
+  --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z"
+  --eev "$vault_dir/kuma-admin.vault.yml:$vault_dir/kuma-admin.vault.yml:ro,Z"
+  --senv "ANSIBLE_VAULT_PASSWORD_FILE=$vault_dir/vault.key"
+  --pae false
+) &&
+"$nav" run ansible/kuma-admin-bootstrap.yml "${options[@]}" \
+  -e kuma_admin_bootstrap_approved=true &&
+"$nav" run ansible/kuma-monitors.yml "${options[@]}" \
+  -e kuma_monitors_approved=true
+```
+
+Return **both PLAY RECAP lines** and the
+`msg` dictionary from **Report bounded
+Wicket monitor configuration acceptance**,
+or failed task/error, not secret logs.
+
+Expected results: first play `changed=0`,
+login verified and no account created; second
+play may create the monitor, then re-read
+its persisted config. The monitor's actual
+**Up** status is separately accepted after
+running inside retained Kuma. A later monitor
+repeat must have `changed=0` with no
+duplicate or attached notifications.
+
+Independent backup/restore of the Kuma volume
+and Vault data, restart/update lifecycle and
+real named client/proxy reachability remain
+unaccepted. Kvar NPM/Kuma and production
+routes must not change as side effects.
+
 ## November 11 — native Vault-backed administrator creation accepted
 
 Nova's first approved `ansible/kuma-admin-bootstrap.yml`

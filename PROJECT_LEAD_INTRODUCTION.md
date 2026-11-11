@@ -1,5 +1,80 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma Vault administrator CREATED + AUTHENTICATED; Wicket source reconciler CI green; next native
+
+**Native operator evidence:** Vault-backed
+`ansible/kuma-admin-bootstrap.yml` completed on Kvin
+`ok=12 changed=1 unreachable=0 failed=0 skipped=0`,
+with `administrator_created_this_run:true`,
+`administrator_login_verified:true`,
+`encrypted_credentials_loaded:true`,
+no password generated/changed or separately written,
+no Kvar/proxy mutation. Actual administrator setup
+and authenticated login **accepted**. No source
+assumption replaces this observed evidence.
+
+**Next source advance:** After reading the exact tagged
+Uptime Kuma 2.5.9 upstream Socket.IO `login`,
+`getMonitorList`, `getMonitor`, `add` and
+`editMonitor` code, implemented separately guarded
+`ansible/kuma-monitors.yml` plus
+`tools/kuma-reconcile-monitors.js`. The playbook
+reads the existing external `kuma-admin.vault.yml`
+through the SAME per-run two-file EE mounts.
+It insists on exact Kvin/wdc2/ARM64/pinned
+image, rootless SQLite/volume/loopback Quadlet,
+and explicit `kuma_monitors_approved=true`.
+It permits **only** `data/kuma-monitors.yml`'s
+one `Wicket Ollama` HTTP GET to
+`http://wicket.arcane.sanctum:11435/healthz`,
+60 seconds, HTTP 200–299, by stable name.
+The native handler authenticates and reads
+current monitors, refuses duplicate names or
+preexisting attached notifications, creates
+or reconciles exactly that monitor, re-reads
+its persisted state, and reports safe metadata
+with no added notification providers.
+Node real-code fake-Socket.IO tests cover
+create/unchanged/update/duplicate/auth failures;
+[full CI #43082780801 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43082780801).
+**Kvin has NOT executed monitor reconciler; no
+Up state or backup/recovery claimed.**
+
+**Next operator command, from Kvin** (one shell chain,
+two separate approved playbooks, one
+Vault configuration):
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+vault_dir="$HOME/.config/sanctum-services/secrets" &&
+nav="$HOME/.local/bin/ansible-navigator" &&
+options=(
+  --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z"
+  --eev "$vault_dir/kuma-admin.vault.yml:$vault_dir/kuma-admin.vault.yml:ro,Z"
+  --senv "ANSIBLE_VAULT_PASSWORD_FILE=$vault_dir/vault.key"
+  --pae false
+) &&
+"$nav" run ansible/kuma-admin-bootstrap.yml "${options[@]}" \
+  -e kuma_admin_bootstrap_approved=true &&
+"$nav" run ansible/kuma-monitors.yml "${options[@]}" \
+  -e kuma_monitors_approved=true
+```
+
+Ask ONLY the two PLAY RECAP lines and
+the bounded `msg` from
+**Report bounded Wicket monitor configuration acceptance**,
+or exact failed task and error. Admin repeat should
+be `changed=0`, account created this run false,
+login verified true. Monitor first run may
+be `changed=1`, configuration persisted;
+**no actual Up accepted yet**. Then test monitor
+unchanged repeat, actual Up in retained Kuma
+(browser via existing SSH tunnel if needed),
+restart/recovery and off-host independent
+backup of data volume and Vault materials.
+No YXORP, Kvar, Maintenance DNS/firewall
+or production cutover.
+
 ## CURRENT — November 11: Kuma administrator CREATED + VERIFIED on native Kvin via Vault; repeat outstanding
 
 **Native acceptance received from Nova:** The approved
