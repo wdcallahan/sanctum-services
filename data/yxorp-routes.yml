@@ -52,6 +52,10 @@ yxorp_routes:
     upstream_host: kvar.outer.sanctum
     upstream_port: 3001
     websocket: true
+    # Match legacy NPM: a redirect containing Kvar :3001 must be emitted
+    # as the same Kvar host with no port, not loopback:80.
+    # Reevaluate this policy when Kuma's backend moves off Kvar.
+    redirect_strip_upstream_port: true
     enabled: false
     provenance: legacy_kuma_on_kvar; change_after_retained_kvin_acceptance
 
