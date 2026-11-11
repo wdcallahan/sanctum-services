@@ -1,5 +1,84 @@
 # Sanctum Services — Roadmap
 
+## Current YXORP milestone — November 10: seven accepted routes; Yarn DNS-direct vs old NPM vhost decision
+
+Kvin stage has **seven
+accepted bounded local HTTP
+virtual hosts**: Yarn,
+Square, Prism, Search,
+interim LinkStack, Kuma
+and Pi-hole. Full browser/
+app state/LAN acceptance
+and actual migration remain
+independent.
+
+**Old Yarn NPM log source
+IP evidence now complete.**
+`ansible/yxorp-kvar-legacy-yarn-source-addresses.yml`
+ran from Kvin against Kvar,
+`ok=5 changed=0 failed=0`.
+The old NPM host 11 access
+log contains six recent
+entries from exactly two
+sources: Kvin
+**192.168.0.192 — three**,
+and **192.168.0.104 — three**.
+One file was readable,
+no tail truncation or
+unclassified entries.
+Maintenance's DNS source
+names .104 as
+`hop.inner.sanctum`
+but its historical future
+reservation and Inner
+address transition make
+current physical identity
+uncertain. A router/NAT
+source could represent
+other clients; this does
+not prove a needed old
+NPM route.
+
+**Name versus proxy is key:**
+Maintenance DNS already
+declares
+`yarn.inner.sanctum` →
+Yarn origin **192.168.1.110**,
+not to Kvar NPM. Kvin
+direct DNS/HTTP tests
+proved that old DNS name
+reaches HTTP200 at Yarn;
+the old NPM vhost itself
+times out because earlier
+Kvar host and NPM container
+could not reach Yarn.
+Thus preserving the old
+DNS hostname does **not**
+require porting the old
+NPM virtual host to Kvin.
+Proposed disposition is to
+retain the direct DNS
+name while excluding the
+redundant old proxy host
+from YXORP reconstruction.
+Nova must authorize this
+policy before removing
+the disabled eighth
+manifest entry. No DNS,
+Kvar, Kvin firewall or
+cutover change was made.
+
+Next step is an explicit
+operator decision, not
+another network probe.
+LinkStack, Kuma and
+Pi-hole still need
+app/data restoration
+on Kvin and
+functional acceptance.
+Kvar retirement remains
+separately gated.
+
 ## Current YXORP milestone — November 10: 7 HTTP routes accepted; legacy Yarn IPs next
 
 **Seven of eight Kvin staged
