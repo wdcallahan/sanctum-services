@@ -27,6 +27,7 @@ on:
       - "tests/test_yxorp_kvin_kuma_redirect_diagnose.py"
       - "tests/test_yxorp_kuma_redirect_policy.py"
       - "tests/test_yxorp_kuma_wire_observe.py"
+      - "tests/test_yxorp_kvin_stage_pihole.py"
       - "tests/test_yxorp_kvin_stage_mounted_config.py"
       - "tests/test_yxorp_config_update_lifecycle.py"
       - "tests/test_yxorp_kvin_yarn_transport_diagnose.py"
@@ -44,6 +45,7 @@ on:
       - "tests/fixtures/verify-yxorp-kvin-dir-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-kuma-stage.py"
       - "tests/fixtures/verify-yxorp-kuma-redirect-diagnose.py"
+      - "tests/fixtures/verify-yxorp-kvin-pihole-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py"
       - "tests/fixtures/verify-yxorp-config-update-lifecycle.py"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
@@ -52,6 +54,7 @@ on:
       - "tools/observe-yxorp-npm-behavior.py"
       - "tools/test-yxorp-http.py"
       - "tools/observe-yxorp-kuma-wire.py"
+      - "tools/observe-yxorp-pihole-wire.py"
       - "tools/inspect-registry-candidates.py"
       - "data/container-image-candidates.yml"
       - "ansible/yxorp-qualify-image.yml"
@@ -97,6 +100,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_kuma_redirect_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kuma_redirect_policy.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kuma_wire_observe.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_pihole.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_mounted_config.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_config_update_lifecycle.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_yarn_transport_diagnose.py'
@@ -130,6 +134,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-kuma-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-kuma-wire-observe.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-pihole-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-mounted-config-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-yarn-transport-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-peer-probe.yml --syntax-check
@@ -146,6 +151,7 @@ jobs:
           python3 tests/fixtures/verify-yxorp-kvin-search-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-dir-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-kuma-stage.py
+          python3 tests/fixtures/verify-yxorp-kvin-pihole-stage.py
           python3 tests/fixtures/verify-yxorp-kuma-redirect-diagnose.py
           python3 tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py
           python3 tests/fixtures/verify-yxorp-config-update-lifecycle.py
