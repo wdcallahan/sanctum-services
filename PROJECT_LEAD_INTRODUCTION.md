@@ -1,5 +1,81 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma native SQLite convergence accepted; shared Vault credential authority selected, admin NOT bootstrapped
+
+**Nova's accepted native results remain unchanged.** The Kvin Kuma
+2.5.9 ARM64 rootless stage passed its HTTP startup with named
+`sanctum-kuma-data` and `127.0.0.1:13001`. A later SQLite
+Quadlet reconciliation passed `ok=9 changed=2 failed=0` and
+the immediate repeat passed `ok=9 changed=0 failed=0`.
+An SSH-tunneled real browser reached the database selection
+and the create-administrator wizard. **No actual administrator,
+monitor, backup/restore, LAN or Kvar cutover is accepted.**
+Do not repeat the already accepted stage and YXORP tests.
+
+**Credential architecture approved by Nova:** Ansible Vault is the
+authority for per-service credentials. One already existing
+external plaintext unlock key belongs to the user at
+`/home/wdc2/.config/sanctum-services/secrets/vault.key`,
+previously documented for Nextcloud's encrypted PostgreSQL
+credential at `.../nextcloud-postgresql.vault.yml`.
+**Do not regenerate or replace that key, or ask Nova to
+supply it to ChatGPT.** Each service may have its own encrypted
+vault variable file with this same key. Ansible uses the desired
+password; rebuilding a service does not create a new identity.
+An unrecognized existing admin must not be reset.
+
+**Source reworked:** `ansible/kuma-admin-bootstrap.yml` now
+loads the external encrypted
+`/home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml`
+containing `vault_kuma_admin_password`.
+The former random password generator and the Kvin-local
+`kuma-admin.json` design have been removed. The separate
+`kuma_admin_bootstrap_approved=true` guard, exact
+Kvin/wdc2/ARM64/source-owned Quadlet and pinned image
+checks, and upstream Kuma 2.5.9 Socket.IO `needSetup`,
+`setup`, `login` protocol remain. Vault data travels
+via Ansible `no_log` task stdin, never in Git,
+command arguments, debug, or a second on-host secret file.
+A repeat verifies login without account changes; an
+unknown preexisting administrator causes failure.
+
+**Important execution-environment boundary:** A first attempt to
+configure `vault_password_file` globally in `ansible.cfg`
+broke source CI and would break unrelated controller
+playbooks without access to Kvin's key. This was corrected.
+Only a vault-aware Navigator run explicitly mounts the
+two exact secret files read-only (`--eev`), passes
+`ANSIBLE_VAULT_PASSWORD_FILE` via `--senv`,
+and disables its playbook artifact (`--pae false`).
+Full source tests and [CI #43076965704
+PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43076965704).
+No native Vault/bootstrap action has been run.
+
+**ONE NEXT OPERATOR ACTION FROM KVIN:** Choose one strong private
+Kuma admin password and create its encrypted Vault variable
+without ever showing the secret in chat, command history,
+or Git. Follow the safe, nonclobbering one-time shell
+command in [docs/runbooks/vault-credentials.md](docs/runbooks/vault-credentials.md).
+The repository command uses the **existing** vault.key.
+Request only “Kuma Vault variable created” or a
+nonsecret error. The encrypted file and key must
+eventually have separately verified off-host backups.
+
+**After that**, run the guarded native admin bootstrap
+twice with the per-run Navigator mounts and
+`-e kuma_admin_bootstrap_approved=true` exactly
+as documented in the same runbook; ask only for the
+two PLAY RECAP lines and the safe bounded message.
+Native bootstrap remains **unexecuted**; changing a
+vaulted password after setup does NOT automatically
+rotate an application credential. An explicit
+authenticated, separately approved rotation mechanism
+still needs source design and testing.
+Continue later to source-owned `Wicket Ollama`
+monitor reconcile and Up observation, independent
+restore, update, rollback, LAN/production acceptance.
+Kvar and existing YXORP remain untouched.
+
 ## CURRENT — November 11: Kuma SQLite no-op verified; administrator bootstrap now automated in source
 
 **Fresh operator evidence:** Nova reconciled the SQLite Quadlet

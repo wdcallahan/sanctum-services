@@ -1,141 +1,88 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
-## November 11 — rootless Kuma and SQLite converged; native administrator bootstrap next
+## November 11 — native Kuma startup and SQLite repeat accepted, Vault administrator next
 
-**Native acceptance:** The Kvin-only, source-owned
-Uptime Kuma 2.5.9 image was independently accepted
-as Linux/ARM64 with offline Node runtime.
-Its rootless Kuma Quadlet uses the exact pinned
-digest, a named `sanctum-kuma-data` volume mounted
-at `/app/data`, `127.0.0.1:13001` host binding,
-and `Environment=UPTIME_KUMA_DB_TYPE=sqlite`.
-Native application stage succeeded with `ok=10
-changed=3 failed=0`; SQLite source reconciliation
-then succeeded `ok=9 changed=2 failed=0`,
-followed immediately by **`ok=9 changed=0 failed=0`**.
-An SSH-tunneled Firefox browser reached both
-the actual database-selection and create-admin
-screens. These are bounded startup/real UI
-observations; no account has been confirmed
-created, no monitor Up, no restart/recovery
-acceptance and no Kvar/DNS/firewall/YXORP changes.
+**Banked Kvin results:** Qualified Linux/ARM64 Uptime Kuma
+2.5.9; first guarded rootless app stage passed
+`ok=10 changed=3 failed=0` with HTTP 302 at
+`127.0.0.1:13001` and named `sanctum-kuma-data`
+mounted at `/app/data`. SQLite configuration
+converged `ok=9 changed=2 failed=0` followed
+by an unchanged repeat `ok=9 changed=0 failed=0`.
+A real SSH-tunneled Firefox browser reached the
+live database setup and admin setup screens.
+Administrator creation, actual monitors, backup,
+restore, LAN and production use remain unproven.
+Kvar and YXORP are unchanged.
 
-### Administrator creation is source-managed, not a manual wizard
+### Administrator credentials — existing Vault authority
 
-Nova asked why creating the administrator had
-been left to browser interaction. It should
-not have been. **Kuma 2.5.9** exposes
-`needSetup`, `setup(username,password,ack)`,
-and `login` over Socket.IO, confirmed directly
-in the tagged upstream server implementation
-and Vue admin setup page. Kuma refuses
-the first-user setup event after a user exists.
+Do **not** complete the administrator wizard or run
+the old random-secret bootstrap; user feedback
+rightly requires reconstructible source-managed
+credential authority. Kvin already has an
+established Ansible Vault password file at
+`/home/wdc2/.config/sanctum-services/secrets/vault.key`
+from the earlier Nextcloud PostgreSQL work. It
+must be **reused, not reset**. The service-specific
+Kuma password belongs in an independently encrypted
+file `kuma-admin.vault.yml` outside the Git checkout.
 
-The separately guarded `ansible/kuma-admin-bootstrap.yml`
-uses these exact events via the `socket.io-client`
-dependency included in the pinned image.
-It runs a temporary Node process **inside**
-the running rootless Kuma container, connecting
-only to container-local `127.0.0.1:3001`.
-It first checks `needSetup`; for an uninitialized
-instance only, creates a random credential and
-uses Kuma's own setup API, then independently
-calls login. On repeat, it verifies that same
-account and makes no changes. If Kuma was
-manually initialized without the owned secret,
-it refuses to override or reset an unknown user.
+Read the exact [Sanctum Vault credentials
+runbook](vault-credentials.md). Its first
+operator command creates the encrypted Kuma
+variable with your chosen password privately,
+without placing the value in history or output
+and without overwriting existing credentials.
+Run it from Kvin and report only its success
+marker or nonsecret failure.
 
-The private credential:
-- Fixed nonsecret username `sanctum-admin`
-- A random password generated with Python's `secrets`
-  library, in `/home/wdc2/.config/sanctum-services/secrets/kuma-admin.json`
-- Secret directory `0700`, file `0600`, created
-  exclusively, never overwritten
-- Sent to a container-local socket process via
-  stdin, not in command arguments, public YAML,
-  CI fixtures, Ansible output or this conversation
-- Must later be backed up **off Kvin**, alongside
-  a proven and independently restorable Kuma
-  `sanctum-kuma-data` volume
+Once the encrypted file exists, the same runbook
+contains the separate explicitly approved
+`ansible/kuma-admin-bootstrap.yml` native
+command using **two read-only, file-only
+Navigator mounts**, a run-local Vault password
+source, and disabled playbook artifacts.
+Kuma's official 2.5.9 Socket.IO events perform
+first-user setup and login verification, with
+all authentication content under `no_log`.
+A repeat must verify existing login with
+`changed=0`; preexisting unknown admin is
+not reset. The password is neither generated
+nor persisted separately by the playbook.
 
-Source contract, real-Node simulated protocol
-and full [CI #43072165068 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43072165068).
-**No native admin operation has yet been run.**
+[Full source CI #43076965704 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43076965704).
+**Native Vault-aware administrator initialization has
+not yet been performed.** An external Vault file
+and its key also require independent, access-controlled
+off-host recovery copies. A Git checkout cannot
+recreate private credential material.
 
-**Next one operator command from Kvin:** explicitly
-authorize admin initialization and immediately
-verify an unchanged repeat, without displaying
-any password or authentication token.
+### Next application qualifications
 
-```bash
-cd ~/src/sanctum-services && git pull &&
-~/.local/bin/ansible-navigator run ansible/kuma-admin-bootstrap.yml \
-  -e kuma_admin_bootstrap_approved=true &&
-~/.local/bin/ansible-navigator run ansible/kuma-admin-bootstrap.yml \
-  -e kuma_admin_bootstrap_approved=true
-```
+After the first account is genuinely created,
+verify browser login via the existing loopback
+SSH tunnel, then implement source-managed,
+idempotent, authenticated monitor reconciliation
+for `Wicket Ollama` using Kuma 2.5.9's
+actual Socket.IO behavior. Verify actual Up,
+repeat/no duplicates, restart and independent
+backup/restore before considering moving
+`kuma.nexus.sanctum` from Kvar to Kvin.
 
-Return only the **two PLAY RECAP** rows and
-the final `msg` dictionary from
-**Report only safe administrator bootstrap acceptance**,
-or a failed task and error. Do not paste
-private task output, secret JSON, cookies or tokens.
-The first run may create the credential and account;
-the second should be `changed=0` and report
-`administrator_login_verified:true`.
+**Password rotation is not yet implemented.**
+Changing `vault_kuma_admin_password` in the
+encrypted file does not make Kuma automatically
+change an established password. That requires a
+separate, safely authenticated and explicitly
+approved application mutation. Existing account
+mismatch fails closed; do not directly edit SQLite.
 
-After native success, the browser's existing SSH
-forward can be used to log in. To retrieve the
-generated credentials **only on Kvin in a private
-terminal**, without embedding the password in
-shell history:
-
-```bash
-python3 - <<'PY'
-import json
-from pathlib import Path
-secret = json.loads(
-    (Path.home() / ".config/sanctum-services/secrets/kuma-admin.json").read_text()
-)
-print("Username:", secret["username"])
-print("Password:", secret["password"])
-PY
-```
-
-Move them to your own password manager and
-arrange an off-host encrypted backup.
-The password will be displayed in that local
-terminal deliberately; **never paste it into
-a chat or Git issue**. Access the existing
-SSH tunnel at `http://127.0.0.1:13001/`
-and verify login/dashboard. Do not create
-the wanted monitors manually.
-
-### Subsequent useful service gates
-
-`data/kuma-monitors.yml` already declares
-`Wicket Ollama`. Select a source-owned
-idempotent Socket.IO monitor reconciler
-against actual Kuma **2.5.9**, including
-the correct admin auth and monitor payload.
-A community wrapper (`uptime-kuma-api2`)
-is a candidate, but its published tests
-stop at 2.5.0; check real 2.5.9 behavior
-before accepting monitor mutations.
-Test the displayed Up state, unchanged
-repeat, no duplicate notifications,
-restart, off-host backup/independent restore,
-version updates and candidate reversal.
-Only after application and proper named
-client acceptance should the incumbent
-Kvar route be retargeted and independently
-accepted. No production cutover yet.
-
-The source-managed Kuma candidate-only reversal
-is `ansible/kuma-stage-remove.yml`, separately
-default-off and validated to preserve the data
-volume and image; its source CI passed but native
-reversal has not yet been exercised.
+Kuma's separately approved candidate reversal is
+source-owned as `ansible/kuma-stage-remove.yml`;
+it preserves the named data volume and cached
+image and has only source, not native, reversal
+acceptance. Kvar production remains unchanged.
 
 ## Project Joule request
 

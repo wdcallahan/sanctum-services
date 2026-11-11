@@ -153,7 +153,36 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — SQLite stage convergence accepted, admin bootstrap source green:**
+  **November 11 — accepted shared Vault credential design (admin still pending):**
+  Nova selected a single established Ansible Vault
+  password file as the unlock authority for independently
+  encrypted, per-service credentials, including Kuma.
+  Existing `/home/wdc2/.config/sanctum-services/secrets/vault.key`
+  and the already documented Nextcloud PostgreSQL
+  encrypted file remain intact; never regenerate the key.
+  Replaced random Kuma admin password generation
+  and Kvin-local JSON with a protected, external
+  `kuma-admin.vault.yml` defining
+  `vault_kuma_admin_password`. The explicit
+  one-time bootstrap keeps native Kuma 2.5.9
+  Socket.IO setup/login and fails closed for
+  unknown existing users.
+
+  The EE is scoped to two explicitly mounted
+  private files for secret-consuming runs; global
+  vault defaults broke unrelated CI and were
+  rejected. CI #43076965704 passed full
+  nonsecret source checks. Administrator is
+  **not natively created**; first operator
+  action is the one-time nonclobbering
+  [private Vault file creation](runbooks/vault-credentials.md),
+  then the guarded admin bootstrap and a no-change
+  repeat. Changing an encrypted variable alone
+  is not sufficient for password rotation; explicit
+  authenticated rotation remains separate work.
+  No Kvar, YXORP, DNS or firewall change.
+
+  **Historical SQLite and first administrator planning:**
   Nova's Kvin SQLite reconciliation finished `ok=9 changed=2
   failed=0`; the immediately repeated guarded Kuma run
   finished **`ok=9 changed=0 failed=0`**. The actual
