@@ -1,5 +1,11 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Mace Kuma dashboard monitor UP at 100%; live browser Socket.IO still to verify
+
+**New user-visible browser acceptance:** From the normal Mace Firefox session already authenticated through Kvin YXORP at `http://kuma.nexus.sanctum`, Nova confirms the **`Wicket Ollama` monitor is visible and reports Up with 100% uptime**. Combined with Mace name resolution to `192.168.0.192` and the successful `sanctum-admin` login, this accepts **named-client DNS, real proxy/browser authentication, and meaningful monitor state being displayed**. The 100% displayed figure is the app's uptime metric, **not proof that the Socket.IO WebSocket upgrade occurred or stays connected**; require an observed client-side WebSocket exchange for that specific remaining gate. Preserve Kvar NPM as rollback; no source or live infrastructure mutation requested by this browser observation.
+
+**Next one browser-only observation:** In Mace Firefox DevTools Network, inspect WebSocket requests during a Kuma page reload for `socket.io` traffic/101 Switching Protocols and continuing frames (without sharing tokens, frames, or credentials). If Socket.IO remains polling or no 101 appears, classify separately rather than assuming Nginx failure. Then independently check other named application routes and reconcile Maintenance main with the successful DNS promotion.
+
 ## CURRENT — November 11: Mace named client and Kuma browser login ACCEPTED; Socket.IO/UI monitor acceptance next
 
 **Operator-confirmed live browser evidence:** On `mace`, `getent ahostsv4 kuma.nexus.sanctum` returned Kvin's live YXORP destination **`192.168.0.192`** (STREAM/DGRAM/RAW); ordinary Firefox reached the Uptime Kuma login and Nova **logged in successfully** using the existing application administrator. **Real Mace DNS resolution, named HTTP browser reachability and Kuma authenticated login are accepted.** User has not yet reported whether `Wicket Ollama` monitor is visible/Up in this browser or whether the UI maintains authenticated Socket.IO/WebSocket updates. Do not silently graduate browser login into WebSocket acceptance.
