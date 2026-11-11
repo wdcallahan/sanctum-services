@@ -1,5 +1,136 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11 — Peanut HTTP80 route accepted; exact scoped DNS preview next
+
+Peanut independently tested the live Kvin production
+listener. To `192.168.0.192` it received
+Kuma HTTP302 and Yarn HTTP200;
+`192.168.1.192` failed both as transport
+errors. Peanut's `kvin.outer` name also
+resolves to `192.168.0.192`.
+Native peer play `ok=5 changed=0 failed=0`.
+**This proves Arcane client HTTP reachability,
+not that Nexus DNS already points to Kvin.**
+
+An independently governed
+**Maintenance six-record YXORP DNS branch**
+`yxorp-dns-release-20261111` at
+exact **`0858020065777070bf6e9a36b0d0f3056f7f5334`**
+([source](https://github.com/wdcallahan/sanctum-maintenance/commit/0858020065777070bf6e9a36b0d0f3056f7f5334))
+prepares only five named Nexus A records
+and `*.nexus` to `192.168.0.192`.
+The original old-NPM administration
+`yxorp.nexus` remains Kvar.
+All direct database names, hosts,
+Yarn origin, NS/SOA policy fields,
+and PTR records are unchanged except
+the deliberate zone SOA serial
+**`2026111101`**. The source
+does NOT alter the Maintenance main
+branch or the active Kvin scheduling
+checkout while the broad core-renumber
+candidate still owns different assumptions.
+The candidate has
+[GREEN dedicated CI #43115349084](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43115349084)
+with real BIND `named-checkzone` and
+exact-six-record projection tests.
+**Not published yet.**
+
+### Next operator step: exact Maintenance DNS candidate PREVIEW only
+
+On Kvin, stage the precise source commit
+under ignored `artifacts/`. The active
+Maintenance controller checkout remains
+unchanged.
+
+```bash
+(
+  set -euo pipefail
+  cd ~/src/sanctum-maintenance
+  revision=0858020065777070bf6e9a36b0d0f3056f7f5334
+  packet=artifacts/yxorp-dns-release-0858020
+  git fetch origin yxorp-dns-release-20261111
+  git cat-file -e "$revision^{commit}"
+  test ! -e "$packet"
+  mkdir -p "$packet"
+  git archive "$revision" | tar -xf - -C "$packet"
+)
+```
+
+Preview the same existing DNS
+owner role on active Peanut, with the
+release-specific preview authorization
+but **no live publication authorization**:
+
+```bash
+cd ~/src/sanctum-maintenance &&
+revision=0858020065777070bf6e9a36b0d0f3056f7f5334 &&
+packet=artifacts/yxorp-dns-release-0858020 &&
+tools/run-ansible-logged run \
+  "$packet/playbooks/publish-yxorp-nexus-dns.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit peanut.arcane.sanctum \
+  --check --diff \
+  -e sanctum_publish_dns_zones=true \
+  -e sanctum_yxorp_dns_preview_approved=true
+```
+
+The owner publisher reads both
+**actually served SOA serials**,
+checks this revision's proposed
+serial is newer than each, reads
+installed zone-file metadata,
+renders both candidate zones,
+and refuses unsafe serials.
+No BIND zone write, install, reload,
+firewall, proxy, Kvar or application
+mutation occurs in check mode.
+The preview has a bounded
+`Report bounded proxy DNS candidate
+scope and publication gate` message:
+`check_mode:true`,
+`candidate_serial:2026111101`,
+`served_forward_serial_before`,
+`served_reverse_serial_before`,
+`forward_zone_file_would_change`,
+`reverse_zone_file_would_change`,
+`proxy_target_ipv4:192.168.0.192`,
+`changed_proxy_alias_count:6`,
+`published_change_accepted:false`.
+Full `--diff` is retained privately
+in the logged transcript; if it shows
+unexpected forward/reverse record or
+policy changes beyond the six A targets
+and expected serial, STOP and adjust
+candidate. A reverse SOA serial update
+may appear even though PTRs stay equal.
+Do not treat source-only BIND validation
+as native preview acceptance.
+
+After preview succeeds and diff is
+reviewed, a **separately gated LIVE**
+owner publication will run the same
+source packet with
+`sanctum_yxorp_dns_publish_approved=true`,
+not check-mode preview permission.
+It first validates both zone files with
+native `named-checkzone`, retains
+backups, reloads each zone, verifies
+served serials, and verifies six
+actual authoritative A answers on
+Peanut; old `yxorp.nexus` must still
+resolve to Kvar. Afterward we verify
+named browser/WebSocket client behavior
+on an external machine and keep old
+Kvar NPM for rollback until accepted.
+
+The final source-state step will
+reconcile this reviewed DNS promotion
+back to Maintenance main **without
+undoing** the separate broad network
+candidate's Kvar proxy-alias assumptions.
+No merging before native acceptance.
+
 ## November 11 — Kvin firewall repeat empty, peer-address distinction before DNS
 
 Native `check_mode:false` owner report

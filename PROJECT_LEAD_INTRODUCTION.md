@@ -1,5 +1,114 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Peanut independently reaches Kvin YXORP via 192.168.0.192; six-record DNS release preview NEXT
+
+**Native Peer HTTP acceptance (banked):**
+Nova ran Services `ansible/yxorp-kvin-peer-http.yml` on
+actual Peanut: **`ok=5 changed=0 unreachable=0 failed=0`**.
+`observer:peanut.arcane.sanctum`,
+`proven_non_kvin_http_reachability:true`.
+To `192.168.0.192:80`, real
+`Host:kuma.nexus.sanctum` returned **HTTP302**
+and `Host:yarn.nexus.sanctum` returned
+**HTTP200**; `qualified_http:true`.
+To the separately assumed `192.168.1.192`,
+both returned `transport_error` (not an HTTP
+response), `qualified_http:false`.
+Peanut's real `kvin.outer.sanctum`
+DNS resolved to **`192.168.0.192`**.
+`configuration_changed:false`,
+`kvar_or_dns_or_firewall_changed:false`.
+The Kvin production host and TCP80 are
+**independently reachable from the Arcane peer**.
+The old Peanut health-check assumption about
+`192.168.1.192` is stale for this use
+and must not silently redirect the proxy
+cutover to the unreachable address.
+This does NOT qualify all client subnets,
+real Nexus DNS, login or WebSockets.
+
+**DNS release preparation owned by Maintenance:**
+Maintenance's old broad core renumber candidate
+still treats these proxy aliases as Kvar-owned.
+To avoid modifying main or conflating this
+proxy-only release with that unfinished
+core-network transaction, created exact
+review branch `yxorp-dns-release-20261111`
+at **commit
+`0858020065777070bf6e9a36b0d0f3056f7f5334`**
+([source](https://github.com/wdcallahan/sanctum-maintenance/commit/0858020065777070bf6e9a36b0d0f3056f7f5334)).
+This changes **only** five explicit records
+`dir.nexus`, `joule.nexus`,
+`kuma.nexus`, `pihole.nexus`,
+`search.nexus`, plus `*.nexus`
+from Kvar `192.168.0.7` to
+Kvin `192.168.0.192`. Source SOA
+serial is proposed **`2026111101`**;
+publisher refuses if it is not
+newer than BOTH real served zone serials.
+`yxorp.nexus` old NPM admin remains at
+Kvar; all direct DB aliases, host, Yarn,
+PTR records and all other DNS authority
+stay unchanged. The candidate branch
+source has a separately gated
+`playbooks/publish-yxorp-nexus-dns.yml`
+that reuses Maintenance's original
+SOA-gated, BIND-validated,
+backup-preserving, zone-reload publisher.
+Preview requires `--check --diff` plus
+`sanctum_publish_dns_zones=true` and
+`sanctum_yxorp_dns_preview_approved=true`.
+A **different** `sanctum_yxorp_dns_publish_approved=true`
+is required for future live publication.
+**Dedicated CI #43115349084 PASSED**
+(BIND `named-checkzone` on both real
+rendered source variants, exact-six and
+nonproxy/PTR preservation tests and
+Ansible syntax).
+No source/main worktree update, no
+Peanut zone publication or DNS client
+change yet.
+
+**ONE next Kvin operator step:**
+Fetch the exact candidate branch revision into
+ignored `~/src/sanctum-maintenance/artifacts/`
+without altering active Maintenance main,
+then run exact staged candidate DNS
+`--check --diff` preview against Peanut,
+using the existing owner
+`tools/run-ansible-logged`.
+Full commands and acceptance in
+[docs/runbooks/yxorp-production-cutover.md](docs/runbooks/yxorp-production-cutover.md).
+Return only `PLAY RECAP`,
+`Report bounded proxy DNS candidate scope and publication gate`
+msg, and any failed task / unexpected
+zone-file diff. If real served serial
+is not below 2026111101 or installed
+zone content differs beyond six
+desired A aliases and expected SOA serial
+bump, HOLD and repair the source candidate.
+Do NOT run live DNS publication before
+native preview passes.
+After owner DNS publication: verify actual
+named client answers, browser login,
+WebSocket, and fallback on old Kvar NPM.
+On full native success, reconcile source
+candidate back to Maintenance main and
+its independent core-renumber assumptions,
+rather than leaving live DNS with an
+unreconciled main source-of-truth.
+
+**Already native accepted:** Kvin rootful
+production YXORP 8 routes, no-change
+repeat `ok=31 changed=0 failed=0`;
+Maintenance TCP80 live apply and
+empty runtime+permanent diff on repeat;
+new Kvin Kuma Vault admin, actual Wicket
+Up and isolated backup/restore. Independent
+two-bear Kvin+Peanut design is not new.
+Off-host Kuma data+Vault independent
+recovery still open.
+
 ## CURRENT — November 11: owner Kvin TCP80 firewall repeat has EMPTY diff; independent Peanut LAN HTTP test NEXT
 
 **Native Maintenance firewall report (subsequent LIVE-repeat):**

@@ -30,6 +30,43 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — Peanut independent Kvin HTTP80 ACCEPTED; six-name Nexus DNS release source candidate ready:**
+Native Peanut `ansible/yxorp-kvin-peer-http.yml`
+`ok=5 changed=0 failed=0`:
+Kvin `192.168.0.192:80` returned
+Kuma HTTP302 and Yarn HTTP200.
+The alternate `192.168.1.192:80`
+returned only `transport_error` for
+both. Peanut really resolves
+`kvin.outer.sanctum` to
+`192.168.0.192`. This closes
+independent peer HTTP route and selects
+the observed DNS target, **not**
+named Nexus/browser/Socket.IO acceptance.
+
+Maintenance owns a **separate source
+branch**, `yxorp-dns-release-20261111`,
+exact commit `0858020065777070bf6e9a36b0d0f3056f7f5334`,
+rather than editing currently active
+main controller/core-renumber candidate.
+It changes exactly the five explicit
+`dir/joule/kuma/pihole/search.nexus`
+records and `*.nexus` to Kvin
+`192.168.0.192`, proposes new
+SOA `2026111101`, preserves
+`yxorp.nexus` old Kvar NPM, DB,
+all other A and PTR. Uses original
+Maintenance BIND validated/backup/
+serial-protected zone publisher with
+separately gated preview/live modes.
+[Dedicated source CI #43115349084
+PASSED](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43115349084).
+Native owner **preview**, LIVE publication,
+real named client and merge to
+Maintenance main are **not yet accepted**.
+Do not conflate this with broad old
+core-renumber candidate assumptions.
+
 **November 11 — owner Kvin TCP80 policy repeat has EMPTY runtime/permanent diff:**
 Nova's supplied safe task report
 `check_mode:false` and
