@@ -153,7 +153,24 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 Kuma image-only source checkpoint:**
+  **November 11 — native image gate ACCEPTED, staging source green:**
+  Nova's corrected Kvin run passed `ok=8 changed=0 failed=0
+  skipped=1`, with actual Linux/ARM64 image inspection and
+  disposable offline Node execution. No application or volume
+  exists because of that image-only step. The tested 2.5.9
+  digest is now pinned in `ansible/group_vars/kuma.yml`;
+  staging still requires separate `kuma_stage_approved=true`
+  authorization. The rootless Quadlet role uses its generator
+  `[Install]` (not unsupported `systemctl enable`), and a new
+  default-off, volume-preserving candidate reversal is source-owned.
+  [Installation source CI #43064138846 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064138846);
+  [reversal source CI #43064602595 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064602595).
+  **Next:** run the one guarded, loopback-only Kuma stage
+  command in the [runbook](runbooks/kuma-monitoring.md),
+  then qualify useful monitor state, persistence/recovery,
+  repeat, and actual clients before any upstream cutover.
+
+  **Historical image qualification preparation (now superseded):**
   Existing `data/container-image-candidates.yml`
   records an explicit Linux/ARM64 Uptime Kuma
   2.5.9 digest marked **registry_only**.
@@ -177,16 +194,10 @@ unnecessary raw content private.
   Corrected the playbook and added real-Ansible
   positive/negative metadata regression tests;
   [CI #43059304269 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43059304269).
-  The cached digest should avoid another pull
-  on the **same image-only operator command**
-  in the [Kuma runbook](runbooks/kuma-monitoring.md).
-  Node has NOT been natively executed; the image
-  remains unqualified until that native retry.
-  Do not pin/deploy the application
-  until Kvin confirms the image.
-  Next finish actual UI, monitor,
-  persistence/recovery and named
-  client acceptance.
+  The corrected Kvin retry subsequently **passed**
+  native ARM64 and Node runtime qualification as
+  recorded above. That evidence is retained for
+  chronology, not an instruction to rerun qualification.
 
 - **SS-APPS-2 — [open] LinkStack with actual directory
   data.** The existing rootless Kvar

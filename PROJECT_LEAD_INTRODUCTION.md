@@ -1,5 +1,55 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: native Kuma ARM64 image QUALIFIED; pinned loopback candidate + safe reversal CI green
+
+**Native Kvin image-only acceptance supplied by Nova:** The corrected
+`ansible/kuma-qualify-image.yml` completed **`ok=8 changed=0
+unreachable=0 failed=0 skipped=1`**. Its bounded `msg` confirms
+image `docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9`
+(2.5.9), Linux ARM64, and real disposable offline Node execution.
+The existing rootless image cache was reused; **no Kuma app,
+volume, Quadlet, monitor, host/network or production changes**.
+This closes the image-only qualification gate, not SS-APPS-1.
+
+**Source prepared for the first retained Kuma app stage:** The exact
+natively qualified digest is now pinned in `ansible/group_vars/kuma.yml`.
+`ansible/kuma.yml` still requires **explicit
+`kuma_stage_approved=true`**; the default is false, and the role
+insists on Kvin/aarch64, rootless user execution, loopback
+`127.0.0.1:13001`, named `sanctum-kuma-data` Podman volume,
+and exact image digest. It creates/stores app state and a
+user Quadlet only when separately authorized, and asserts
+an HTTP 200 or 302 from localhost. Fixed an existing issue:
+Quadlet-generated units are enabled by their own `[Install]`
+`WantedBy`, not `systemctl enable`. [Pin and stage
+CI #43064138846 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43064138846).
+
+**Reversal ready before installation:** New
+`ansible/kuma-stage-remove.yml` is explicitly default-off
+(`kuma_stage_remove_approved=true`), checks exact Kvin
+owner/unit/Quadlet contents, stops and removes only the
+Kuma user Quadlet/service, and **preserves the named data
+volume and image**. It never changes YXORP, Kvar, DNS or
+firewalld. [Source CI #43064602595 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43064602595).
+Reversal has NOT yet been executed on Kvin.
+
+**One next operator action (from Kvin; explicitly authorizes
+loopback application staging, NOT production):**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kuma.yml \
+  -e kuma_stage_approved=true
+```
+Ask only for the native `PLAY RECAP` and bounded `msg`
+from **Report bounded loopback Kuma candidate staging
+acceptance**, or failed task/error. A successful stage
+gains only a local Kuma HTTP endpoint and data volume:
+administrator bootstrap, actual wanted `Wicket Ollama`
+monitor Up, no-change repeat, backup/restore, upgrade,
+removal proof, named YXORP/LAN use and production cutover
+remain separate gates. Do not retarget the existing
+`kuma.nexus` route or stop Kvar.
+
 ## CURRENT — November 11: Kuma image cached on Kvin; Podman Id assertion corrected, native retry next
 
 Nova's first native `ansible/kuma-qualify-image.yml` run on Kvin

@@ -1,66 +1,73 @@
-# Uptime Kuma — declared monitors and future reconciliation
+# Uptime Kuma — retained monitors and source-managed recovery
 
-## November 11 — next native action: image qualification only
+## November 11 — Linux ARM64 image qualified; loopback staging source ready
 
-The commissioned proxy rebuild has passed initial native Kvin-local
-HTTP acceptance for **all eight routes**. The first actual Kvar-hosted
-application migration is a clean retained **Kuma 2** on Kvin.
+**Accepted native evidence:** Kvin's corrected image-only
+qualification finished `ok=8 changed=0 failed=0 skipped=1`.
+The rootless cached Uptime Kuma **2.5.9 Linux ARM64** digest
+passed actual Podman inspect and a disposable offline,
+read-only `node --version` execution. No application,
+service, data volume or network change was made by
+qualification.
 
-The repository already declares a version-specific, registry-discovered
-**Linux ARM64 Uptime Kuma 2.5.9** digest in
-`data/container-image-candidates.yml`:
-`docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9`.
-That entry is **not native accepted** or an authorization to
-install the application. The source-managed
-`ansible/kuma-qualify-image.yml` requires exact Kvin/aarch64,
-explicit `kuma_image_qualification_approved=true`,
-the declared digest/tag and `kuma_stage_approved=false`.
-It looks for the image in **wdc2's rootless Podman store**,
-pulls the exact digest if absent, inspects Linux/arm64
-metadata, and runs only `node --version` in a disposable
-rootless, read-only, network-disabled container.
-No Kuma app, volume, port, Quadlet, monitor, DNS, firewall,
-YXORP route or Kvar service is touched. A successful
-image qualification proves image and runtime only.
+The exact qualified digest is pinned in
+`ansible/group_vars/kuma.yml`, not a mutable `:2` tag.
+[Staging source CI #43064138846 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064138846).
+The rootless Quadlet will use a local `sanctum-kuma-data`
+volume mounted at `/app/data`; it is local persistent storage,
+not a remote share without reliable SQLite locking.
+It publishes only `127.0.0.1:13001` to the host from
+container port `3001`. The user-systemd generated service
+is started via the ordinary manager, with boot linkage
+handled by Quadlet's own `[Install] WantedBy=default.target`.
+No Kvar, YXORP, DNS, firewall or client publication is changed.
 
-**November 11 native checkpoint:** First Kvin run:
-`ok=5 changed=1 failed=1` — the exact image was downloaded,
-and the single-image, Linux and ARM64 checks passed.
-The playbook then incorrectly required `sha256:` on Podman's
-bare hexadecimal `Id` (distinct from its prefixed `Digest`).
-The runtime check did not execute, so this is NOT yet
-native image acceptance. The assertion has been corrected,
-and a new real-Ansible metadata regression checks both valid and
-deliberately invalid inspect data. [Corrected full source
-CI #43059304269 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43059304269).
-No application, volume, service, network or Kvar changes occurred.
-
-To resume the image-only qualification on Kvin, the same
-playbook will reuse the cached image if present:
+**Next operator command, from Kvin.** This is the **first
+actual application installation**, which creates a retained
+named volume, a rootless Quadlet and running candidate.
+It requires explicit stage approval supplied only on this
+command (default remains off):
 
 ```bash
 cd ~/src/sanctum-services && git pull &&
-~/.local/bin/ansible-navigator run ansible/kuma-qualify-image.yml \
-  -e kuma_image_qualification_approved=true
+~/.local/bin/ansible-navigator run ansible/kuma.yml \
+  -e kuma_stage_approved=true
 ```
 
-Return ONLY the single Kvin `PLAY RECAP` line and
-`msg` from **“Report bounded image-only qualification metadata”**,
-or the failed task/error. Don't share the full pull log.
+Return only the Kvin `PLAY RECAP` and the `msg` dictionary
+from **Report bounded loopback Kuma candidate staging
+acceptance**, or failed task/error. HTTP 200/302 on the
+Kvin loopback endpoint means basic application startup,
+not administrator/session, monitor, persistence, recovery
+or named client acceptance. The old Kvar proof-of-concept
+database need not be migrated, but the NEW retained volume
+is valuable state once configured.
 
-After **native** acceptance, pin the tested digest in
-`ansible/group_vars/kuma.yml` and explicitly stage the
-existing source-owned **rootless loopback-only** Kuma
-candidate at `127.0.0.1:13001`; do not retarget
-`kuma.nexus.sanctum` yet. Select a version-qualified
-Socket.IO monitor-reconciliation mechanism, verify
-actual Up for `Wicket Ollama`, persistence, no-op
-repeat and recovery before Kvar upstream migration.
-Kvar PoC database migration remains unnecessary,
-but retained Kuma state still requires recoverable backup.
+**Source-managed reversal, separately approved only when needed:**
+`ansible/kuma-stage-remove.yml` has explicit
+`kuma_stage_remove_approved=true` protection, validates
+the exact owned user Quadlet, stops/removes the candidate
+service and generator input, and **does not delete the
+persistent data volume or image cache**. Its [source
+CI #43064602595 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064602595);
+native reversal has not yet been exercised. It is not
+a production cutover or a data-purge procedure. When
+explicitly authorized to reverse a candidate, run:
 
-**Status:** Desired monitor declarations only. No service creation, monitor
-mutation, login or live endpoint verification has been performed.
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kuma-stage-remove.yml \
+  -e kuma_stage_remove_approved=true
+```
+
+**Next application acceptance after staging:** version-qualified
+authenticated monitor reconciliation, an actual UI/login,
+`Wicket Ollama` genuinely Up as observed in the retained
+Kuma, repeat without duplicate monitors/alerts, restart,
+independent backup and restore, update/reversal workflow.
+Only then retarget `kuma.nexus.sanctum` away from Kvar and
+qualify real clients with the proper infrastructure owners.
+The old Kvar installation and production route stay untouched.
 
 ## Project Joule request
 
