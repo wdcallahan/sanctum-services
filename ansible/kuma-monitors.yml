@@ -115,6 +115,37 @@
           - not ((kuma_monitor_result.stdout | from_json).actual_up_accepted | bool)
         fail_msg: Kuma persisted monitor contract did not verify.
 
+    - name: Read the retained Kuma heartbeat for actual Wicket Up status
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - sanctum-kuma
+          - node
+          - -e
+          - "{{ kuma_monitor_js }}"
+          - observe
+        stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password, 'monitor': kuma_monitors_desired[0]} | to_json }}"
+        stdin_add_newline: false
+      register: kuma_monitor_heartbeat
+      changed_when: false
+      no_log: true
+
+    - name: Assert the bounded read-only heartbeat contract
+      ansible.builtin.assert:
+        that:
+          - (kuma_monitor_heartbeat.stdout | from_json).monitor_id | int == 1
+          - (kuma_monitor_heartbeat.stdout | from_json).monitor_name == 'Wicket Ollama'
+          - (kuma_monitor_heartbeat.stdout | from_json).persisted_configuration_verified | bool
+          - (kuma_monitor_heartbeat.stdout | from_json).latest_status_in_kuma in ['Up', 'Down', 'Pending', 'Maintenance', 'Unknown']
+          - (kuma_monitor_heartbeat.stdout | from_json).actual_up_accepted is boolean
+          - not ((kuma_monitor_heartbeat.stdout | from_json).changed | bool)
+          - not ((kuma_monitor_heartbeat.stdout | from_json).notifications_attached | bool)
+        fail_msg: Native Kuma heartbeat observation did not return bounded safe state.
+
     - name: Report bounded Wicket monitor configuration acceptance
       ansible.builtin.debug:
         msg:
@@ -125,7 +156,11 @@
           monitor_id: "{{ (kuma_monitor_result.stdout | from_json).monitor_id | int }}"
           configuration_persisted_and_verified: true
           notifications_attached: false
-          actual_up_accepted: false
+          latest_status_in_kuma: "{{ (kuma_monitor_heartbeat.stdout | from_json).latest_status_in_kuma }}"
+          heartbeat_records_last_hour: "{{ (kuma_monitor_heartbeat.stdout | from_json).heartbeat_records_last_hour | int }}"
+          heartbeat_age_seconds: "{{ (kuma_monitor_heartbeat.stdout | from_json).heartbeat_age_seconds }}"
+          heartbeat_recent_within_180_seconds: "{{ (kuma_monitor_heartbeat.stdout | from_json).heartbeat_recent_within_180_seconds | bool }}"
+          actual_up_accepted: "{{ (kuma_monitor_heartbeat.stdout | from_json).actual_up_accepted | bool }}"
           backup_restore_accepted: false
           named_client_and_production_accepted: false
-          next_gate: repeat with changed zero, then verify actual Up in Kuma and independent backup/restore
+          next_gate: accept actual Up if recent heartbeat, then independently verify backup/restore and named client access
