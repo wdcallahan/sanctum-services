@@ -50,12 +50,11 @@ function eventAck(event, ...args) {
     });
 }
 
-async function credentialsFromStdin() {
-    const parts = [];
-    for await (const chunk of process.stdin) {
-        parts.push(chunk);
-    }
-    const raw = Buffer.concat(parts).toString("utf8");
+function credentialsFromStdin() {
+    // Ansible sends one JSON object through the process's stdin, not argv.
+    // Synchronous fd-0 read has a deterministic EOF under podman exec -i
+    // and under the source-only child_process simulation.
+    const raw = require("node:fs").readFileSync(0, "utf8");
     const result = JSON.parse(raw);
     if (result.username !== "sanctum-admin"
         || typeof result.password !== "string"
