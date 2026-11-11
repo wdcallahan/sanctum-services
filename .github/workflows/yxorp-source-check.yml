@@ -25,6 +25,7 @@ on:
       - "tests/test_yxorp_kvin_stage_dir.py"
       - "tests/test_yxorp_kvin_stage_kuma.py"
       - "tests/test_yxorp_kvin_kuma_redirect_diagnose.py"
+      - "tests/test_yxorp_kuma_redirect_policy.py"
       - "tests/test_yxorp_kvin_stage_mounted_config.py"
       - "tests/test_yxorp_config_update_lifecycle.py"
       - "tests/test_yxorp_kvin_yarn_transport_diagnose.py"
@@ -92,6 +93,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_dir.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_kuma.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_kuma_redirect_diagnose.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kuma_redirect_policy.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_mounted_config.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_config_update_lifecycle.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_yarn_transport_diagnose.py'
