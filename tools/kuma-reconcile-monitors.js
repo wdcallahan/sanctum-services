@@ -2,7 +2,8 @@
 /* Uptime Kuma 2.5.9 Socket.IO, retained Kvin only. No direct SQLite edits. */
 const fs=require("node:fs");
 const {io}=require("socket.io-client");
-if(process.argv[1]!=="reconcile") process.exit(2);
+const mode=process.argv[1];
+if(!["reconcile","observe"].includes(mode)) process.exit(2);
 const socket=io("http://127.0.0.1:3001",{transports:["websocket"],reconnection:false,timeout:8000});
 const ack=(event,...args)=>new Promise((resolve,reject)=>socket.timeout(25000).emit(event,...args,(err,res)=>err?reject(new Error("ack_timeout")):resolve(res)));
 const connected=()=>new Promise((resolve,reject)=>{
@@ -62,6 +63,32 @@ async function main(){
   const p=input();await connected();
   const login=await ack("login",{username:p.username,password:p.password});
   if(!login?.ok)throw new Error("login_failed");
+  if(mode==="observe"){
+    // Kuma 2.5.9's own persisted heartbeat API; no synthetic curl
+    // and no setup/add/edit/pause/resume events in this branch.
+    const saved=await getMonitor(1);
+    if(!matches(saved))throw new Error("saved_mismatch");
+    noNotifications(saved);
+    const beats=await ack("getMonitorBeats",1,1);
+    if(!beats?.ok||!Array.isArray(beats.data))throw new Error("heartbeat_fetch_failed");
+    const last=beats.data.length?beats.data[beats.data.length-1]:null;
+    const code=last?Number(last.status):null;
+    const rawTime=typeof last?.time==="string"?last.time:"";
+    const normalized=rawTime.replace(" ","T");
+    const timeMs=/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d/.test(normalized)?
+      Date.parse(/(?:Z|[+-]\\d\\d:\\d\\d)$/.test(normalized)?normalized:normalized+"Z"):NaN;
+    const ageSeconds=Number.isFinite(timeMs)?Math.floor((Date.now()-timeMs)/1000):null;
+    const recent=ageSeconds!==null&&ageSeconds>=-120&&ageSeconds<=180;
+    const status=code===1?"Up":code===0?"Down":code===2?"Pending":code===3?"Maintenance":"Unknown";
+    process.stdout.write(JSON.stringify({
+      monitor_id:1,monitor_name:expected.name,persisted_configuration_verified:true,
+      latest_status_in_kuma:status,heartbeat_records_last_hour:beats.data.length,
+      heartbeat_age_seconds:ageSeconds,heartbeat_recent_within_180_seconds:recent,
+      actual_up_accepted:recent&&code===1,
+      notifications_attached:false,changed:false,
+    })+"\\n");
+    return;
+  }
   const list=(await getList()).filter(m=>m?.name===expected.name);
   if(list.length>1)throw new Error("duplicate_monitor_refused");
   let id,action;
@@ -92,7 +119,7 @@ main().catch(e=>{
   const errors=new Set(["credentials_invalid","manifest_invalid","connection_timeout",
     "connection_error","ack_timeout","list_timeout","list_ack_failed","list_invalid",
     "login_failed","duplicate_monitor_refused","existing_notification_refused",
-    "monitor_read_failed","add_failed","edit_failed","saved_mismatch"]);
+    "monitor_read_failed","add_failed","edit_failed","saved_mismatch","heartbeat_fetch_failed"]);
   process.stderr.write("Kuma monitor operation: "+(errors.has(e.message)?e.message:"unclassified")+"\n");
   process.exitCode=1;
 }).finally(()=>socket.disconnect());
