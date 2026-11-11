@@ -1,80 +1,70 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: 6/8 routes initially HTTP accepted; Pi-hole seventh
+## Current YXORP milestone — November 10: seven initial HTTP routes accepted; old Yarn alias review
 
-**Kvin rootful YXORP now has six
-of eight declared names accepted
-for their limited initial local
-HTTP check**: Yarn, Square,
-Prism, Search, interim LinkStack
-and **interim Kuma**.
+**Kvin YXORP has now tested and accepted
+seven of eight declared route names at
+the bounded anonymous local HTTP level**:
+Yarn, Square, Prism, Search, interim
+LinkStack, interim Kuma, and **interim
+Pi-hole**. The seven-route stage
+reconciliation passed `ok=46
+changed=3 failed=0` and Pi-hole's
+read-only wire probe `ok=4 changed=0
+failed=0`. Its `/` response was
+HTTP404 across direct Kvar UI,
+incumbent Kvar NPM, and candidate
+Kvin; no redirect at any path.
+`/admin/` was HTTP302 across
+all three, and original raw
+relative Location headers were
+exactly equal. Candidate/incumbent
+content-type and status parity
+were true on both paths.
 
-Kuma's apparent redirect mismatch
-was **caused by the observer**.
-The previous Ansible URI test
-compared its relative `Location`
-header after converting it to an
-absolute URL using each distinct
-request address. The newest
-native Python raw-wire header
-check on Kvin completed
-`ok=7 changed=0 failed=0`
-and reported direct Kuma,
-incumbent Kvar NPM and
-candidate Kvin all **HTTP302,
-relative redirects, with
-exact full wire Location
-equality**. It also confirmed
-published and container-mounted
-configuration equality. The
-Kuma-only `proxy_redirect`
-workaround proved unnecessary
-and has been removed from the
-source manifest and template.
-The existing stage still has
-the old rule until next native
-stage reconcile. Full Kuma
-WebSockets/sessions/monitors
-remain unaccepted.
+**Only old `yarn.inner.sanctum`
+remains unqualified**. Its existing
+Kvar NPM path to `192.168.1.110:80`
+previously timed out; the new
+`yarn.nexus.sanctum` is a separately
+requested and accepted frontend.
+Do not enable or retire the old
+name merely to make the inventory
+8/8. Its consumer/use and old
+route behavior need evaluation.
+A new read-only guarded observer
+`ansible/yxorp-kvin-legacy-yarn-observe.yml`
+compares the old origin IP and
+hostname, legacy route through
+current NPM, and known new
+Kvin-stage route as control,
+using safe bounded HTTP status
+and outcome classes. It does not
+activate that route or change
+Kvar, DNS or firewalld.
 
-**Seventh stage candidate:**
-Pi-hole `pihole.nexus.sanctum`
-→ old **Kvar UI :82**,
-selected using new default-off
-`yxorp_stage_pihole_approved`
-alongside all six existing stage
-routes. It uses a **raw-wire**
-three-path observer to compare
-both `/` and `/admin/`
-with direct old Kvar backend,
-incumbent NPM and local Kvin
-stage. Status, MIME equality
-and exact redirect equality
-are reported without raw HTTP
-values. The historical root
-HTTP404 does not imply that
-Pi-hole UI is unavailable.
-Stage selection does NOT move
-the Pi-hole application,
-resolver databases or DNS
-blocking from Kvar to Kvin.
+**[Source CI #42952354046 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/42952354046)**
+for the source-owned observer,
+closed-cutover guard, syntax and
+synthetic local HTTP tests.
+Next native Kvin action is in
+the [YXORP runbook](runbooks/yxorp-reconstruction.md).
+Return only one recap and the
+observer's sanitized `msg`.
 
-The next approved Kvin stage
-reconciliation and Pi-hole
-wire comparison command is
-in the [YXORP runbook](runbooks/yxorp-reconstruction.md).
-Ask Nova ONLY for the two
-one-line play recaps and
-the sanitized Pi-hole `msg`.
-Kvar NPM and wildcard DNS
-remain production, no
-firewall or cutover authority
-has changed, and legacy
-`yarn.inner.sanctum`
-is still untested. LinkStack,
-Kuma and Pi-hole need separate
-stateful migrations before
-Kvar retirement.
+**Application migration is not
+done:** LinkStack, Kuma and
+Pi-hole still have backend
+applications and persistent data
+on Kvar. Even route compatibility
+does not establish their eventual
+Kvin restore, sessions, monitor
+history, Pi-hole DNS filtering
+or firewall/remote-client success.
+Kvar NPM and wildcard DNS remain
+production, Kvin HTTP80 firewall
+remains Maintenance-owned, and
+cutover/retirement remain closed.
 
 
 ## Nova's available-week priority — November 1–8, 2026
