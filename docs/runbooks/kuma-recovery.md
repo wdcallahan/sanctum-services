@@ -1,5 +1,33 @@
 # Kuma — consistent backup and isolated restore trial
 
+## Native recovery trial ACCEPTED — November 11, 2026
+
+Nova executed the actual Kvin guard-approved playbook:
+**`ok=49 changed=11 failed=0 skipped=0`**.
+Source-qualified outcome: original user service
+restarted; local HTTP and Vault login worked;
+exported SQLite data passed integrity checks;
+an isolated, no-network real Kuma started from
+the imported copy, authenticated the existing
+Vault administrator and returned the saved
+Wicket monitor through its native socket API.
+The disposable restored container and test volume
+were removed.
+
+**Retained private Kvin archive:**
+`/home/wdc2/.local/share/sanctum-services/backups/kuma/sanctum-kuma-20261111t144137.tar`,
+290816 bytes, SHA-256
+`97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`.
+No Kvar/production/proxy route change.
+
+**Recovery still incomplete:** no independent
+off-host copy, no verified independent
+restoration of external `vault.key` and
+`kuma-admin.vault.yml`, no permanent
+recovery automation for a replacement Kvin.
+This local artifact is a working backup,
+not a second-machine disaster recovery.
+
 **Status:** source prepared, not yet natively executed. This procedure
 is for the retained Uptime Kuma 2.5.9 on Kvin; it does **not** touch
 the incumbent Kvar proxy/monitoring service.

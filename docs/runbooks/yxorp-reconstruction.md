@@ -1,5 +1,44 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## November 11 — operator authorizes practical cutover, with downtime acceptable
+
+Nova explicitly approves moving real traffic to
+Kvin's source-managed YXORP at any point,
+even if proxy downtime lasts the rest of a
+working day. Do not invent a no-downtime
+release window or require completion of
+unrelated Kvar app migrations first.
+Do retain a straightforward path back
+to existing Kvar Nginx Proxy Manager.
+
+Current stages are **not production**:
+Kvin `sanctum-yxorp-kvin-stage` serves
+eight initially locally accepted hostnames
+on actual HTTP80; the separate production
+Quadlet uses the same port and cannot
+coexist. Current production manifest would
+render only `yarn.nexus` if used verbatim.
+Source promotion must enable all eight,
+preserving existing backends for other Kvar
+services and pointing **Kuma** at Kvin's
+now-recovered source-managed instance
+on `127.0.0.1:13001`.
+Maintenance owns HTTP80 firewall publication
+and DNS; currently active explicit records
+for `dir/joule/kuma/pihole/search.nexus`
+and `*.nexus` all refer to Kvar
+`192.168.0.7`. Kvin is
+`192.168.0.192`.
+The old `yxorp.nexus` NPM admin URL is
+deliberately excluded from new Nginx and
+may stay pointed to Kvar during rollback.
+
+Do not change DNS before proving the production
+Nginx has all intended routes, adequate
+TCP80 admission and appropriate operator
+approval. Native client/session/WebSocket
+and rollback still need evidence.
+
 ## November 11 — Eight staged YXORP virtual hosts accepted at native local HTTP level
 
 **SS-YX-2 native acceptance succeeded.** The corrected

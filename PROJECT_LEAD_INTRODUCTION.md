@@ -1,5 +1,68 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: native Kuma offline restore ACCEPTED; operator authorizes YXORP cutover and two-bear mutual monitoring
+
+**Native operator result (now ACCEPTED):**
+`ansible/kuma-backup-restore-trial.yml` on Kvin completed
+`ok=49 changed=11 unreachable=0 failed=0 skipped=0`.
+The bounded receipt records private backup
+`/home/wdc2/.local/share/sanctum-services/backups/kuma/sanctum-kuma-20261111t144137.tar`,
+**290816 bytes**, SHA-256
+`97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`.
+Kuma's original HTTP and Vault login verified after safe restart;
+independently imported test volume passed SQLite integrity;
+restored **network-none** Kuma actually started, accepted the
+previous Vault admin and retained Wicket monitor; disposable
+test container+volume removed. **Local backup and isolated live-application
+recovery ACCEPTED.** No data overwritten, Kvar,
+YXORP or production changed. **Off-host copy and Vault
+key+encrypted-secret independent recovery remain UNACCEPTED**.
+
+**New operator guidance:** Nova explicitly says the new reverse proxy
+**may be swapped into use at any point**, even if an outage lasts
+the remainder of the working day; no class dependency requires
+zero downtime. This supersedes any invented availability
+cutover scheduling gate, but does **not** excuse preserving
+source of truth, correct eight frontend routes, application
+state, existing fallback and explicit reversal.
+
+**Two Kuma/bear design:** Kvar's existing Kuma and Kvin's
+new Kuma can mutually monitor one another as separately
+scoped HTTP endpoints. The current Kvin Kuma already
+monitors Wicket and is Up. No Kvar Kuma credential,
+monitor changes or new cross-check subscriptions
+have yet been qualified; avoid assuming Kvar's old
+Kuma or Podman socket is open. HTTP health monitoring
+does not require Kuma direct access to another local
+container's Podman socket; container-native monitor
+integration does have user/socket permission boundaries.
+
+**Proxy release facts:** Eight stage routes accepted
+at Kvin HTTP80 with rootful
+`sanctum-yxorp-kvin-stage.service`.
+Production `ansible/yxorp.yml` is separately gated
+(`yxorp_production_cutover_approved`) and uses a
+distinct Quadlet `sanctum-yxorp.service`;
+both cannot hold TCP80 simultaneously. The
+existing checked-in `data/yxorp-routes.yml`
+has only Yarn enabled; production promotion must
+select all 8 approved hostnames **without
+altering the historical staging manifest** and
+retarget only new `kuma.nexus.sanctum` backend
+to Kvin `127.0.0.1:13001`. Other
+app backends continue using existing direct
+Kvin/Kvar origins. The Kvar NPM proxy stays
+available for rollback. Maintenance owns Kvin
+firewall TCP80 and Peanut DNS `data/dns.yml`,
+including explicit names plus wildcard.
+The current source still points those public
+names at Kvar. Do not claim production cutover
+until independent LAN client DNS + session/
+WebSocket and rollback are actually observed.
+Prepare source, CI and safe owner coordination
+before asking for a single meaningful native
+operator command.
+
 ## CURRENT — November 11: Wicket Ollama actually UP in retained Kvin Kuma; consistent backup/isolated restore source next
 
 **New native acceptance from Nova:** The unchanged second native

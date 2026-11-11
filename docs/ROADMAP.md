@@ -153,7 +153,37 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — actual Kuma Wicket Up, monitor convergence ACCEPTED:**
+  **November 11 — Kuma consistent backup/isolated restore ACCEPTED:**
+  Native explicit one-shot recovery play
+  `ok=49 changed=11 failed=0`.
+  Kvin original user service restarted and
+  HTTP/Vault auth verified; disposable
+  network-none Kuma restored from private tar,
+  SQLite integrity checked, and existing
+  Vault login plus Wicket monitor verified.
+  The test instance/volume were deleted
+  without touching original data. Artifact:
+  `sanctum-kuma-20261111t144137.tar`,
+  290816 bytes, SHA-256
+  `97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`.
+  **Local backup+application restore accepted.**
+  **Off-host archive and master Vault key recovery not accepted.**
+
+  **November 11 — new proxy cutover authorized with downtime tolerance:**
+  Nova says it is fine to switch YXORP live
+  without waiting for an after-hours window,
+  even if the proxy is down all day; his
+  teaching does not depend on its uptime.
+  Engineering still owns correct eight-route
+  production promotion, stage TCP80 handoff,
+  Maintenance-managed Kvin firewall & DNS,
+  and retained Kvar fallback. Do not claim
+  those components deployed until native
+  acceptance. Wants two Kuma bears on
+  Kvar/Kvin to monitor one another; no
+  cross-Kuma monitor was configured yet.
+
+  **Historical accepted actual monitoring:**
   Nova's native `ansible/kuma-monitors.yml` repeat
   completed **`ok=13 changed=0 failed=0`**,
   `action:unchanged`, `monitor_id:1`, persisted
