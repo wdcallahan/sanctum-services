@@ -27,6 +27,36 @@ The bounded report does not contain
 it; if an unexpected extra installed
 diff exists, review before publication.
 
+### Pre-staged fallback source (qualified before live DNS move)
+
+The exact source-controlled six-record Kvar DNS
+fallback is on Maintenance branch
+`yxorp-dns-rollback-20261111` commit
+`f7461ee84d13439e92e07037858b6828840a94d6`
+([dedicated CI #43117275811 passed](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43117275811)).
+It keeps all nonproxy A records, all PTRs,
+old NPM administration and DB aliases
+unchanged, but returns exactly the five
+explicit proxy names and `*.nexus`
+to Kvar `192.168.0.7`
+at **newer SOA `2026111102`**.
+Its separately guarded owner publisher
+requires actual served forward/reverse
+serials in the known pre/post release
+pair (`2026101904` or `2026111101`)
+with **at least one already
+`2026111101`**, refusing rollback
+before this move is actually attempted.
+The rollback source is ready;
+it is **not deployed or natively
+previewed**. If live release is
+successful but client acceptance
+fails, separately preview this exact
+fallback source with check mode and
+only then publish its owner-authorized
+`sanctum_yxorp_dns_rollback_publish_approved=true`.
+No blind restoration of an older SOA.
+
 ### Next native operation: publish DNS live, owner-guarded
 
 Run on Kvin using the **same already
