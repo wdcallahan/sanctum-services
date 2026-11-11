@@ -1,5 +1,32 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
+## November 11 — Wicket actually Up; backup/recovery is the next gate
+
+Nova's native second `ansible/kuma-monitors.yml` run
+returned **`ok=13 changed=0 failed=0`**,
+`action:unchanged`, `monitor_id:1`,
+`configuration_persisted_and_verified:true`,
+and `notifications_attached:false`.
+**Kuma itself** reported `Up` from 12
+persisted heartbeats in the last hour,
+the latest only 17 seconds old, with
+`actual_up_accepted:true`. Native account
+creation, authenticated repeat, Wicket
+monitor creation, no-change reconciliation
+and real Up observation are **accepted**.
+No need to rerun these tests.
+
+Next read [Kuma backup and isolated restore
+trial](kuma-recovery.md). Its default-off
+playbook deliberately stops **only the new
+Kvin Kuma briefly** for a consistent backup,
+always restarts it, and tests a second
+network-disconnected restored instance
+without touching Kvar, YXORP or production.
+The source must pass CI and then native
+restoration before acceptance. Off-host
+and Vault key restoration remain separate.
+
 ## November 11 — Actual Kvin admin no-op and first Wicket monitor created
 
 Native Kvin provided two exact acceptance outputs:

@@ -153,7 +153,31 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — native admin repeat and Wicket first monitor ACCEPTED:**
+  **November 11 — actual Kuma Wicket Up, monitor convergence ACCEPTED:**
+  Nova's native `ansible/kuma-monitors.yml` repeat
+  completed **`ok=13 changed=0 failed=0`**,
+  `action:unchanged`, `monitor_id:1`, persisted
+  configuration and no subscriptions. Kuma's
+  own last-hour heartbeat records contained **12
+  beats**, most recent **Up** and **17 seconds
+  old**; `actual_up_accepted:true`. Wicket is
+  genuinely monitored by retained Kvin Kuma.
+  No more isolated health probes needed.
+
+  Next source-provisioned trial is a guarded
+  **consistent volume backup**, brief Kuma stop
+  with guaranteed restart, then an **isolated,
+  offline restored Kuma** proving saved Vault
+  authentication and Wicket monitor configuration.
+  This is `ansible/kuma-backup-restore-trial.yml`
+  documented at [Kuma recovery](runbooks/kuma-recovery.md),
+  not yet natively executed. A private backup
+  on Kvin is not independent recovery: off-host
+  artifact and existing Vault key backups are
+  still a required follow-up. No production
+  proxy, DNS or firewall change is authorized.
+
+  **Historical native initial monitor creation:**
   Nova's approved admin bootstrap repeat completed
   `ok=12 changed=0 failed=0`; idempotent
   login/account reconciliation is now banked.

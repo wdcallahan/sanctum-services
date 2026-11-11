@@ -1,5 +1,67 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Wicket Ollama actually UP in retained Kvin Kuma; consistent backup/isolated restore source next
+
+**New native acceptance from Nova:** The unchanged second native
+`ansible/kuma-monitors.yml` run reported
+`ok=13 changed=0 unreachable=0 failed=0 skipped=0`.
+Its bounded report: `action:unchanged`,
+`monitor_id:1`, `configuration_persisted_and_verified:true`,
+`notifications_attached:false`,
+**`latest_status_in_kuma:Up`**,
+`heartbeat_age_seconds:17`,
+`heartbeat_records_last_hour:12`,
+`heartbeat_recent_within_180_seconds:true`,
+**`actual_up_accepted:true`**. This proves the *real Kuma*
+monitoring engine saw Wicket's
+`http://wicket.arcane.sanctum:11435/healthz`
+healthy, not just a direct Kvin curl.
+Earlier admin repeat was `ok=12 changed=0`
+and native Wicket creation `ok=11 changed=1`.
+**The live-monitor state/identity/idempotence gates are now closed.**
+Do not repeat already accepted Wicket checks. Kvar and YXORP
+have NOT been changed, and no named LAN client acceptance
+or independent backup/restore has happened.
+
+**Next gated source work:** One-shot
+`ansible/kuma-backup-restore-trial.yml` uses
+source-pinned Kuma 2.5.9 and existing private Vault.
+It is default-off until an operator supplies
+`kuma_backup_restore_trial_approved=true` and
+knows it will briefly stop the **Kvin** user
+service for SQLite-consistent `podman volume export`.
+The playbook always starts Kuma again; verifies
+original HTTP and Vault login; validates a private
+`0600` local backup; imports only to a new
+test volume, runs a separate restored Kuma container
+with **no network or port publishing**, verifies
+restored SQLite integrity and Vault login
+without creating users, and checks the
+saved monitor using Kuma's Socket.IO. It then
+removes only the disposable restored container
+and volume. Off-host backup, actual restore
+on a different machine, schema upgrade and
+LAN/production are NOT covered.
+The source also adds a read-only `verify`
+mode to `tools/kuma-admin-init.js` and
+SQLite archive/volume checker
+`tools/kuma-backup-verify.py`.
+Use the exact command in
+[docs/runbooks/kuma-recovery.md](docs/runbooks/kuma-recovery.md)
+**only after CI is green**. The operator must
+return PLAY RECAP and safe bounded recovery msg.
+If CI fails, fix source/tests before asking Nova
+to run this impactful operation.
+
+**Beyond the local restore trial:** independent
+off-host copy (Peanut candidate) + hash check,
+recoverable existing Vault key+encrypted secret,
+actual named client browser/WebSocket path,
+restart/update/rollback, then separately approved
+Kvar->Kvin `kuma.nexus` retarget. This is still
+one Sanctum Services/YXORP migration project,
+not a new separate scope.
+
 ## CURRENT — November 11: Native Kuma admin repeat NO-CHANGE; Wicket created and persisted; real Up observation next
 
 **Native operator acceptance, exact Kvin:**

@@ -1,6 +1,14 @@
 # Uptime Kuma — retained Kvin deployment and recovery proposal
 
-**Status: source prepared, not deployed or natively qualified.**
+**Current native status (November 11):** The source-managed retained
+Kvin Kuma application is installed; its Vault-backed administrator
+was created and authenticated, and Wicket Ollama is genuinely **Up**
+with a repeat `changed=0`. This page's original installation
+plan is retained as historical architecture context.
+For the current recovery gate and commands see
+[Kuma recovery](kuma-recovery.md) and
+[Kuma monitoring](kuma-monitoring.md).
+Production still uses Kvar; no cutover has occurred.
 
 Sanctum Services will keep Uptime Kuma on Kvin, replacing the Kvar
 proof-of-concept rather than requiring migration of its old history.
