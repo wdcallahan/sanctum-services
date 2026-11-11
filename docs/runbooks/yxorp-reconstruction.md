@@ -41,13 +41,9 @@ Source-only test contracts and real-Ansible
 stage-selection tests, with synthetic
 Nginx tests against different old/new Yarn
 backends, are in workflow
-[Actions #43048429592](https://github.com/wdcallahan/sanctum-services/actions/runs/43048429592).
-**Do not give the operator the native
-command until full latest-source CI is green.**
-This documentation records SOURCE work,
-not live Kvin acceptance.
+[Actions #43049835644](https://github.com/wdcallahan/sanctum-services/actions/runs/43049835644), **PASSED**, including real Nginx parser and live loopback HTTP tests. An earlier runner package-mirror DNS failure was external to source. This is source qualification, **not** live Kvin acceptance.
 
-**Next once CI passes:** Run exactly one
+**Next action, CI green:** Run exactly one
 Kvin stage reconciliation plus the new
 read-only probe, both with Kvin approval
 and all seven existing host opt-ins PLUS
