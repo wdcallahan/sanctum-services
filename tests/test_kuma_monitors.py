@@ -48,7 +48,7 @@ class TestKumaMonitorSource(unittest.TestCase):
         self.assertIs(observe["changed_when"],False)
         self.assertEqual(observe["ansible.builtin.command"]["argv"][-1],"observe")
         self.assertIn('ack("getMonitorBeats",1,1)',self.js)
-        self.assertIn('ack("getMonitor",1)',self.js)
+        self.assertIn('const saved=await getMonitor(1)',self.js)
         self.assertIn('recent&&code===1',self.js)
         report=self.tasks[-1]["ansible.builtin.debug"]["msg"]
         self.assertIn("kuma_monitor_heartbeat.stdout",report["actual_up_accepted"])
