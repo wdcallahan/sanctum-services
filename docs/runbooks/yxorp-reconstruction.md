@@ -1,5 +1,101 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Latest native Pi-hole check accepted (7/8); old Yarn alias remains disabled — November 10
+
+**Seven of eight YXORP route names have passed
+the first bounded local HTTP check on Kvin.**
+Pi-hole is the new seventh result:
+`ansible/yxorp-kvin-stage.yml`
+completed `ok=46 changed=3 failed=0
+skipped=1` while selecting exactly
+Yarn, Square, Prism, Search,
+LinkStack, Kuma and Pi-hole.
+`ansible/yxorp-kvin-stage-pihole-probe.yml`
+completed `ok=4 changed=0 failed=0`.
+
+For Pi-hole `Host: pihole.nexus.sanctum`,
+the direct Kvar UI backend `:82`,
+incumbent NPM `:80` and new local
+Kvin stage `:80` matched:
+- Anonymous GET `/`: all returned
+  **HTTP404** with the same candidate/
+  incumbent media type; no redirects
+  were sent; no redirect comparison
+  is relevant.
+- Anonymous GET `/admin/`: all
+  returned **HTTP302**, the same
+  candidate/incumbent media type,
+  and **exact equal original
+  relative Location headers**.
+This accepts initial Pi-hole UI
+proxy compatibility, **not**
+ad blocking/resolver behavior,
+login, persisted data,
+dashboard scripts or actual
+Pi-hole application restore
+onto Kvin. The Pi-hole backend
+still resides on Kvar.
+
+**Final unqualified route name:**
+the old `yarn.inner.sanctum`
+frontend to IP `192.168.1.110:80`
+is *distinct* from the accepted
+new `yarn.nexus.sanctum`.
+Kvar NPM's legacy path previously
+timed out. Do not enable it merely
+to reach 8/8: first establish
+whether its backend and the
+existing NPM route are reachable
+and what consumes the old name.
+Replacement/retirement needs a
+separate deliberate decision.
+
+**Next bounded read-only task:**
+`ansible/yxorp-kvin-legacy-yarn-observe.yml`,
+which *asserts the legacy route
+is disabled* and performs anonymous
+HTTP GET / via five paths:
+direct old IP/old Host,
+direct DNS name/old Host,
+incumbent Kvar NPM/old Host,
+Kvin accepted new-name stage
+as a control, and old IP/new Host.
+`tools/observe-yxorp-legacy-yarn.py`
+uses raw HTTP from Kvin with
+six-second per-request timeout
+and reports only safe outcome/status,
+redirect kind and media-type
+presence. It never reveals bodies,
+raw redirects, cookie/session
+values or error messages. This
+does not establish historical
+client usage or warrant legacy
+route activation.
+
+**Next exact command on Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-legacy-yarn-observe.yml -e yxorp_kvin_stage_approved=true
+```
+**Output:** Only the single
+`PLAY RECAP` line and `msg`
+dictionary from **“Report only
+old Yarn alias HTTP transport
+classifications.”** If a task fails,
+provide that failed task and
+error only. Do not request
+complete Ansible output.
+No configuration, active
+route selection, DNS, Kvar NPM,
+firewall or cutover changes occur.
+Kvar NPM and wildcard DNS
+remain production; Maintenance
+owns Kvin firewall. Restoring
+Kuma, Pi-hole and LinkStack
+and their application state
+on Kvin remains separate
+from these proxy compatibility
+checks.
+
 ## Current Kvin stage — Kuma raw redirect parity confirmed; Pi-hole seventh canary next (November 10)
 
 **Root cause of the earlier Kuma "mismatch" was the
