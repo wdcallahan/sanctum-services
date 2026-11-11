@@ -55,6 +55,7 @@
           - sanctum-yxorp-kvin-stage
           - cat
           - /etc/nginx/nginx.conf
+        strip_empty_ends: false
       become: true
       register: yxorp_yarn_eighth_container_config
       changed_when: false
