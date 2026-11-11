@@ -44,7 +44,7 @@ class KumaRedirectPolicy(unittest.TestCase):
             "proxy_redirect http://kvar.outer.sanctum:3001/ "
             "http://kvar.outer.sanctum/;"
         )
-        self.assertEqual(result.count("proxy_redirect "), 1)
+        self.assertEqual(result.count("\n            proxy_redirect "), 1)
         self.assertEqual(result.count(expected), 1)
         before, after = result.split("server_name kuma.nexus.sanctum;")
         self.assertNotIn("proxy_redirect ", before)
