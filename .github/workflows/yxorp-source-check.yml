@@ -208,8 +208,12 @@ jobs:
           fi
       - name: Validate generated syntax with real Nginx (synthetic DNS only)
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends nginx-core
+          # Hosted runner image already has package indexes; avoid blocking
+          # the actual source checks on a redundant apt index refresh.
+          # Keep real Nginx parser and HTTP integration coverage unchanged.
+          if ! command -v nginx >/dev/null 2>&1; then
+            sudo env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nginx-core
+          fi
           echo '127.0.0.1 yarn.inner.sanctum kvin.outer.sanctum kvar.outer.sanctum' | sudo tee -a /etc/hosts
           sudo nginx -t -c /tmp/sanctum-yxorp-proposed.conf
           python3 - <<'PY'
