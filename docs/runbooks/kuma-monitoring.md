@@ -1,5 +1,73 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
+## November 11 — Actual Kvin admin no-op and first Wicket monitor created
+
+Native Kvin provided two exact acceptance outputs:
+- The repeated Vault-backed admin bootstrap:
+  **`ok=12 changed=0 failed=0`**. No account
+  creation/replacement or password rotation.
+- The separately approved first Wicket monitor
+  reconcile: **`ok=11 changed=1 failed=0`**,
+  `action:created`, `monitor_id:1`,
+  `configuration_persisted_and_verified:true`,
+  `notifications_attached:false`. Its
+  desired URL is
+  `http://wicket.arcane.sanctum:11435/healthz`,
+  HTTP GET every 60 seconds, expected HTTP
+  200–299. The report says
+  `actual_up_accepted:false` because **no
+  heartbeat was measured**, not because an
+  actual Down result was observed. The
+  existing Kvar service/proxy is unchanged.
+
+### Next Kvin acceptance — actual heartbeat plus monitor no-change repeat
+
+An update to `tools/kuma-reconcile-monitors.js`
+uses tagged Uptime Kuma 2.5.9's own read-only
+authenticated Socket.IO `getMonitorBeats`
+event, specifically **monitor ID 1**,
+after the source-owned monitor config
+has been independently re-read.
+The updated `ansible/kuma-monitors.yml`
+reports Kuma's actual most recent status,
+number of beats seen in the last hour and
+age of the latest heartbeat. It marks
+`actual_up_accepted:true` only when the
+latest beat is Up and recent (within 180
+seconds). This is not a controller-side curl,
+not a fabricated Up result, and not a
+server configuration mutation. Passwords
+and tokens remain private.
+
+From Kvin, after confirming the latest
+source CI pass:
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+vault_dir="$HOME/.config/sanctum-services/secrets" &&
+~/.local/bin/ansible-navigator run ansible/kuma-monitors.yml \
+  --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
+  --eev "$vault_dir/kuma-admin.vault.yml:$vault_dir/kuma-admin.vault.yml:ro,Z" \
+  --senv "ANSIBLE_VAULT_PASSWORD_FILE=$vault_dir/vault.key" \
+  --pae false \
+  -e kuma_monitors_approved=true
+```
+
+Expected monitor repeat: `changed=0`
+with `action:unchanged`, no duplicate
+monitor or attached notification, and
+bounded `latest_status_in_kuma`,
+`heartbeat_age_seconds`,
+`actual_up_accepted`. Return only
+the `PLAY RECAP` and
+`Report bounded Wicket monitor configuration acceptance`
+`msg` (or a failed task).
+A successful repeat plus current Up
+will close the initial live monitoring
+gate, **not** backup/restore, restart,
+update, named client or production.
+
 ## November 11 — Wicket monitor reconciliation source green; native test next
 
 Native Kuma administrator creation and Vault-backed login

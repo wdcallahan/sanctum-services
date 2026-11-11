@@ -153,7 +153,30 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — exact Kuma 2.5.9 Wicket reconciler source CI ACCEPTED:**
+  **November 11 — native admin repeat and Wicket first monitor ACCEPTED:**
+  Nova's approved admin bootstrap repeat completed
+  `ok=12 changed=0 failed=0`; idempotent
+  login/account reconciliation is now banked.
+  First native source-managed Wicket monitor
+  reconcile completed `ok=11 changed=1 failed=0`,
+  `action:created`, `monitor_id:1`,
+  `configuration_persisted_and_verified:true`,
+  `notifications_attached:false`. The monitor
+  itself has been created and persisted on
+  Kvin via Kuma 2.5.9 native Socket.IO.
+  `actual_up_accepted:false` still means
+  **not observed**, not Down. No Kvar,
+  YXORP/DNS/firewall or production changes.
+
+  Source now adds a read-only, authenticated
+  `getMonitorBeats` observation to the same
+  monitor playbook; after full CI, run it
+  once more for no-op configuration and an
+  actual recent heartbeat Up/Down/Pending
+  report. Independent restore, lifecycle
+  and named client acceptance remain open.
+
+  **Historical source CI-qualified monitor reconciler:**
   Added `ansible/kuma-monitors.yml` and
   `tools/kuma-reconcile-monitors.js` after reviewing
   the exact upstream 2.5.9 Socket.IO monitor APIs.

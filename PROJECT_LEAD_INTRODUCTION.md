@@ -1,5 +1,73 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Native Kuma admin repeat NO-CHANGE; Wicket created and persisted; real Up observation next
+
+**Native operator acceptance, exact Kvin:**
+- Guarded Vault-backed `ansible/kuma-admin-bootstrap.yml` repeat
+  **`ok=12 changed=0 unreachable=0 failed=0 skipped=0`**.
+  First-user administration and second-run idempotence are ACCEPTED,
+  following the earlier native `administrator_created_this_run:true`
+  and `administrator_login_verified:true` result.
+- Separately authorized `ansible/kuma-monitors.yml` first native
+  run **`ok=11 changed=1 unreachable=0 failed=0 skipped=0`**.
+  Bounded report: **`action:created`**, `monitor_id:1`,
+  `monitor:Wicket Ollama`, `configuration_persisted_and_verified:true`,
+  `notifications_attached:false`,
+  `actual_up_accepted:false`,
+  `backup_restore_accepted:false`,
+  `named_client_and_production_accepted:false`.
+  Source-managed target is HTTP GET
+  `http://wicket.arcane.sanctum:11435/healthz`
+  every 60 seconds, expected 200–299. This establishes
+  native monitor creation and saved configuration,
+  **not the live Up heartbeat**. Kvar, YXORP,
+  DNS, firewall and production unchanged.
+
+**Next source and planned native acceptance:**
+Extended the already qualified `tools/kuma-reconcile-monitors.js`
+with a strictly read-only `observe` mode that
+authenticates with the same existing Vault password
+and uses the exact tagged Kuma **2.5.9**
+Socket.IO `getMonitor(1)` and
+`getMonitorBeats(1,1)` read methods. The
+same `ansible/kuma-monitors.yml` now reconciles
+idempotently, then reads actual retained Kuma
+heartbeat status and recency. It reports
+`latest_status_in_kuma`,
+`heartbeat_age_seconds`, and
+`actual_up_accepted:true` only for a recent
+(<=180-second-old) Up/1 record. Missing,
+Down, Pending or stale records do **not**
+get promoted to Up. The read uses `no_log`,
+makes no app writes or notifications, and
+never exposes Vault credentials. New synthetic
+Node tests cover actual Up/Down/Pending/stale
+and absent heartbeat. Verify full CI before
+giving Nova the next command.
+
+**One next Kvin operator action after source CI:**
+```bash
+cd ~/src/sanctum-services && git pull &&
+vault_dir="$HOME/.config/sanctum-services/secrets" &&
+~/.local/bin/ansible-navigator run ansible/kuma-monitors.yml \
+  --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
+  --eev "$vault_dir/kuma-admin.vault.yml:$vault_dir/kuma-admin.vault.yml:ro,Z" \
+  --senv "ANSIBLE_VAULT_PASSWORD_FILE=$vault_dir/vault.key" \
+  --pae false \
+  -e kuma_monitors_approved=true
+```
+
+Request only the `PLAY RECAP` row
+(`changed=0` expected) and bounded
+`Report bounded Wicket monitor configuration acceptance`
+`msg`. Real Kuma heartbeat Up closes the
+monitor-state gate; false or Down is a
+specific supported blocker to investigate.
+Full independent backup/restore of `sanctum-kuma-data`
+and existing Vault key + encrypted files,
+restart/update, actual browser and named client
+acceptance remain open. No Kvar cutover.
+
 ## CURRENT — November 11: Kuma Vault administrator CREATED + AUTHENTICATED; Wicket source reconciler CI green; next native
 
 **Native operator evidence:** Vault-backed
