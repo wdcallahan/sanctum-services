@@ -1,5 +1,129 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Current Kvin stage — Kuma raw redirect parity confirmed; Pi-hole seventh canary next (November 10)
+
+**Root cause of the earlier Kuma "mismatch" was the
+observer, not the HTTP proxy.** Nova's
+latest actual read-only wire probe completed
+`ok=7 changed=0 failed=0`; it confirmed
+the Kvin-mounted config equals the
+host-published one and contains the
+temporary Kuma-only redirect rule.
+More importantly, the exact **wire
+Location** from three independent
+`Host: kuma.nexus.sanctum` GET /
+requests through direct Kvar Kuma
+:3001, incumbent Kvar NPM and
+new Kvin stage was **relative in
+all three**, with full header equality
+true through all paths and HTTP302
+statuses. Direct Kuma with proxy-style
+forwarded headers emitted the same
+relative Location. The earlier
+Ansible `uri.location` compared
+*absolute representations* resolved
+against each different request
+address, so its hostname/port
+comparison gave a false negative.
+The active Kvin stage's anonymous
+Kuma root routing is **accepted**
+based on the independent actual
+HTTP header comparison, not the
+previous normalized `uri` field.
+
+**Status: 6/8 route names tested,
+6 passed their first limited local
+HTTP check**: Yarn, Square,
+Joule/Prism, Search, interim
+LinkStack and interim Kuma.
+Pi-hole and the old Yarn inner
+name remain untested. Real Kuma
+login, monitor history, notification
+delivery and WebSockets still
+unaccepted. Kuma, LinkStack
+and Pi-hole apps and persistence
+remain on Kvar, not migrated
+to Kvin.
+
+**Remove mistaken Kuma workaround:**
+The source manifest no longer
+declares `redirect_strip_upstream_port`
+and the shared Nginx template no
+longer emits the Kuma-only
+`proxy_redirect`. This unnecessary
+rule was synthetic-tested only
+for an *absolute* Location, but
+actual Kuma root redirects were
+**relative**. The old stage will
+still contain the rule until
+the next approved native
+reconciliation. The source CI
+now tests preserved relative
+Location behavior with a real
+Nginx synthetic backend. The
+checked-in manifest remains
+Yarn-only.
+
+**Next seventh route: interim Pi-hole
+UI proxy compatibility.** Its
+disabled source route targets
+`pihole.nexus.sanctum` →
+`http://kvar.outer.sanctum:82`,
+the *current* Kvar Pi-hole UI,
+not a restored app on Kvin.
+Default-off `yxorp_stage_pihole_approved`
+requires the six previously
+authorized Kvin stage flags.
+The stage checks the exact
+seven-route selection before
+the existing validated
+service remount/restart;
+old `yarn.inner.sanctum`
+remains disabled. Kvar NPM
+and wildcard DNS are production;
+Maintenance owns Kvin LAN port80.
+
+**Test both GET / and GET /admin/.**
+Pi-hole's upstream root historically
+returned HTTP404, which does not
+mean its UI is down.
+`ansible/yxorp-kvin-stage-pihole-probe.yml`
+executes a Python `http.client`
+raw-header observer through all
+three paths from Kvin, no
+redirect following, with five-second
+per-request bounds. Its sanitized
+output reports HTTP status
+and content-type equality,
+presence/kind of redirect
+and exact **original raw wire**
+Location equality. No actual
+URL values, credentials,
+bodies, query values or cookies
+are printed. This does **not**
+accept Pi-hole DNS blocking,
+ad lists, persistent databases,
+login or user clients, real
+LAN access or cutover.
+
+**Next native action on Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true -e yxorp_stage_pihole_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-pihole-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true -e yxorp_stage_pihole_approved=true
+```
+
+**Reply contract:** Two short `PLAY RECAP`
+lines and the `msg` object from
+`Report only Pi-hole root and admin
+HTTP parity metadata` only. If
+anything fails, paste just the
+failed task/error. No complete
+Ansible logs and no rerun of
+Kuma or other earlier checks.
+A clean nonfatal probe recap
+alone does not accept Pi-hole;
+evaluate explicit statuses and
+wire header equality.
+
 ## Latest Kvin Kuma stage: explicit redirect fix did NOT achieve parity — November 10
 
 The user has **already applied** the first narrowly
