@@ -1,6 +1,14 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
-## November 11 — scoped DNS native preview accepted; live publication is next
+## CURRENT — November 11: live guarded Peanut six-Nexus DNS publication ACCEPTED; named client acceptance NEXT
+
+**New native operator receipt (23:32Z):** Nova ran the previously accepted exact Maintenance release packet `artifacts/yxorp-dns-release-0858020` with `sanctum_publish_dns_zones=true`, `sanctum_yxorp_dns_publish_approved=true`, target `peanut.arcane.sanctum`, **without `--check`**. Report `Report bounded proxy DNS candidate scope and publication gate` returned **`check_mode:false`**, **`published_change_accepted:true`**, `candidate_serial:2026111101`, prior served forward/reverse SOA `2026101904`, both zone-file changes true, six proxy aliases directed to Kvin **`192.168.0.192`**, `old_npm_administration_address_retained:true`, `db_and_nonproxy_addresses_retained:true`, `reverse_ptr_records_unchanged_in_source:true`, `production_proxy_or_app_changed:false`, `real_named_client_sessions_and_websocket_accepted:false`. Actual play **`ok=18 changed=3 unreachable=0 failed=0 skipped=0`**, Navigator exit0, run completed. Private logged transcript: `artifacts/transcripts/publish-yxorp-nexus-dns-2026-11-11T23-32-01Z.log` and matching `.json`.
+
+**Publication is ACCEPTED** on authoritative Peanut, based on the full play and publisher's guarded real authoritative postchecks; do not claim browser, login/session or Socket.IO from it. Kvar NPM remains running, old admin DNS preserved for rollback. The separate Maintenance rollback source candidate at `f7461ee84d13439e92e07037858b6828840a94d6` / `yxorp-dns-rollback-20261111`, desired SOA `2026111102`, has passing source CI but has NOT been natively previewed or executed.
+
+**Next operational gate:** verify normal client resolver answers for relevant named Nexus routes, real browser login/session (particularly Kuma), and Kuma Socket.IO/WebSocket behavior. If client acceptance fails, classify DNS cache/client route/application issue; keep Kvar NPM intact and use separately previewed/authorized higher-serial rollback only if required. After client acceptance, reconcile the scoped DNS change with Maintenance main's older, incompatible broad renumber assumptions. Do not treat old YAML main source as safe to republish yet.
+
+## PREVIOUS — November 11: scoped DNS native preview accepted; live publication was next
 
 Native owner preview of exact scoped
 Maintenance candidate
