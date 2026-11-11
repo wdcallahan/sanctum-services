@@ -1,55 +1,63 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: 6/8 attempted; Kuma redirect mismatch under diagnosis
+## Current YXORP milestone — November 10: six attempted; Kuma redirect fix source-qualified
 
-**Kvin rootful YXORP stage has attempted
-six of eight declared route names. Five
-passed their bounded initial local HTTP
-acceptance:** Yarn, Square, Prism,
-Search and LinkStack. The sixth,
-Kuma, now returns HTTP302 through
-direct old Kvar :3001, Kvar NPM
-and staged Kvin :80, but **the new
-proxy redirect is not equal to
-the incumbent**. Status, content
-type, redirect path and scheme
-match; redirect hostname differs,
-Kvin's response contains an
-unexpected explicit port, while
-Kvar NPM does not include a port.
-Native stage `ok=44 changed=3 failed=0`,
-comparison `ok=4 changed=0 failed=0`.
-Kuma therefore **is not yet accepted**.
+**Kvin's rootful Nginx stage has attempted
+6 of 8 declared route names. Five have
+passed their bounded local HTTP tests**:
+Yarn, Square, Prism, Search, and
+interim LinkStack. Kuma's HTTP302
+and MIME match incumbent Kvar NPM,
+but its redirect does not; Pi-hole
+and the old Yarn legacy name remain
+untested.
 
-A new source-managed, read-only
-`ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml`
-classifies direct/incumbent/stage
-redirect hosts and ports into safe
-fixed categories, without revealing
-raw Location values, credentials,
-queries, bodies or unexpected hostnames.
-**Next action** on Kvin: run that
-single diagnosis from the
-[YXORP runbook](runbooks/yxorp-reconstruction.md)
-and return only its one-line recap
-and sanitized `msg` report. If
-source changes are needed, qualify
-them under CI before stage retry.
+**Actual bounded read-only diagnosis
+now resolved the Kuma mismatch:**
+direct Kvar Kuma redirects to Kvar:3001;
+incumbent Kvar NPM redirects to Kvar
+without an explicit port; new Kvin
+stage incorrectly redirects to
+loopback:80. Their path, query,
+fragment and scheme agree. The
+user's native observer completed
+`ok=4 changed=0 failed=0`
+without configuration changes.
 
-Pi-hole and old Yarn legacy name
-are still untested on Kvin.
-Even accepted LinkStack routing
-still points to its Kvar app/data;
-Kuma and Pi-hole are likewise
-not yet migrated to Kvin. Kvar
-NPM and wildcard DNS remain
-live production. No Maintenance
-firewall change or cutover has
-been authorized. Full login,
-WebSockets, browser sessions,
-Nextcloud Calendar, search-results
-behavior and application restores
-remain separate acceptance gates.
+**Next milestone is apply/test
+source-managed Kuma-only correction.**
+The disabled Kuma route declares
+`redirect_strip_upstream_port:true`;
+the shared Nginx template renders
+a specific `proxy_redirect` rule
+removing backend port 3001 while
+retaining Kvar hostname. The stage
+preflight checks the exact backend
+and policy before application.
+[Source CI #42948962676 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/42948962676)
+including a *real Nginx* synthetic
+redirect with path/query/fragment
+preservation and checks that all
+other routes remain unchanged.
+**Kvin stage has not yet been
+reconciled with that correction**;
+Kuma is still **not accepted**.
+
+The operator's next exact command
+to reconcile the existing six-route
+Kvin stage and rerun just the Kuma
+comparison is recorded in the
+[YXORP runbook](runbooks/yxorp-reconstruction.md).
+Return only both short `PLAY RECAP`
+lines and the sanitized Kuma
+`msg` dictionary; no full logs.
+Kvar NPM/wildcard DNS remain
+production, host firewall belongs
+to Maintenance and production
+cutover is still closed.
+Kuma, LinkStack and Pi-hole's
+future actual app/data restoration
+onto Kvin remains separate.
 
 
 ## Nova's available-week priority — November 1–8, 2026
