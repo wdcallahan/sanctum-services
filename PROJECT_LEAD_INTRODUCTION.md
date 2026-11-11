@@ -1,5 +1,101 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: eighth Kvin stage deployed; false acceptance regex fixed, probe-only rerun next
+
+**Newest native evidence supplied by Nova:**
+`ansible/yxorp-kvin-stage.yml` with all eight stage
+approvals finished **Kvin ok=48 changed=3
+failed=0 skipped=1**. This is the
+**successful isolated eight-route stage
+reconciliation**; do not repeat the
+deployment simply to test the probe.
+The following **read-only** eighth Yarn
+probe completed `ok=7 changed=0 failed=1`
+only because its acceptance assertion
+`old_vhost_present_once` evaluated
+false. This does NOT establish that
+the old Yarn vhost is absent or the
+stage has failed. The sanitized
+metadata printed before the failure
+was not provided in Nova's paste;
+do not infer the other checks' states.
+
+**Root cause confirmed locally:**
+`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+used `regex_findall('server_name
+yarn\\\\.inner\\\\.sanctum;')` and
+similar double-escaped patterns.
+Those look for literal slash content
+and **fail to match** ordinary
+Nginx `server_name
+yarn.inner.sanctum;` text.
+The same bug affected new vhost
+and backend regex counts, though
+the assertion stopped at the
+first false. Source fixed by
+replacing all three expressions
+with exact equality counts of
+**trimmed config lines** (no regex).
+No Nginx template, staged route,
+DNS, host, Kvar NPM, firewalld or
+live configuration was changed
+by the correction.
+
+**Regression that prevents recurrence:**
+New `tests/fixtures/verify-yxorp-kvin-yarn-inner-config.py`
+executes the **actual source Ansible
+set_fact classifier** against Jinja-rendered
+eight-route synthetic Nginx configuration,
+as well as missing old/new host,
+duplicate old host, wrong upstream and
+host/container drift cases. Real
+Ansible asserts every expected Boolean.
+Full source CI **PASSED**:
+[GitHub Actions #43053056244](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244);
+its job logs explicitly show
+`PASS: real Ansible exact Yarn line
+counts, missing/duplicate routes,
+wrong upstream and host/container drift`.
+Other Ansible source tests, Nginx syntax,
+real Nginx loopback HTTP checks and
+image inspection passed.
+
+**ONLY NEXT OPERATOR ACTION:** From Kvin
+`git pull`, then rerun **only**
+`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+with all eight source stage approvals
+`yxorp_kvin_stage_approved=true`,
+`yxorp_stage_square_approved=true`,
+`yxorp_stage_prism_approved=true`,
+`yxorp_stage_search_approved=true`,
+`yxorp_stage_dir_approved=true`,
+`yxorp_stage_kuma_approved=true`,
+`yxorp_stage_pihole_approved=true`,
+`yxorp_stage_yarn_inner_approved=true`.
+The probe is read-only, and stage
+reconciliation should NOT be rerun.
+Request the one `PLAY RECAP` and
+`msg` from **“Report only eighth Yarn
+route configuration and wire acceptance
+metadata”**, or the failed task
+and error. No full logs, DNS debate,
+or repeat of prior canaries.
+
+**Current acceptance:** Seven original
+Kvin local anonymous HTTP routes
+accepted; eighth stage successfully
+installed, **native eighth HTTP/
+content/config acceptance still
+pending the corrected probe**.
+After acceptance resume SS-YX-3
+meaningful proxy equivalence and
+the source-owned Kvin app migrations
+(Kuma clean retained first). The
+[November 11 outcome plan](docs/ROADMAP.md#active-execution-plan--wednesday-november-11-2026)
+is the source of truth. No
+arbitrary timeboxes or tangential
+diagnostic cascades.
+
 ## CURRENT — Wednesday, November 11: eighth existing Yarn NPM stage coded, real-Nginx CI pending
 
 **Actual work this morning:** Implemented SS-YX-2 in source:
