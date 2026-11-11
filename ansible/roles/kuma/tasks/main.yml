@@ -12,6 +12,7 @@
       - kuma_host_port | int == 13001
       - kuma_data_volume is match('^[a-z0-9][a-z0-9_.-]+$')
       - kuma_data_volume == 'sanctum-kuma-data'
+      - kuma_db_type == 'sqlite'
     fail_msg: >-
       This source is deliberately held: select an exact linux/arm64-tested
       Kuma v2 image digest and separately approve a loopback-only candidate
@@ -92,6 +93,8 @@
       candidate_stage_http_status: "{{ kuma_web_response.status | int }}"
       loopback_endpoint: "http://127.0.0.1:{{ kuma_host_port }}/"
       data_volume: "{{ kuma_data_volume }}"
+      desired_database_backend: "{{ kuma_db_type }}"
+      database_and_admin_setup_accepted: false
       stage_approved: true
       persistent_volume_created_or_present: true
       quadlet_reconciled: true

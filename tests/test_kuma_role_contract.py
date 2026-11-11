@@ -28,9 +28,12 @@ class KumaRoleContract(unittest.TestCase):
         self.assertEqual(self.vars["kuma_host_port"], 13001)
         self.assertEqual(self.vars["kuma_bind_address"], "127.0.0.1")
         self.assertEqual(self.vars["kuma_data_volume"], "sanctum-kuma-data")
+        self.assertEqual(self.vars["kuma_db_type"], "sqlite")
         self.assertIn("kuma_stage_approved | bool",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
         self.assertIn("ansible_facts['architecture'] == 'aarch64'",
+                      self.tasks[0]["ansible.builtin.assert"]["that"])
+        self.assertIn("kuma_db_type == 'sqlite'",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
         self.assertIn("kuma_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
@@ -42,6 +45,9 @@ class KumaRoleContract(unittest.TestCase):
         self.assertLess(names.index("Observe whether the exact Kuma image exists"),
                         names.index("Pull the exact pinned image if absent"))
         self.assertIn("Volume={{ kuma_data_volume }}:/app/data", self.quadlet)
+        self.assertIn(
+            "Environment=UPTIME_KUMA_DB_TYPE={{ kuma_db_type }}", self.quadlet
+        )
         self.assertIn("PublishPort={{ kuma_bind_address }}:{{ kuma_host_port }}:3001/tcp",
                       self.quadlet)
         self.assertIn("Network=slirp4netns", self.quadlet)
@@ -59,6 +65,8 @@ class KumaRoleContract(unittest.TestCase):
         report = self.tasks[-1]["ansible.builtin.debug"]["msg"]
         self.assertIs(report["stage_approved"], True)
         self.assertIs(report["initial_http_only"], True)
+        self.assertIs(report["database_and_admin_setup_accepted"], False)
+        self.assertEqual(report["desired_database_backend"], "{{ kuma_db_type }}")
         for key in ("administrator_and_monitor_state_accepted",
                     "backup_restore_and_recovery_accepted",
                     "named_lan_or_production_route_accepted"):

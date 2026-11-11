@@ -11,6 +11,9 @@ ContainerName={{ kuma_container_name }}
 Network=slirp4netns
 PublishPort={{ kuma_bind_address }}:{{ kuma_host_port }}:3001/tcp
 Volume={{ kuma_data_volume }}:/app/data
+# The database backend is declared in source; administrator setup remains
+# a one-time authenticated application operation with secret data in the volume.
+Environment=UPTIME_KUMA_DB_TYPE={{ kuma_db_type }}
 
 [Service]
 Restart=always

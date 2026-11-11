@@ -8,3 +8,6 @@ kuma_stage_approved: false
 kuma_bind_address: "127.0.0.1"
 kuma_host_port: 13001
 kuma_data_volume: sanctum-kuma-data
+# Uptime Kuma v2 officially supports UPTIME_KUMA_DB_TYPE=sqlite.
+# A local Podman volume avoids remote database dependencies during recovery.
+kuma_db_type: sqlite
