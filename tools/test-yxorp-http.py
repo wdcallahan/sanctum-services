@@ -157,6 +157,14 @@ def main(template_path):
                 dict(hostname="disabled.nexus.sanctum", upstream_scheme="http",
                      upstream_host="127.0.0.1", upstream_port=one.server_port,
                      enabled=False, websocket=False),
+                # Existing NPM host 11 must be distinct from the newly
+                # requested Yarn nexus host; each name has its OWN upstream.
+                dict(hostname="yarn.inner.sanctum", upstream_scheme="http",
+                     upstream_host="127.0.0.1", upstream_port=two.server_port,
+                     enabled=True, websocket=False),
+                dict(hostname="yarn.nexus.sanctum", upstream_scheme="http",
+                     upstream_host="127.0.0.1", upstream_port=one.server_port,
+                     enabled=True, websocket=False),
             ]
             render(template_path, cfg, pid, listen, routes)
             process = subprocess.Popen(
@@ -173,6 +181,20 @@ def main(template_path):
             assert response["forwarded_for"], response
             status, _ = request(listen, "socket.nexus.sanctum", upgrade=True)
             assert status == 101, status
+            # Exercise the actual Nginx template with different upstream
+            # identities: using the wrong virtual host MUST be detectable.
+            status, old_bytes = request(listen, "yarn.inner.sanctum")
+            old = json.loads(old_bytes)
+            assert status == 200 and old["identity"] == "backend_two", old
+            assert old["host"] == "yarn.inner.sanctum", old
+            status, new_bytes = request(listen, "yarn.nexus.sanctum")
+            new = json.loads(new_bytes)
+            assert status == 200 and new["identity"] == "backend_one", new
+            assert new["host"] == "yarn.nexus.sanctum", new
+            assert old_bytes != new_bytes
+            status, location = redirect_request(listen, "yarn.inner.sanctum",
+                                                "/relative-redirect")
+            assert status == 302 and location == "/dashboard?test=1#section"
             # Actual Kuma GET / returned the SAME relative Location
             # through direct, incumbent, and candidate. Nginx passes such
             # a relative header through without rewriting the authority.
@@ -224,9 +246,9 @@ def main(template_path):
                 if time.monotonic() >= end:
                     raise AssertionError(f"removed host still routes: {result}")
                 time.sleep(.08)
-            print("PASS: host routing, headers, WebSocket 101, "
-                  "relative Location wire passthrough, default-deny, "
-                  "route change and explicit removal (loopback-only)")
+            print("PASS: distinct existing/new Yarn vhosts and upstreams, "
+                  "Host forwarding, WebSocket 101, raw relative Location, "
+                  "default-deny, route change and removal (real loopback Nginx)")
     finally:
         if process is not None:
             process.terminate()
