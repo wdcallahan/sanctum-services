@@ -30,6 +30,27 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — live owner TCP80 Kvin firewall APPLY ACCEPTED:**
+Maintenance's reviewed revision
+`3ba9523befe229af2262194a615c3bc35da5aa01`
+from the unchanged staged source packet
+completed native `ok=28 changed=1 failed=0`,
+`check_mode:false`, navigator exit0.
+Runtime and permanent `public`/`eth0`
+both planned only `add_ports:['80/tcp']`,
+with `remove_rich_rules:[]`. Post-state
+firewall and PostgreSQL boundary checks
+passed. This is the genuine mutation,
+not the preceding check-mode prediction.
+Next: **one unchanged repeat** of the
+same pinned owner play, then independent
+LAN Kvin TCP80 reachability before
+Maintenance authoritative Nexus DNS
+publication (six names/wildcard and new
+served serial). Kvar NPM remains live.
+No DNS or named browser/session/WebSocket
+cutover acceptance yet.
+
 **November 11 — production listener native ACCEPTED unchanged:**
 The operator's repeat of only
 `ansible/yxorp.yml` after a transient

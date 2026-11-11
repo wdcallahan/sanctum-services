@@ -1,5 +1,72 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kvin live TCP80 firewall APPLY accepted; unchanged repeat next; DNS still Kvar
+
+**Native Maintenance owner application accepted.**
+Nova applied exact reviewed `wdcallahan/sanctum-maintenance`
+revision `3ba9523befe229af2262194a615c3bc35da5aa01`
+from the already staged source packet
+`artifacts/kvin-firewall-source-3ba9523b`
+using `tools/run-ansible-logged` with explicit
+`sanctum_service_firewall_apply=true` and
+`--diff` (without `--check`).
+`ok=28 changed=1 unreachable=0 failed=0 skipped=1`,
+Navigator exit 0, log status completed.
+The bounded `Show the exact firewall-only preview`
+report had `check_mode:false`, `zone:public`,
+`interface:eth0`, and **exactly
+`80/tcp` added** in runtime and permanent
+plans, `remove_rich_rules:[]` in both.
+All preservation/verification tasks passed,
+including the PostgreSQL identity/hashes
+and full firewall boundary. The `would_change:true`
+field describes the state *before* this apply,
+not an unmet postcondition. Private artifact:
+`.../artifacts/service-firewall/20261111T220356580373Z`;
+transcript `artifacts/transcripts/configure-kvin-firewall-2026-11-11T22-03-55Z.log`.
+**Live firewall TCP80 application accepted.**
+
+**Next ONE native action:** Repeat only
+the same Maintenance owner play from the same
+staged packet with `--diff`,
+`sanctum_service_firewall_apply=true`, exact
+source revision, no `--check`. Expect
+`changed=0`, `failed=0`, both store
+`add_ports:[]` and `remove_rich_rules:[]`,
+and the same PostgreSQL state boundary.
+```bash
+cd ~/src/sanctum-maintenance &&
+revision=3ba9523befe229af2262194a615c3bc35da5aa01 &&
+packet=artifacts/kvin-firewall-source-3ba9523b &&
+tools/run-ansible-logged run "$packet/playbooks/configure-kvin-firewall.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit kvin.outer.sanctum --diff \
+  -e "sanctum_service_firewall_source_revision=$revision" \
+  -e sanctum_service_firewall_apply=true
+```
+Ask for PLAY RECAP and bounded
+`Show the exact firewall-only preview`
+and final `Report the saved boundary evidence
+and remaining independent acceptance` results,
+or failed task. Do not ask to repeat stage
+removal, proxy deployment, prior firewall preview.
+Then test real Kvin HTTP80 from independent
+LAN observer (Peanut), then Maintenance-managed
+six Nexus DNS aliases/wildcard update with new
+SOA serial, keeping Kvar NPM intact for rollback.
+
+**Already native accepted:** YXORP production
+`sanctum-yxorp.service`, eight routes,
+Kuma HTTP302, Yarn HTTP200,
+`ansible/yxorp.yml` repeat
+`ok=31 changed=0 failed=0`.
+Kvar's effective Nexus DNS is NOT moved.
+Kvin Kuma Vault admin/Wicket Up and isolated
+restore accepted. Off-host copy/Vault recovery
+and browser/WebSocket tests remain open.
+Original two-bear independent Kvin/Peanut
+monitoring plan unchanged.
+
 ## CURRENT — November 11: Maintenance exact-source Kvin TCP80 check-mode preview ACCEPTED; next LIVE owner apply
 
 **Native Kvin latest operator receipt:** With the exact staged owner source

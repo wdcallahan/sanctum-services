@@ -1,5 +1,51 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11 — Kvin firewall TCP80 native APPLY accepted, no DNS cutover
+
+Nova ran Maintenance's exact pinned owner-source
+`configure-kvin-firewall.yml` without
+`--check`, with explicit
+`sanctum_service_firewall_apply=true`.
+Native receipt: `ok=28 changed=1 failed=0 skipped=1`,
+navigator exit0, run status completed.
+Before-change plan:
+`check_mode:false`, `eth0`/`public`,
+**only `80/tcp` add** in permanent and
+runtime; **zero rich-rule removals**.
+The owner play's comprehensive post-state
+firewall and PostgreSQL preservation
+assertions passed.
+Logged run:
+`artifacts/transcripts/configure-kvin-firewall-2026-11-11T22-03-55Z.log`.
+**This is the accepted LIVE Kvin firewall application**,
+not another prediction.
+
+### Next action — prove unchanged firewall repeat
+
+From Kvin, same staged Maintenance source
+packet and live-apply authorization; do
+not update the active Maintenance worktree:
+
+```bash
+cd ~/src/sanctum-maintenance &&
+revision=3ba9523befe229af2262194a615c3bc35da5aa01 &&
+packet=artifacts/kvin-firewall-source-3ba9523b &&
+tools/run-ansible-logged run "$packet/playbooks/configure-kvin-firewall.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit kvin.outer.sanctum --diff \
+  -e "sanctum_service_firewall_source_revision=$revision" \
+  -e sanctum_service_firewall_apply=true
+```
+
+Expect `changed=0`, both runtime and permanent
+`add_ports:[]` and `remove_rich_rules:[]`
+and PostgreSQL preservation. Then verify
+Kvin port80 from **Peanut or another independent
+LAN source** before Maintenance changes
+the effective six Nexus DNS aliases/wildcard
+to Kvin. Leave Kvar NPM fully intact until
+actual named browser/WebSocket acceptance.
+
 ## November 11 — Kvin production Nginx accepted; next native firewall PREVIEW
 
 **Actual native convergence:** `ansible/yxorp.yml`
