@@ -1,73 +1,122 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
-## November 11 — Linux ARM64 image qualified; loopback staging source ready
+## November 11 — Kvin loopback startup accepted, initial administrator pending
 
-**Accepted native evidence:** Kvin's corrected image-only
-qualification finished `ok=8 changed=0 failed=0 skipped=1`.
-The rootless cached Uptime Kuma **2.5.9 Linux ARM64** digest
-passed actual Podman inspect and a disposable offline,
-read-only `node --version` execution. No application,
-service, data volume or network change was made by
-qualification.
+**Accepted native state:** Kvin's rootless Podman Quadlet
+deployment `ansible/kuma.yml -e kuma_stage_approved=true`
+completed `ok=10 changed=3 unreachable=0 failed=0 skipped=1`.
+Uptime Kuma 2.5.9 Linux ARM64 is installed as a
+managed service, responds with HTTP **302** at
+`http://127.0.0.1:13001/`, and uses named
+`sanctum-kuma-data` storage at `/app/data`.
+This is a successful initial HTTP startup, but
+**administrator setup, actual monitor state,
+reboot, backup/restore and LAN access are unproven**.
+Kvar remains production; YXORP, DNS and firewalld unchanged.
 
-The exact qualified digest is pinned in
-`ansible/group_vars/kuma.yml`, not a mutable `:2` tag.
-[Staging source CI #43064138846 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064138846).
-The rootless Quadlet will use a local `sanctum-kuma-data`
-volume mounted at `/app/data`; it is local persistent storage,
-not a remote share without reliable SQLite locking.
-It publishes only `127.0.0.1:13001` to the host from
-container port `3001`. The user-systemd generated service
-is started via the ordinary manager, with boot linkage
-handled by Quadlet's own `[Install] WantedBy=default.target`.
-No Kvar, YXORP, DNS, firewall or client publication is changed.
+The image was already separately natively qualified
+(`ok=8 changed=0 failed=0 skipped=1`), with
+actual Podman linux/arm64 inspection and disposable
+offline Node execution. The exact digest is pinned
+in `ansible/group_vars/kuma.yml`.
 
-**Next operator command, from Kvin.** This is the **first
-actual application installation**, which creates a retained
-named volume, a rootless Quadlet and running candidate.
-It requires explicit stage approval supplied only on this
-command (default remains off):
+**SQLite is declared in source.** The Quadlet now
+includes `Environment=UPTIME_KUMA_DB_TYPE=sqlite`,
+supported by the
+[official Kuma v2 environment documentation](https://github.com/louislam/uptime-kuma/wiki/Environment-Variables).
+This eliminates an ambiguous database choice on
+fresh reconstruction while retaining the local named
+volume. [Source CI #43065990976 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43065990976).
+The initial native install was before this setting:
+**it has not yet been applied on Kvin**.
 
-```bash
-cd ~/src/sanctum-services && git pull &&
-~/.local/bin/ansible-navigator run ansible/kuma.yml \
-  -e kuma_stage_approved=true
-```
+### Next: source reconciliation and true no-op repeat
 
-Return only the Kvin `PLAY RECAP` and the `msg` dictionary
-from **Report bounded loopback Kuma candidate staging
-acceptance**, or failed task/error. HTTP 200/302 on the
-Kvin loopback endpoint means basic application startup,
-not administrator/session, monitor, persistence, recovery
-or named client acceptance. The old Kvar proof-of-concept
-database need not be migrated, but the NEW retained volume
-is valuable state once configured.
-
-**Source-managed reversal, separately approved only when needed:**
-`ansible/kuma-stage-remove.yml` has explicit
-`kuma_stage_remove_approved=true` protection, validates
-the exact owned user Quadlet, stops/removes the candidate
-service and generator input, and **does not delete the
-persistent data volume or image cache**. Its [source
-CI #43064602595 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064602595);
-native reversal has not yet been exercised. It is not
-a production cutover or a data-purge procedure. When
-explicitly authorized to reverse a candidate, run:
+On Kvin, run this single `&&` chain. The first
+playbook call is expected to reconcile/restart the
+user Quadlet to declare SQLite. The second
+call must be **unchanged** for idempotence:
 
 ```bash
 cd ~/src/sanctum-services && git pull &&
-~/.local/bin/ansible-navigator run ansible/kuma-stage-remove.yml \
-  -e kuma_stage_remove_approved=true
+~/.local/bin/ansible-navigator run ansible/kuma.yml -e kuma_stage_approved=true &&
+~/.local/bin/ansible-navigator run ansible/kuma.yml -e kuma_stage_approved=true
 ```
 
-**Next application acceptance after staging:** version-qualified
-authenticated monitor reconciliation, an actual UI/login,
-`Wicket Ollama` genuinely Up as observed in the retained
-Kuma, repeat without duplicate monitors/alerts, restart,
-independent backup and restore, update/reversal workflow.
-Only then retarget `kuma.nexus.sanctum` away from Kvar and
-qualify real clients with the proper infrastructure owners.
-The old Kvar installation and production route stay untouched.
+Return only the **two PLAY RECAP rows** and the
+`msg` from the final
+**Report bounded loopback Kuma candidate staging
+acceptance**, or the first failed task/error.
+Do not post raw application/credential logs.
+
+### Then: administrator bootstrap from your browser
+
+Kuma's initial administrator is a one-time
+application credential setup, not a secret to
+publish in the Services repo or relay in chat.
+On the desktop where you will use the browser
+(e.g., Mace, **not** a second shell inside Kvin),
+open an SSH forwarding session to Kvin:
+
+```bash
+ssh -o ExitOnForwardFailure=yes -N \
+  -L 127.0.0.1:13001:127.0.0.1:13001 \
+  wdc2@kvin.outer.sanctum
+```
+
+Leave that SSH session open and navigate in the
+**same desktop** browser to
+`http://127.0.0.1:13001/`.
+The source-pinned SQLite backend should avoid
+an arbitrary remote database choice; if the
+database selector still appears, choose **SQLite**,
+not an unconfigured MariaDB backend. Complete the
+administrator creation flow and verify login/
+the actual dashboard. Keep the chosen credentials
+in an operator-controlled private secret store.
+**Do not manually create the Wicket monitor** in
+the UI: it is already declared in
+`data/kuma-monitors.yml` and belongs in
+idempotent authenticated reconciliation.
+
+A browser login is a separate acceptance gate
+from localhost HTTP 302; please report only
+whether the setup/login and empty dashboard
+worked, and unexpected nonsecret messages
+if they did not. Never share a password,
+session cookie, or authentication token.
+
+### Remaining durable application work
+
+Next select and test a stable, version-compatible
+authenticated Socket.IO interface to create/update
+the declared `Wicket Ollama` monitor. The maintained
+[uptime-kuma-api2](https://github.com/pbarone/uptime-kuma-api2)
+wrapper supports Kuma 2 in principle, but its
+published compatibility matrix is tested through
+**2.5.0**, not our exact **2.5.9**. No monitor
+write or direct SQLite mutation is authorized
+solely by that library's existence. Reconcile by
+stable identity and ensure a second run creates
+no duplicates/notifications. Verify `Wicket Ollama`
+genuinely **Up** in the retained Kuma UI.
+
+Source-managed candidate-only reversal
+`ansible/kuma-stage-remove.yml` is separately
+default-off (`-e kuma_stage_remove_approved=true`);
+it verifies the owned Quadlet, removes its
+running user service and generator input, but
+**preserves `sanctum-kuma-data` and the cached image**.
+[Reversal CI #43064602595 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064602595).
+Native reversal has not yet been exercised.
+No Kvar retirement is authorized by this procedure.
+
+Once administrator and desired monitors actually
+work, independently prove restart/idempotence,
+backup/restore, update/recovery and eventually
+real named clients before moving the existing
+`kuma.nexus.sanctum` proxy upstream from Kvar.
+Avoid premature proxy diagnostics or production cutover.
 
 ## Project Joule request
 

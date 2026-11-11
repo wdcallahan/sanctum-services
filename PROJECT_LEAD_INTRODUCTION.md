@@ -1,5 +1,78 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma rootless stage NATIVELY ACCEPTED, SQLite declared; next is repeat and administrator setup
+
+**Actual native stage receipt supplied by Nova:** From Kvin,
+`~/.local/bin/ansible-navigator run ansible/kuma.yml
+-e kuma_stage_approved=true` completed **`ok=10 changed=3
+unreachable=0 failed=0 skipped=1`**. Reported
+`candidate_stage_http_status:302`, `initial_http_only:true`,
+named `sanctum-kuma-data` volume, pinned Uptime Kuma
+2.5.9 Linux ARM64 image, Quadlet reconciled, rootless
+`127.0.0.1:13001`. HTTP 302 was expressly an accepted
+startup status, **not proof of browser UI, login, monitors,
+recovery or production access**. Kvar, existing YXORP,
+Maintenance DNS/firewall and all production routes remain unchanged.
+
+**Source-only continuation after the native receipt:**
+Pinned supported SQLite backend `kuma_db_type: sqlite`
+and `Environment=UPTIME_KUMA_DB_TYPE=sqlite` in the
+rootless user Quadlet (official Kuma v2 environment
+variable). Separate administrator account creation stays in
+the application; secrets never go into Git or chat.
+Static source contract and full [CI #43065990976
+PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43065990976).
+No SQLite source change has yet been reconciled
+on native Kvin. Source-only CI does not establish
+whether Kuma's actual setup wizard is complete.
+
+**Next meaningful operator step, Kvin:** Reconcile
+the one source-owned SQLite Quadlet change and immediately
+run an unchanged repeat, with the same explicit
+isolated stage approval on each call:
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kuma.yml -e kuma_stage_approved=true &&
+~/.local/bin/ansible-navigator run ansible/kuma.yml -e kuma_stage_approved=true
+```
+
+Ask for **both Kvin PLAY RECAP rows** and the final
+**Report bounded loopback Kuma candidate staging
+acceptance** `msg`, or failed task/error. The first run
+should reconcile/restart the Quadlet; second should have
+`changed=0` if role really converges. If unsuccessful
+diagnose the exact failed task before asking for more runs.
+
+**Then administrator bootstrap through existing SSH:**
+From Nova's desktop/browser machine (not within
+Kvin shell), open a loopback-only SSH forwarding session:
+`ssh -o ExitOnForwardFailure=yes -N -L
+127.0.0.1:13001:127.0.0.1:13001
+wdc2@kvin.outer.sanctum`. Visit
+`http://127.0.0.1:13001/` in that desktop browser;
+source chooses SQLite. Create the initial administrator
+using the application's own setup UI and retain secret
+credentials privately, never in a pasted diagnostic.
+Do NOT manually create the Wicket monitor yet;
+its `data/kuma-monitors.yml` declaration is already
+owned by Services, and an idempotent, version-qualified
+authenticated Socket.IO reconciler is still needed.
+The community `uptime-kuma-api2` library has v2 support
+but documents live-test coverage only through 2.5.0,
+not this exact 2.5.9 image: source assessment is
+not proof of 2.5.9 native integration. No installation
+of that library or monitor mutation has been done.
+
+**Recovery remaining:** login/actual monitor Up,
+source-controlled repeat and no duplicate alerts,
+backup/independent restore, restart/update and
+named/LAN client proof before any Kvar upstream
+retarget. Volume must be preserved; current
+source-managed candidate reversal is available but
+not natively exercised. See
+[runbook](docs/runbooks/kuma-monitoring.md).
+
 ## CURRENT — November 11: native Kuma ARM64 image QUALIFIED; pinned loopback candidate + safe reversal CI green
 
 **Native Kvin image-only acceptance supplied by Nova:** The corrected

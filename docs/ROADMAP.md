@@ -153,7 +153,36 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — native image gate ACCEPTED, staging source green:**
+  **November 11 — native Kvin loopback stage ACCEPTED; real UI and recovery remain:**
+  Nova's first approved `ansible/kuma.yml`
+  completed `ok=10 changed=3 failed=0 skipped=1`
+  and returned HTTP 302 at
+  `http://127.0.0.1:13001/` with named
+  `sanctum-kuma-data` volume and managed user
+  Quadlet. This is accepted application-startup
+  evidence, not administrator, actual monitor,
+  restore or LAN/prod evidence. The incumbent
+  Kvar Kuma and shared proxy/routes are unchanged.
+
+  Immediately afterward, Services pinned the
+  official Kuma v2 SQLite setting
+  `UPTIME_KUMA_DB_TYPE=sqlite` in the Quadlet
+  through `kuma_db_type`, with source contract
+  and [CI #43065990976 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43065990976).
+  Native SQLite reconciliation and unchanged
+  repeat remain pending; use the two-call bounded
+  Kvin command in the [Kuma runbook](runbooks/kuma-monitoring.md).
+  Then access the loopback service from a desktop
+  through an SSH tunnel for administrator
+  bootstrap, without putting credentials into
+  the public repo or this chat. A maintained
+  Socket.IO integration library is a candidate
+  for desired monitor reconciliation, but published
+  library testing only reaches Kuma 2.5.0; our
+  installed 2.5.9 requires real compatibility
+  qualification before we accept monitor writes.
+
+  **Historical stage preparation (now accepted):**
   Nova's corrected Kvin run passed `ok=8 changed=0 failed=0
   skipped=1`, with actual Linux/ARM64 image inspection and
   disposable offline Node execution. No application or volume
@@ -165,10 +194,13 @@ unnecessary raw content private.
   default-off, volume-preserving candidate reversal is source-owned.
   [Installation source CI #43064138846 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064138846);
   [reversal source CI #43064602595 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43064602595).
-  **Next:** run the one guarded, loopback-only Kuma stage
-  command in the [runbook](runbooks/kuma-monitoring.md),
-  then qualify useful monitor state, persistence/recovery,
-  repeat, and actual clients before any upstream cutover.
+  That initial native app stage has now passed
+  `ok=10 changed=3 failed=0` as noted above.
+  Preserve useful evidence; do not repeat the
+  image-only qualification or initial stage
+  merely to retake its acceptance. Continue
+  from the SQLite source reconciliation and
+  actual administrator/monitor state.
 
   **Historical image qualification preparation (now superseded):**
   Existing `data/container-image-candidates.yml`
