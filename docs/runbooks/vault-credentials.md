@@ -1,5 +1,13 @@
 # Private Sanctum Vault credentials
 
+## Two different passwords — operator-facing login contract
+
+**Uptime Kuma browser login on Kvin:** open `http://kuma.nexus.sanctum` and sign in with **username `sanctum-admin`** and **the password Nova supplied at the two `Kuma password:` prompts**. That password is the *application administrator's password*, not the Ansible Vault unlock password. Preserve the application login in the password manager with both the URL and the exact username. Do not use the Vault unlock password at Kuma's browser login.
+
+**Ansible Vault unlock:** `/home/wdc2/.config/sanctum-services/secrets/vault.key` is the preexisting *separate* Vault decryption key, which encrypts/decrypts the service-specific credential files. `kuma-admin.vault.yml` stores the separate Kuma application password encrypted under that key. The password-entry helper asks Nova to **choose the application password**, then encrypts it; it does not ask for or replace the Vault key.
+
+**Operator communication correction (November 11):** The initial bootstrap instructions did not communicate the browser username to Nova, and the wording allowed the application password to be mistaken for a Vault unlock password. The first user-visible login identity must always be included alongside the password setup instructions, not left buried in an Ansible report. Nova subsequently logged in successfully through the production `kuma.nexus.sanctum` route from Mace; see the YXORP cutover runbook. No credential rotation or re-bootstrap is needed.
+
 ## One existing Vault unlock secret
 
 Sanctum Services already used the external Vault password file
