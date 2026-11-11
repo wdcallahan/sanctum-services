@@ -1,5 +1,47 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11, 15:17 Central — FIRST NATIVE PRODUCTION ATTEMPT BLOCKED BY YARN
+
+Nova authorized stage-removal and production
+Quadlet transition. Native second play
+`ok=29 changed=5 failed=1 skipped=1`.
+The source-owned Kuma forwarding post-test
+passed (HTTP 200/302), then the next Yarn
+new-name `Host: yarn.nexus.sanctum`
+frontend request to `127.0.0.1:80`
+timed out (HTTP status -1, 8-second
+timeout). **Actual eight-route production
+acceptance is NOT complete.**
+Existing Kvar NPM and Maintenance DNS
+were NOT changed: clients still reach
+Kvar for the current Nexus names.
+No native TCP80 firewall publication.
+
+**DO NOT rerun stage removal or
+production deployment just to get a
+second timeout.** Run one source-owned,
+read-only Kvin comparison after source CI:
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp-production-yarn-diagnose.yml
+```
+Return `PLAY RECAP` and the bounded
+`Report bounded production Yarn route
+evidence without retrying a deployment`
+msg or failed task. This classifies
+the current named origin, direct IP
+and actual production proxy on
+both Yarn Host headers, using the
+working Kuma route as control.
+No raw response body, cookies or
+other secret material is reported.
+Choose the correction from the actual
+result, then finish stage-to-production
+and Maintenance firewall/DNS release.
+The already accepted historical
+8/8 Kvin *stage* probes should not
+be rerun for reassurance.
+
 **Current status: SOURCE PREPARED, NO LIVE CUTOVER.** Nova expressly
 permits a practical proxy switchover during the workday, including
 substantial downtime. Do not invent an after-hours or zero-downtime

@@ -1,5 +1,96 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11, 15:17 Central: Kvin production YXORP partly installed, Yarn forwarding timed out; no DNS/firewall changes. Podman hairpin design reaffirmed
+
+**Operator's native result:** Nova executed the guarded
+stage-removal then `ansible/yxorp.yml` production
+deployment chain from Kvin. Production play:
+`ok=29 changed=5 unreachable=0 failed=1 skipped=1`.
+Exact failed post-task:
+`Verify production proxy still reaches original Yarn service`
+at `ansible/yxorp.yml:128`, with `Status code was -1 ...
+Connection failure: timed out` to
+`http://127.0.0.1/` with
+`Host: yarn.nexus.sanctum`.
+The preceding `Verify production proxy actually
+reaches source-owned Kvin Kuma` post-task
+**passed**, accepting HTTP 200 or 302.
+The playbook had already reconciled the
+owned Nginx unit/mounted config before
+the Yarn timeout, but **full production
+acceptance FAILED**. The separate
+stage-removal play must have succeeded
+to reach production because the native
+shell used `&&`, but do not invent an
+unseen stage recap. Maintenance firewall
+and DNS are unchanged; the live
+`*.nexus`/selected explicit A records
+continue to point to Kvar NPM. Don't rerun
+the deployment or publish DNS blindly.
+
+**Next targeted action (read-only, Kvin only):**
+`ansible/yxorp-production-yarn-diagnose.yml`
+and `tools/observe-yxorp-production-yarn.py`
+compare DNS `yarn.inner.sanctum`,
+direct Yarn `192.168.1.110` with both
+Host headers, direct named origin, and
+the new and legacy Yarn Host routing
+through the current `127.0.0.1:80`
+production Nginx. Kuma remains a
+proxy control. Return safe outcome/status
+classes, not raw content. Source-only
+CI #43102390350 was running as last
+checked; wait for green before native use.
+Exact command:
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp-production-yarn-diagnose.yml
+```
+Return `PLAY RECAP` and bounded
+`Report bounded production Yarn route evidence without retrying a deployment`
+`msg`, or failed task. Diagnose actual
+path before any production source change.
+
+**Correction from Nova on established network design:**
+On April 23, containerized Kuma
+**could monitor other hosts but not its
+own host-published containers** due
+to rootless Podman/pasta hairpin
+restriction, yielding refused traffic.
+`Network=host` was the historical
+workaround, **not a Podman bugfix**;
+Nova does not want that workaround
+as permanent monitoring architecture.
+The **two Kuma bears on distinct hosts
+monitoring one another was always
+the plan**, not a newly invented
+suggestion. Maintenance inventory
+marks **Kvin and Peanut** `kuma_peer`
+for the eventual independent hosts;
+Kvar is temporary incumbent only.
+Monitor direct external hostnames from
+independent vantage points; never claim
+same-host published-port reachability
+or implicit Podman fixes.
+This issue is *distinct* from the current
+rootful host-network YXORP -> Yarn timeout
+until proved otherwise.
+
+**Already accepted (do not redo):**
+Kvin Kuma has saved Wicket Ollama actual
+Up, source-managed Vault admin,
+unchanged repeat, and complete local
+SQLite backup + isolated network-none
+Kuma restore `ok=49 changed=11 failed=0`
+with original service healthy after restart.
+Off-host snapshot/Vault key recovery is
+still outstanding. Maintenance source
+TCP80 policy CI #43100611079 PASSED
+but no native firewall publication.
+Services full eight-route production
+source CI #43098976225 PASSED
+but native Yarn acceptance now FAILED.
+
 ## CURRENT — November 11: Kuma restore accepted, eight-route YXORP production source CI GREEN; firewall source awaiting CI, DNS untouched
 
 **Native Kuma acceptance banked:** latest user-supplied

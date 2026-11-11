@@ -30,6 +30,43 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — first Kvin production native attempt FAILED on Yarn:**
+The approved stage removal plus
+production deployment chain progressed
+into the new production post-tasks.
+`ansible/yxorp.yml` native
+`ok=29 changed=5 failed=1 skipped=1`;
+the Kvin Kuma frontend check passed
+but the next test for
+`Host: yarn.nexus.sanctum` at
+`http://127.0.0.1:80/` timed out
+(status -1). **Do not claim production
+accepted or move DNS.** Kvar NPM
+still serves normal names and is
+available for rollback. The earlier
+eight-route **stage** acceptance remains
+valid *for that vantage point and time*;
+the new production Yarn behavior needs
+fresh explanation. Source now contains
+a specifically read-only production
+Yarn origin-by-IP/name and both-new/
+old-proxy-Host comparison. Run once
+after targeted CI passes, then select
+a concrete correction. No firewall,
+DNS or Kvar source changed.
+
+**Longstanding hairpin/Kuma rule reaffirmed:**
+Old rootless Podman/pasta Kuma couldn't
+monitor own-host published containers,
+even while other-host monitoring
+worked; `Network=host` was an
+explicit workaround, not an upstream
+bugfix. Two independent bears
+cross-monitoring each other is the
+established design; eventual independent
+peers are Kvin and Peanut (Maintenance
+`kuma_peer`), not permanently Kvar.
+
 **November 11 — Production promotion SOURCE QUALIFIED, awaiting native owner acceptance:**
 Nova permits an immediate pragmatic Kvar->Kvin
 proxy cutover, accepting even substantial
