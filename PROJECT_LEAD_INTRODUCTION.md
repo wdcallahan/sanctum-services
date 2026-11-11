@@ -1,5 +1,100 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma restore accepted, eight-route YXORP production source CI GREEN; firewall source awaiting CI, DNS untouched
+
+**Native Kuma acceptance banked:** latest user-supplied
+`ansible/kuma-backup-restore-trial.yml` **`ok=49 changed=11 failed=0`**.
+Original Kvin Kuma restarted and verified HTTP+Vault login;
+isolated `--network none` restored application actually
+started, SQLite integrity passed, existing Vault
+login and saved Wicket monitor verified, disposable
+volume/container removed. Local retained
+`sanctum-kuma-20261111t144137.tar`
+290816 bytes, SHA-256
+`97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`.
+This is **genuine local backup and application restore acceptance**,
+not an off-host recovery. Vault key and encrypted
+per-service credentials also still require independent
+off-host recovery. Historical Wicket monitor is natively
+`Up` with 12 heartbeats and 17-second age,
+`changed=0` repeat.
+
+**Operator production risk tolerance:** Nova says
+YXORP may cut over anytime, even if an outage lasts
+the remainder of the workday; his class does not
+depend on it. This authorizes practical production
+promotion without a zero-downtime maintenance-window
+gate. It does not authorize discarding Kvar's
+reversal path or pretending DNS/firewall/source
+changes have run.
+
+**Permanent two bears:** Maintenance production inventory
+explicitly marks **both Kvin and Peanut** as
+`sanctum_service_roles: kuma_peer`. Kvar Kuma
+is temporary migration fallback, **not**
+the eventual second bear; Kvar is intended
+to be emptied/reprovisioned. No Peanut Kuma
+deployment or peer cross-monitor configuration
+has yet been performed. HTTP monitors do
+not need a privileged Podman socket; direct
+container-state integration is a different
+socket/permissions feature.
+
+**Production proxy source implemented:**
+`ansible/yxorp.yml` now explicitly approves only
+exact Kvin rootful Nginx and builds a full eight-host
+production route projection from untouched
+`data/yxorp-routes.yml` stage baseline, with
+**only** `kuma.nexus.sanctum` retargeted to
+`127.0.0.1:13001`. It verifies stage
+TCP80 Quadlet is absent, Kvin Kuma local HTTP
+exists, role's Nginx parsing and live mounted
+configuration pass, and both Kuma and Yarn
+real frontend HTTP respond. It does not
+touch DNS/firewall/Kvar. A second source-owned
+`ansible/yxorp-production-remove.yml`
+can remove only the exact production Quadlet
+and its known Nginx files; never Kvar or
+application state. Source tests execute actual
+Ansible eight-route projection and verify
+separate production/reversal gates.
+**[FULL Services CI #43098976225 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43098976225).**
+No native stage-to-production handoff has happened.
+
+**Maintenance-owned firewall source:** Updated
+`wdcallahan/sanctum-maintenance` at commit
+[`873c9c6`](https://github.com/wdcallahan/sanctum-maintenance/commit/873c9c6fdb7f4ac8a7b56181a957eb03a89005a9)
+to include `80/tcp` in the exact
+`public`/Kvin `eth0` reviewed service
+policy alongside 5432, 8084 and 8085;
+retained same two old rich rules and
+PG/zone preservation logic. Added new
+source CI fixture workflow; **CI was
+queued as last checked**. No native
+firewall modification. **Maintenance DNS
+`data/dns.yml` untouched**: five explicit
+`dir/joule/kuma/pihole/search.nexus` A
+records and `*.nexus` still point to Kvar
+`192.168.0.7`; Kvin is
+`192.168.0.192`. Don't change DNS
+before Kvin prod is actually live and
+TCP80 admitted. Preserve explicit old
+`yxorp.nexus` NPM-admin Kvar and three
+direct DB records (already Kvin).
+
+**Current exact operational runbook:**
+[docs/runbooks/yxorp-production-cutover.md](docs/runbooks/yxorp-production-cutover.md).
+It documents Maintenance source-reviewed
+TCP80 preview/apply, source-owned stage
+remove -> production start as **two distinct
+approved** Navigator plays, then owner
+DNS zone serial/publish and real external
+browser/WebSocket acceptance. Reverse
+DNS first after release, retaining Kvar
+NPM throughout. Do not invent native
+acceptance or recommend running the
+firewall command before source CI green.
+
 ## CURRENT — November 11: native Kuma offline restore ACCEPTED; operator authorizes YXORP cutover and two-bear mutual monitoring
 
 **Native operator result (now ACCEPTED):**

@@ -30,6 +30,33 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — Production promotion SOURCE QUALIFIED, awaiting native owner acceptance:**
+Nova permits an immediate pragmatic Kvar->Kvin
+proxy cutover, accepting even substantial
+proxy downtime. All 8 approved local stage
+hostnames remain accounted for.
+`ansible/yxorp.yml` promotes eight source
+routes, retargeting only Kuma to Kvin's
+`127.0.0.1:13001`, and proves local
+Yarn+Kuma forwarding after stage removal.
+`ansible/yxorp-production-remove.yml`
+provides scoped reversal. **[Full Services
+CI #43098976225 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43098976225).**
+No native production promotion yet.
+Maintenance's supported Kvin firewall
+source now adds TCP80 (commit
+`873c9c6`); no live firewall apply yet.
+The owner-managed DNS source still
+points the five explicit relevant Nexus
+aliases plus wildcard at Kvar.
+[One supported release/rollback
+sequence](runbooks/yxorp-production-cutover.md)
+stages the firewall, removes old
+Kvin YXORP staging, installs proper
+production Quadlet, then publishes
+DNS and tests real clients. Kvar NPM
+stays for rollback.
+
 - **SS-YX-1 — [accepted, limited] Seven Kvin stage virtual hosts.**
   `yarn.nexus`, `square.nexus`, `joule.nexus`,
   `search.nexus`, `dir.nexus`, `kuma.nexus`, and

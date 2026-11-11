@@ -1,5 +1,32 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## November 11 — YXORP production route promotion source CI PASSED
+
+Eight accepted Kvin stage routes now
+have a separately guarded **production**
+promotion in `ansible/yxorp.yml`,
+not merely the seven disabled entries
+from the historical staging manifest.
+The production backend for Kuma is
+source-owned Kvin `127.0.0.1:13001`,
+with all seven other previous origins
+retained. The separate production removal
+playbook preserves Kvar for reversal.
+[Services full CI #43098976225 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43098976225).
+**No live source-managed production Quadlet,
+firewall, DNS or named-client cutover
+has been accepted yet.** Maintenance
+firewall source includes TCP80 but
+has not been natively applied.
+
+Use [YXORP production cutover and reversal
+runbook](yxorp-production-cutover.md)
+rather than rerunning already accepted
+historical 8/8 stage canaries.
+Nova permits practical downtime, so
+do not invent a mandatory after-hours
+release or HA load balancer.
+
 ## November 11 — operator authorizes practical cutover, with downtime acceptable
 
 Nova explicitly approves moving real traffic to
