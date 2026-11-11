@@ -41,14 +41,17 @@ does create its ordinary private
 controller transcripts/reports.
 
 ```bash
-cd ~/src/sanctum-maintenance &&
-revision=3ba9523befe229af2262194a615c3bc35da5aa01 &&
-packet=artifacts/kvin-firewall-source-3ba9523b &&
-git fetch origin main &&
-git cat-file -e "$revision^{commit}" &&
-test ! -e "$packet" &&
-mkdir -p "$packet" &&
-git archive "$revision" | tar -xf - -C "$packet"
+(
+  set -euo pipefail
+  cd ~/src/sanctum-maintenance
+  revision=3ba9523befe229af2262194a615c3bc35da5aa01
+  packet=artifacts/kvin-firewall-source-3ba9523b
+  git fetch origin main
+  git cat-file -e "$revision^{commit}"
+  test ! -e "$packet"
+  mkdir -p "$packet"
+  git archive "$revision" | tar -xf - -C "$packet"
+)
 ```
 
 Once extracted, use the existing
