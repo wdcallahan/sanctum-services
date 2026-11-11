@@ -57,7 +57,8 @@
           - (kuma_qualify_image_info.stdout | from_json | length) == 1
           - (kuma_qualify_image_info.stdout | from_json)[0].Architecture == 'arm64'
           - (kuma_qualify_image_info.stdout | from_json)[0].Os == 'linux'
-          - (kuma_qualify_image_info.stdout | from_json)[0].Id is match('^sha256:[a-f0-9]{64}$')
+          # Podman .Id is bare 64-hex; .Digest (a different field) has sha256:.
+          - (kuma_qualify_image_info.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
         fail_msg: The selected cached image is not verified as Linux ARM64.
 
     - name: Verify Node starts inside a disposable offline rootless candidate

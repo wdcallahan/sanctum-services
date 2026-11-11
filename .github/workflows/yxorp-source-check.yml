@@ -15,6 +15,7 @@ on:
       - "ansible/roles/kuma/**"
       - "tests/test_kuma_role_contract.py"
       - "tests/test_kuma_image_qualification.py"
+      - "tests/fixtures/verify-kuma-image-metadata.py"
       - "tests/test_yxorp_contract.py"
       - "tests/test_yxorp_stage_removal.py"
       - "tests/test_yxorp_status.py"
@@ -202,6 +203,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-inspect-npm.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-qualify-image.yml --syntax-check
+          python3 tests/fixtures/verify-kuma-image-metadata.py
           ansible-playbook -i 'localhost,' ansible/yxorp-preview.yml --syntax-check
       - name: Render on the CI runner without connecting to Sanctum
         run: |

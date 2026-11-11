@@ -85,6 +85,16 @@ class KumaImageQualification(unittest.TestCase):
         self.assertIs(reported["host_or_network_changed"], False)
         self.assertIs(reported["persistent_data_or_volume_changed"], False)
 
+    def test_inspected_image_id_uses_documented_podman_format(self):
+        checks = next(task for task in self.play["tasks"]
+                      if task["name"] == "Require native Linux ARM64 metadata and real loaded image")
+        predicates = checks["ansible.builtin.assert"]["that"]
+        self.assertIn(
+            "(kuma_qualify_image_info.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')",
+            predicates,
+        )
+        self.assertNotIn("Id is match('^sha256:", "\n".join(predicates))
+
     def test_node_version_regex_has_no_double_backslash(self):
         checks = next(task for task in self.play["tasks"]
                       if task["name"] == "Require the native runtime actually executed")
