@@ -45,98 +45,85 @@ unnecessary raw content private.
   It does **not** qualify browser sessions, WebSockets,
   app state, LAN firewall reachability, production or cutover.
 
-- **SS-YX-2 — [Kvin stage installed; corrected native acceptance pending] Eighth existing
-  NPM virtual host `yarn.inner.sanctum`.**
-  Reuse the checked-in eight-route manifest; the existing old
-  `yarn.inner` proxy host in original `11.conf`
-  targets `http://192.168.1.110:80`.
-  The distinct new `yarn.nexus` route is already qualified.
-  Implement **one default-off, exact Kvin-stage-only eighth-route
-  opt-in**, following the proven seven-route progression.
-  Preserve the source manifest's stage-disabled defaults and
-  retain the exact old backend/Host mapping. Before native
-  invocation, add source-contract tests, actual Nginx synthetic
-  Host routing and backend-parity tests, Ansible syntax, and
-  validate CI. After green CI, give Nova **one consolidated
-  Kvin stage-reconcile + read-only probe command**, guarded
-  against Kvar/DNS/firewall/production writes. Check HTTP 200,
-  stable content/metadata equality against the directly
-  reachable origin for `Host: yarn.inner.sanctum`, distinct
-  old/new vhost selection and unknown-Host refusal;
-  use **raw Location** where redirects exist. If dynamic
-  body bytes prevent strict equality, prove an explicit
-  stable representative rather than invent a pass.
-  The old Kvar NPM path **times out**, including earlier
-  Kvar-host and NPM-container origin attempts, so a
-  nonexistent incumbent HTTP response must NOT be
-  called a parity mismatch or a passing comparison.
-  Investigate only the specific failure that blocks Kvin.
-  **Exit:** Eight route names have their intended isolated
-  Kvin-stage vhost and the eighth has native local-backend
-  acceptance. Do not infer production/client acceptance.
-  **Owner:** Services. **Do not** revisit keeping the
-  ordinary Yarn DNS hostname: the old NPM route is a
-  migration requirement, not a discretionary deletion.
-
-  **November 11 native outcome (after source checkpoint):** Kvin
-  eight-route stage reconciliation passed
-  `ok=48 changed=3 failed=0`. The following
-  read-only observer failed `old_vhost_present_once`
-  because its double-escaped regex was malformed,
-  **not because the Nginx stage was proven wrong**.
-  The probe was fixed to count exact trimmed
-  config lines, with new real-Ansible
-  regression covering present, absent,
-  duplicate and wrong upstream cases.
-  **[Full CI #43053056244 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244)**.
-  Native HTTP/content/config acceptance remains
-  pending a **probe-only rerun**; do not redeploy
-  eight routes or reopen previous routing questions.
-  Operator command is in the
-  [YXORP runbook](runbooks/yxorp-reconstruction.md).
-
-  **November 11 source checkpoint:** Exact eighth
-  opt-in `yxorp_stage_yarn_inner_approved: false` now
-  exists in `ansible/vars/yxorp-kvin-stage.yml`,
-  guarded and selected only in
-  `ansible/yxorp-kvin-stage.yml`. New
+- **SS-YX-2 — [accepted: native Kvin stage, bounded] Eighth original NPM vhost.**
+  Nova's corrected native run of
   `ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
-  and `tools/observe-yxorp-kvin-stage-yarn-inner.py`
-  test mounted-config and live direct-origin
-  HTTP/body equality, alongside new Yarn host
-  availability and default-deny. New synthetic
-  tests verify distinct old/new Yarn Host
-  routing and reject wrong-body acceptance.
-  **[Full source CI #43049835644 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43049835644)**: source contracts, Ansible, actual Nginx parser and loopback HTTP tests. Native Kvin acceptance remains unrun. No host or
-  production change has occurred.
+  returned **`ok=8 changed=0 failed=0`** and
+  **all assertions passed**. For original NPM
+  `yarn.inner.sanctum` → `192.168.1.110:80`,
+  direct Yarn and Kvin stage both returned
+  **HTTP200**, matching MIME/status and an
+  **identical complete 349-byte body**. The
+  distinct new `yarn.nexus.sanctum` stage
+  returned 200. An unknown Host was refused.
+  Published and container-mounted Nginx
+  configurations matched exactly; both Yarn
+  vhosts and original backend directive were
+  present exactly once. No redirect was
+  returned, so relative Location equality
+  was correctly **not comparable**, not
+  failed. The earlier double-escaped observer
+  regex defect was corrected and independently
+  regression-tested in **[full passing CI
+  #43053056244](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244)**.
+  Combined with already accepted SS-YX-1,
+  **all eight intended application vhosts have
+  passed the initial actual Kvin-local HTTP
+  acceptance**. The Kvar legacy NPM → Yarn
+  timeout remains an incumbent Kvar-side
+  transport issue, not an eighth-route
+  failure and not a reason to reopen Yarn
+  client attribution or DNS policy.
+  **Owner:** Services. **Exit accepted
+  only for initial HTTP/config mechanism.**
+  Not app/session/LAN/production.
 
-- **SS-YX-3 — [open; after SS-YX-2] Close meaningful proxy
-  behavior gaps, rather than multiplying synthetic probes.**
-  Reuse the Nov 9 read-only NPM `5.conf` through
-  `11.conf` generated-host evidence, existing source
-  route comparison, CI's real Nginx synthetic
-  Host/header/WebSocket tests, and native HTTP evidence.
-  One bounded source-to-live review must account for
-  the **eight intended application vhosts**, upstream
-  scheme/host/port, relevant custom locations,
-  upstream Host and forwarded headers, path handling,
-  redirects, WebSocket Upgrade where apps use it,
-  default-deny behavior and restart/remount idempotence.
-  The old NPM *administration UI* `yxorp.nexus`
-  is the single explicitly justified exclusion; plain
-  Nginx has no equivalent GUI. If an essential NPM
-  behavior is not yet evidenced, inspect that specific
-  incumbent behavior and add only the missing regression.
-  Treat immutable Nginx image digest, staged configuration
-  convergence and source-controlled lifecycle as
-  accepted where native evidence already supports them.
-  **Exit:** All eight vhosts are represented in the
-  source/renderer; material routing behavior has
-  source+native evidence or an explicit real
-  application-client acceptance gate; install,
-  update/reload and reversal are documented. This
-  finishes **proxy mechanism** only, not app
-  migrations or Kvin LAN publication. **Owner:** Services.
+- **SS-YX-3 — [reviewed: proxy source mechanism covered; functional consumers remain open] Material NPM behavior.**
+  Reused the [Nov 9 real NPM generated-host
+  inspection](review/2026-11-09-yxorp-behavior-observation.md)
+  and [default-upstream comparison](review/2026-11-09-yxorp-default-route-comparison.md)
+  rather than collecting redundant logs.
+  The seven incumbent application hosts had
+  one ordinary location each, no non-default
+  custom locations, and no nonempty global
+  custom snippets. Default upstream mappings
+  are preserved for all seven originals,
+  plus the explicitly requested new
+  `yarn.nexus.sanctum` proxy.
+  The old NPM **administration UI** is
+  deliberately excluded from the new
+  plain-Nginx design. Prism's observed
+  legacy HTTPS certificate/listener is
+  deliberately not recreated under the
+  already accepted private-HTTP policy.
+  The template and source tests cover
+  relevant Host and forwarding headers,
+  WebSocket Upgrade, original raw relative
+  redirects, default-deny, actual Nginx
+  syntax and synthetic backend isolation.
+  The source-managed rootful Quadlet role
+  validates candidate config before
+  publishing, recovers stale single-file
+  mounts and independently checks live
+  mounted equality. Config change/reload
+  and removal have automated tests;
+  a new eight-vhost no-change native
+  repeat has not yet been separately
+  logged and can be verified during the
+  next meaningful managed change.
+  **This review identifies no additional
+  isolated proxy-source defect requiring
+  another standalone NPM investigation.**
+  Shared include semantics not independently
+  expanded, actual application authentication,
+  browser/WebSocket behavior and real LAN
+  named access are **not claimed fully
+  equivalent**: their necessary observable
+  outcomes remain required under the
+  relevant **SS-APPS** and **SS-PUB** gates.
+  Do not promote 8/8 local HTTP into
+  complete service or production
+  acceptance. **Owner:** Services.
 
 ### SS-APPS — Replace the services still depending on Kvar
 
