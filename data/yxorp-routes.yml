@@ -4,8 +4,9 @@
 # entries or explicitly excluded as the old NPM administration UI.
 # This is NOT yet complete behavioral equivalence (headers/custom locations).
 # Only Yarn is enabled for the initial rootful Peanut HTTP:80 trial.
-# Disabled routes require downstream restoration and behavioral qualification
-# before activation. Never enable everything merely to make NPM names match.
+# Disabled routes are staging gates, NOT retirement decisions. Preserve
+# incumbent NPM host entries in the migration baseline unless the operator
+# explicitly approves an exception; test routes individually before enabling.
 yxorp_routes:
   - hostname: yarn.nexus.sanctum
     upstream_scheme: http
@@ -63,15 +64,17 @@ yxorp_routes:
     enabled: false
     provenance: november_8_kvar_npm_7_conf; retain_pihole_ad_blocking; requalify_ui_on_kvin
 
-  # This existing name is distinct from the newly requested yarn.nexus
-  # route. Keep it in the adoption inventory until independently retired.
+  # Existing NPM proxy-host 11.conf: required migration baseline entry,
+  # distinct from the new yarn.nexus name. Disabled here only because its
+  # staging HTTP behavior has not yet been tested from Kvin. Do not infer
+  # that direct DNS mapping makes this proxy route disposable.
   - hostname: yarn.inner.sanctum
     upstream_scheme: http
     upstream_host: 192.168.1.110
     upstream_port: 80
     websocket: false
     enabled: false
-    provenance: november_8_kvar_npm_11_conf; legacy_route_subject_to_client_review
+    provenance: november_8_kvar_npm_11_conf; existing_proxy_route_pending_kvin_stage_qualification
 
 # Intentionally not rendered until their effective upstream and semantics
 # are independently established. NPM's management UI is not being rebuilt.
