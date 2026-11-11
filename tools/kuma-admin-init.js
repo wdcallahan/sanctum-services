@@ -9,7 +9,7 @@
 const { io } = require("socket.io-client");
 
 const mode = process.argv[1];
-if (!["status", "diagnose", "bootstrap"].includes(mode)) {
+if (!["status", "diagnose", "bootstrap", "verify"].includes(mode)) {
     process.stderr.write("Unsupported Kuma administrator operation\n");
     process.exit(2);
 }
@@ -91,7 +91,12 @@ async function main() {
         return;
     }
 
-    if (needsSetup) {
+    if (mode === "verify" && needsSetup) {
+        // A recovered copy without the saved administrator is not usable;
+        // never bootstrap a new account as part of a restore verification.
+        throw new Error("Restored Kuma still requires first-user setup");
+    }
+    if (mode === "bootstrap" && needsSetup) {
         // The upstream handler refuses setup once a user already exists.
         const setup = await eventAck("setup", credentials.username, credentials.password);
         if (!setup || setup.ok !== true) {
@@ -108,7 +113,7 @@ async function main() {
         throw new Error("Kuma administrator login verification failed");
     }
     process.stdout.write(JSON.stringify({
-        administrator_created: needsSetup,
+        administrator_created: mode === "bootstrap" && needsSetup,
         administrator_login_verified: true,
     }) + "\n");
 }

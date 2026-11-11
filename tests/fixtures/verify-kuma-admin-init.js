@@ -60,6 +60,13 @@ try {
     s = run("diagnose", secret, { SIM_NEEDS_SETUP: "no" });
     assert.equal(s.status, 0, s.stderr);
     assert.deepEqual(JSON.parse(s.stdout), { needs_setup: false, password_meets_upstream_setup_rule: true });
+    s = run("verify", secret, { SIM_NEEDS_SETUP: "no" });
+    assert.equal(s.status, 0, s.stderr);
+    assert.deepEqual(JSON.parse(s.stdout), { administrator_created: false, administrator_login_verified: true });
+    s = run("verify", secret, { SIM_NEEDS_SETUP: "yes" });
+    assert.notEqual(s.status, 0);
+    s = run("verify", secret, { SIM_NEEDS_SETUP: "no", SIM_LOGIN_OK: "no" });
+    assert.notEqual(s.status, 0);
     s = run("bootstrap", secret, { SIM_NEEDS_SETUP: "yes" });
     assert.equal(s.status, 0, s.stderr);
     assert.deepEqual(JSON.parse(s.stdout), { administrator_created: true, administrator_login_verified: true });
