@@ -153,6 +153,29 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
+  **November 11 Kuma image-only source checkpoint:**
+  Existing `data/container-image-candidates.yml`
+  records an explicit Linux/ARM64 Uptime Kuma
+  2.5.9 digest marked **registry_only**.
+  New `ansible/kuma-qualify-image.yml`
+  requires exact Kvin aarch64, rootless
+  execution, explicit image qualification
+  opt-in and *no app-stage approval*. It
+  checks/pulls the exact digest into the
+  rootless image cache, validates actual
+  image metadata and runs Node offline
+  in a disposable read-only container.
+  It creates **no service or volume**.
+  [Source CI #43055414958 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43055414958).
+  The native result remains unobserved:
+  use the **one image-only operator command**
+  in the [Kuma runbook](runbooks/kuma-monitoring.md).
+  Do not pin/deploy the application
+  until Kvin confirms the image.
+  Next finish actual UI, monitor,
+  persistence/recovery and named
+  client acceptance.
+
 - **SS-APPS-2 — [open] LinkStack with actual directory
   data.** The existing rootless Kvar
   `linkstack` volume is mounted at `/htdocs`.
