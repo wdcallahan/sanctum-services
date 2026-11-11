@@ -1,5 +1,128 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kuma raw-wire redirect ACCEPTED; Pi-hole seventh candidate ready
+
+**Decisive actual operator result:** The read-only
+`ansible/yxorp-kvin-stage-kuma-wire-observe.yml`
+completed `ok=7 changed=0 failed=0` on Kvin.
+It privately inspected published and
+Podman-mounted Nginx config:
+`published_equals_container_mount=true`,
+`mounted_config_has_kuma_virtual_host=true`,
+`mounted_config_has_exact_kuma_redirect_rule=true`,
+`mounted_config_exact_redirect_rule_count=1`.
+Crucially, Python `http.client` on Kvin
+read the **unaltered wire Location header**
+from direct old Kvar Kuma :3001, Kvar NPM
+:80 and local Kvin stage :80:
+each was **HTTP302 with a *relative*
+Location** (`absolute=false`,
+`host_class=relative`),
+`candidate_wire_equals_incumbent_wire=true`
+and `candidate_wire_equals_direct_wire=true`.
+The direct backend did not change Location
+when proxy forwarded headers were present.
+**Kuma therefore PASSED its bounded anonymous
+GET / HTTP redirect parity as actually
+observed on the wire.** The earlier
+Ansible `uri.location` full URL/host/port
+comparisons were **test artifacts**:
+relative Location headers were
+resolved against each request URL,
+creating spurious loopback:80 vs
+Kvar host/port differences.
+Do not mistake those normalized
+URI properties for a real absolute
+Location header from the wire.
+
+**Project count is now 6/8 names tested and
+6/6 passed initial scoped local HTTP checks:**
+Yarn, Square, Prism, Search, interim Kvar-backed
+LinkStack and interim Kvar-backed Kuma.
+Pi-hole and legacy Yarn inner name remain
+untested on Kvin. Kuma login, monitor state,
+Socket.IO/WebSockets, notifications and eventual
+Kvin service restore still NOT accepted.
+
+**Source cleanup:** The Kuma-only
+`redirect_strip_upstream_port` flag
+and explicit Nginx `proxy_redirect` rule
+were unnecessary because the observed
+redirect was relative. These have been
+removed from the checked-in manifest,
+Nginx template and stage guard. The
+previously executed stage still contains
+the obsolete rule until the next native
+stage reconcile. Source regression
+tests now assert the plain template
+leaves relative Locations intact and
+Kuma has no special policy. Historical
+read-only Kuma wire observer can
+still inspect mounted configuration.
+The checked-in desired manifest
+remains **Yarn-only**; no production
+Kvar, DNS or firewall changes.
+
+**Next native stage route (7th):**
+`pihole.nexus.sanctum`, current Kvar
+Pi-hole **UI** backend port82.
+New default-off stage flag
+`yxorp_stage_pihole_approved: false`
+in `ansible/vars/yxorp-kvin-stage.yml`.
+`ansible/yxorp-kvin-stage.yml`
+requires the six prior Kvin stage
+flags, exact disabled Pi-hole manifest,
+Kvar :82 upstream and no WebSocket,
+then enables only Pi-hole as seventh
+in-memory vhost. Other legacy
+`yarn.inner.sanctum` stays off.
+The stage validation/remount/health
+guards remain unchanged.
+
+**Pi-hole observer:**
+`ansible/yxorp-kvin-stage-pihole-probe.yml`
+loads source-managed
+`tools/observe-yxorp-pihole-wire.py`
+using Python `http.client` from Kvin.
+Independently compares direct old Kvar :82,
+incumbent Kvar NPM :80 and local Kvin
+stage :80, both anonymous GET /
+and GET /admin/. Reports only HTTP
+status/MIME equalities, redirect presence
+and **raw Location equality** (never
+Ansible's normalized URI Location),
+and redirect kind (relative/absolute/
+absent). No Location values,
+queries, HTML, cookies, credentials
+or raw exceptions. A root / 404
+does NOT by itself imply Pi-hole down;
+the /admin/ UI path is independently
+tested. Does NOT qualify Pi-hole
+DNS blocking, login, client settings,
+data migration or service restore.
+
+**Next exact Kvin command, after CI green:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true -e yxorp_stage_pihole_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-pihole-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true -e yxorp_stage_pihole_approved=true
+```
+**Operator output only:** two one-line
+`PLAY RECAP` results and the
+`msg` dictionary from **“Report only
+Pi-hole root and admin HTTP parity
+metadata”**; if failure only the
+failed task and error. Never demand
+entire Ansible logs or already
+accepted Kuma rechecks. The
+checked-in manifest is still
+Yarn-only. Kvar NPM/wildcard DNS
+remain production; Maintenance
+owns Kvin LAN HTTP80 firewalld.
+Kuma, LinkStack and Pi-hole app
+state remain on Kvar. Do not
+authorize cutover or Kvar retirement.
+Each assistant turn ends in
+a concrete operator action.
+
 ## CURRENT — November 10: Kuma redirect still mismatched after CI-qualified fix; raw-wire diagnosis needed
 
 **Latest native result:** Nova reran the checked-in
