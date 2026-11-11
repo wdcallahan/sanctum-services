@@ -58,14 +58,15 @@ function credentialsFromStdin() {
     const result = JSON.parse(raw);
     if (result.username !== "sanctum-admin"
         || typeof result.password !== "string"
-        || result.password.length < 40) {
+        || result.password.length < 16) {
         throw new Error("Invalid private administrator secret format");
     }
     return result;
 }
 
 async function main() {
-    // Read the secret ONLY when running bootstrap, not when checking status.
+    // Read the Vault-decrypted secret from stdin, never from arguments or disk
+    // inside the managed container. Status is intentionally unauthenticated.
     const credentials = mode === "bootstrap" ? await credentialsFromStdin() : null;
     await waitForConnection();
 

@@ -13,7 +13,6 @@ on:
       - "ansible/kuma-stage-remove.yml"
       - "ansible/kuma-admin-bootstrap.yml"
       - "tools/kuma-admin-init.js"
-      - "tools/kuma-generate-admin-secret.py"
       - "ansible/kuma-qualify-image.yml"
       - "ansible/group_vars/kuma.yml"
       - "ansible/roles/kuma/**"
