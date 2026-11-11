@@ -36,6 +36,8 @@ on:
       - "tests/fixtures/verify-kuma-image-metadata.py"
       - "tests/test_yxorp_contract.py"
       - "tests/test_yxorp_production_promotion.py"
+      - "tests/test_yxorp_production_yarn_diagnose.py"
+      - "tools/observe-yxorp-production-yarn.py"
       - "tests/fixtures/verify-yxorp-production-routes.py"
       - "tests/test_yxorp_stage_removal.py"
       - "tests/test_yxorp_status.py"
@@ -123,6 +125,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_promotion.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_production_yarn_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_status.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_yarn_content.py'
@@ -166,6 +169,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-yarn-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-remove.yml --syntax-check
           python3 tests/fixtures/verify-yxorp-production-routes.py
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-preflight.yml --syntax-check

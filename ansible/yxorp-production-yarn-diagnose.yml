@@ -1,0 +1,66 @@
+---
+# After the first source-owned YXORP production run timed out on Yarn,
+# inspect only current Kvin paths before any repeat or DNS publication.
+- name: Diagnose only the current production Yarn forwarding timeout on Kvin
+  hosts: yxorp
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require exact Kvin and existing production proxy scope
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - yxorp_deployment_scope == 'kvin_production'
+          - yxorp_bind_address == '0.0.0.0'
+          - yxorp_host_port | int == 80
+          - not (yxorp_production_cutover_approved | bool)
+        fail_msg: This read-only Yarn check is only for the existing Kvin production service.
+
+    - name: Observe the exact production Nginx user-visible service state
+      ansible.builtin.command:
+        argv: [systemctl, is-active, sanctum-yxorp.service]
+      register: yxorp_production_yarn_unit
+      changed_when: false
+      failed_when: false
+
+    - name: Require running production service before diagnosing a single route
+      ansible.builtin.assert:
+        that:
+          - yxorp_production_yarn_unit.rc == 0
+          - yxorp_production_yarn_unit.stdout | trim == 'active'
+        fail_msg: Production YXORP is not active. Do not infer a Yarn origin timeout.
+
+    - name: Collect bounded direct-origin, DNS and local production Nginx Yarn results
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-production-yarn.py') }}"
+      register: yxorp_production_yarn_observation
+      changed_when: false
+      no_log: true
+
+    - name: Require safe source-owned result classification
+      ansible.builtin.assert:
+        that:
+          - (yxorp_production_yarn_observation.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (yxorp_production_yarn_observation.stdout | from_json).classification in yxorp_expected_classes
+          - not ((yxorp_production_yarn_observation.stdout | from_json).configuration_changed | bool)
+          - not ((yxorp_production_yarn_observation.stdout | from_json).kvar_or_dns_or_firewall_changed | bool)
+          - not ((yxorp_production_yarn_observation.stdout | from_json).contents_headers_cookies_exposed | bool)
+        fail_msg: Yarn observer returned unexpected or unsafe fields.
+      vars:
+        yxorp_expected_classes:
+          - proxy_listener_or_general_routing_unconfirmed
+          - yarn_origin_unreachable_from_kvin_ip
+          - kvin_yarn_name_resolution_or_named_origin_path
+          - production_new_yarn_proxy_path_unreachable
+          - production_legacy_yarn_proxy_path_unreachable
+          - production_new_yarn_http_status_differs_from_origin
+          - current_production_yarn_proxy_http_path_answers
+
+    - name: Report bounded production Yarn route evidence without retrying a deployment
+      ansible.builtin.debug:
+        msg: "{{ yxorp_production_yarn_observation.stdout | from_json }}"
