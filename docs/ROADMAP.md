@@ -45,7 +45,7 @@ unnecessary raw content private.
   It does **not** qualify browser sessions, WebSockets,
   app state, LAN firewall reachability, production or cutover.
 
-- **SS-YX-2 — [open; first executable assignment] Eighth existing
+- **SS-YX-2 — [source implemented; real-Nginx CI and native qualification pending] Eighth existing
   NPM virtual host `yarn.inner.sanctum`.**
   Reuse the checked-in eight-route manifest; the existing old
   `yarn.inner` proxy host in original `11.conf`
@@ -77,6 +77,25 @@ unnecessary raw content private.
   **Owner:** Services. **Do not** revisit keeping the
   ordinary Yarn DNS hostname: the old NPM route is a
   migration requirement, not a discretionary deletion.
+
+  **November 11 source checkpoint:** Exact eighth
+  opt-in `yxorp_stage_yarn_inner_approved: false` now
+  exists in `ansible/vars/yxorp-kvin-stage.yml`,
+  guarded and selected only in
+  `ansible/yxorp-kvin-stage.yml`. New
+  `ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+  and `tools/observe-yxorp-kvin-stage-yarn-inner.py`
+  test mounted-config and live direct-origin
+  HTTP/body equality, alongside new Yarn host
+  availability and default-deny. New synthetic
+  tests verify distinct old/new Yarn Host
+  routing and reject wrong-body acceptance.
+  **[Full source CI #43048429592](https://github.com/wdcallahan/sanctum-services/actions/runs/43048429592)
+  must finish green before native invocation**;
+  contract/syntax steps have passed, but
+  this note does not claim full CI completion
+  or native Kvin acceptance. No host or
+  production change has occurred.
 
 - **SS-YX-3 — [open; after SS-YX-2] Close meaningful proxy
   behavior gaps, rather than multiplying synthetic probes.**
