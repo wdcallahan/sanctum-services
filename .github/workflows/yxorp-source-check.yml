@@ -52,6 +52,7 @@ on:
       - "tests/fixtures/verify-yxorp-kuma-redirect-diagnose.py"
       - "tests/fixtures/verify-yxorp-kvin-pihole-stage.py"
       - "tests/fixtures/verify-yxorp-kvin-yarn-inner-stage.py"
+      - "tests/fixtures/verify-yxorp-kvin-yarn-inner-config.py"
       - "tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py"
       - "tests/fixtures/verify-yxorp-config-update-lifecycle.py"
       - "tests/fixtures/yxorp-redirect-urlsplit.yml"
@@ -174,6 +175,7 @@ jobs:
           python3 tests/fixtures/verify-yxorp-kvin-kuma-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-pihole-stage.py
           python3 tests/fixtures/verify-yxorp-kvin-yarn-inner-stage.py
+          python3 tests/fixtures/verify-yxorp-kvin-yarn-inner-config.py
           python3 tests/fixtures/verify-yxorp-kuma-redirect-diagnose.py
           python3 tests/fixtures/verify-yxorp-kvin-stage-mounted-config.py
           python3 tests/fixtures/verify-yxorp-config-update-lifecycle.py
