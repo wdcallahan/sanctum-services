@@ -1,0 +1,53 @@
+---
+# Read only limited existing Kvar NPM proxy-host 11 access log tails.
+# Unlike earlier categorical check, reveal exact logged source IPs and
+# request counts as appropriate for the operator's own network.
+# Never log raw HTTP requests, cookies, access lines, config or credentials.
+- name: Inspect exact old Yarn NPM logged source addresses privately
+  hosts: npm_proxy_legacy
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require Kvar identity and disabled legacy Yarn migration route
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - "'npm_proxy_legacy' in group_names"
+          - not ansible_check_mode
+          - not (yxorp_production_cutover_approved | default(false) | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[7].hostname == 'yarn.inner.sanctum'
+          - not (yxorp_routes[7].enabled | bool)
+          - yxorp_routes[7].upstream_host == '192.168.1.110'
+          - yxorp_routes[7].upstream_port | int == 80
+        fail_msg: Only Kvar may inspect limited old NPM log addresses; no route changes permitted.
+
+    - name: Collect exact logged source IP counts without copying raw NPM access logs
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - nginx-proxman
+          - node
+          - -e
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-kvar-yarn-source-addresses.js') }}"
+      register: yxorp_legacy_yarn_exact_addresses
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Require complete bounded private NPM source address classifier
+      ansible.builtin.assert:
+        that:
+          - yxorp_legacy_yarn_exact_addresses.rc == 0
+          - yxorp_legacy_yarn_exact_addresses.stdout | length > 0
+        fail_msg: Source IP classification unavailable; keep legacy route undecided.
+
+    - name: Report only old Yarn NPM logged source addresses and counts
+      ansible.builtin.debug:
+        msg: "{{ yxorp_legacy_yarn_exact_addresses.stdout | from_json }}"
