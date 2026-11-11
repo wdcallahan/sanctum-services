@@ -24,11 +24,13 @@ class SyntheticBackend(BaseHTTPRequestHandler):
     server_version = "SyntheticUpstream/1"
 
     def do_GET(self):
-        if self.path == "/redirect":
+        if self.path in ("/redirect", "/relative-redirect"):
             self.send_response(302)
             self.send_header(
                 "Location",
-                f"http://127.0.0.1:{self.server.server_port}/dashboard?test=1#section"
+                "/dashboard?test=1#section"
+                if self.path == "/relative-redirect"
+                else f"http://127.0.0.1:{self.server.server_port}/dashboard?test=1#section"
             )
             self.send_header("Content-Length", "0")
             self.end_headers()
@@ -83,11 +85,11 @@ def request(port, hostname, upgrade=False):
         connection.close()
 
 
-def redirect_request(port, hostname):
-    """Retrieve only the synthetic Location produced by the real Nginx."""
+def redirect_request(port, hostname, path="/redirect"):
+    """Retrieve the original Location header from actual synthetic Nginx."""
     connection = HTTPConnection("127.0.0.1", port, timeout=2)
     try:
-        connection.request("GET", "/redirect", headers={"Host": hostname})
+        connection.request("GET", path, headers={"Host": hostname})
         response = connection.getresponse()
         status, location = response.status, response.getheader("Location")
         response.read()
@@ -155,13 +157,6 @@ def main(template_path):
                 dict(hostname="disabled.nexus.sanctum", upstream_scheme="http",
                      upstream_host="127.0.0.1", upstream_port=one.server_port,
                      enabled=False, websocket=False),
-                # Same precise correction used only on the Kuma route,
-                # with a synthetic backend that generates an absolute :port
-                # redirect matching the observed legacy Kvar behavior.
-                dict(hostname="kuma-fixture.nexus.sanctum", upstream_scheme="http",
-                     upstream_host="127.0.0.1", upstream_port=one.server_port,
-                     redirect_strip_upstream_port=True,
-                     enabled=True, websocket=True),
             ]
             render(template_path, cfg, pid, listen, routes)
             process = subprocess.Popen(
@@ -178,19 +173,19 @@ def main(template_path):
             assert response["forwarded_for"], response
             status, _ = request(listen, "socket.nexus.sanctum", upgrade=True)
             assert status == 101, status
-            # Before the fix, default proxy_redirect turned the upstream
-            # Location into the local stage listener authority. The special
-            # Kuma-only policy must instead preserve the exact backend host
-            # and strip only its explicit port, query/path/fragment intact.
-            status, location = redirect_request(
-                listen, "kuma-fixture.nexus.sanctum")
-            assert status == 302, status
-            assert location == "http://127.0.0.1/dashboard?test=1#section", location
-            # The other route deliberately has no such policy; keep the
-            # correction from spreading to other virtual hosts.
+            # Actual Kuma GET / returned the SAME relative Location
+            # through direct, incumbent, and candidate. Nginx passes such
+            # a relative header through without rewriting the authority.
+            for host in ("example.nexus.sanctum", "socket.nexus.sanctum"):
+                status, location = redirect_request(
+                    listen, host, "/relative-redirect")
+                assert status == 302, status
+                assert location == "/dashboard?test=1#section", location
+            # Absolute upstream URLs remain on default proxy_redirect
+            # behavior; no Kuma-only rewrite is installed.
             status, location = redirect_request(listen, "example.nexus.sanctum")
             assert status == 302, status
-            assert location != "http://127.0.0.1/dashboard?test=1#section", location
+            assert location != "/dashboard?test=1#section", location
             for unknown in ("unknown.nexus.sanctum", "disabled.nexus.sanctum"):
                 try:
                     status, _ = request(listen, unknown)
@@ -229,8 +224,8 @@ def main(template_path):
                 if time.monotonic() >= end:
                     raise AssertionError(f"removed host still routes: {result}")
                 time.sleep(.08)
-            print("PASS: host routing, headers, WebSocket 101, Kuma-only "
-                  "Location authority normalization, default-deny, "
+            print("PASS: host routing, headers, WebSocket 101, "
+                  "relative Location wire passthrough, default-deny, "
                   "route change and explicit removal (loopback-only)")
     finally:
         if process is not None:
