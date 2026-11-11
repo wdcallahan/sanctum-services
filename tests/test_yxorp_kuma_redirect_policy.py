@@ -1,76 +1,59 @@
-"""Kuma's explicitly declared legacy NPM redirect authority policy only."""
+"""Regression: do not rewrite equal relative Kuma Location headers unnecessarily."""
 from pathlib import Path
 import unittest
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data/yxorp-routes.yml"
-TEMPLATES = ROOT / "ansible/roles/yxorp/templates"
-STAGE = ROOT / "ansible/yxorp-kvin-stage.yml"
 
 
-class KumaRedirectPolicy(unittest.TestCase):
+class KumaRelativeRedirectContract(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.routes = yaml.safe_load(DATA.read_text(encoding="utf-8"))["yxorp_routes"]
-        cls.stage = yaml.safe_load(STAGE.read_text(encoding="utf-8"))[0]
+        cls.routes = yaml.safe_load(
+            (ROOT / "data/yxorp-routes.yml").read_text(encoding="utf-8")
+        )["yxorp_routes"]
+        cls.stage = yaml.safe_load(
+            (ROOT / "ansible/yxorp-kvin-stage.yml").read_text(encoding="utf-8")
+        )[0]
 
-    def test_only_kuma_has_declared_port_normalization(self):
-        true_routes = [
-            route["hostname"] for route in self.routes
-            if route.get("redirect_strip_upstream_port", False)
-        ]
-        self.assertEqual(true_routes, ["kuma.nexus.sanctum"])
-        for route in self.routes:
-            if "redirect_strip_upstream_port" in route:
-                self.assertIsInstance(route["redirect_strip_upstream_port"], bool)
-        kuma = self.routes[5]
-        self.assertFalse(kuma["enabled"])
+    def test_manifest_does_not_carry_unnecessary_absolute_redirect_policy(self):
         self.assertEqual(
-            (kuma["hostname"], kuma["upstream_scheme"],
-             kuma["upstream_host"], kuma["upstream_port"]),
-            ("kuma.nexus.sanctum", "http", "kvar.outer.sanctum", 3001),
+            [r["hostname"] for r in self.routes if r["enabled"]],
+            ["yarn.nexus.sanctum"],
+        )
+        self.assertEqual(
+            [(r["hostname"], r["redirect_strip_upstream_port"])
+             for r in self.routes if "redirect_strip_upstream_port" in r],
+            [],
+        )
+        k = self.routes[5]
+        self.assertEqual(
+            (k["hostname"], k["upstream_host"], k["upstream_port"], k["enabled"]),
+            ("kuma.nexus.sanctum", "kvar.outer.sanctum", 3001, False),
         )
 
-    def test_explicit_redirect_rule_generated_only_for_kuma(self):
-        routes = [{**route, "enabled": True} for route in self.routes]
+    def test_no_special_proxy_redirect_in_actual_template(self):
         env = Environment(
-            loader=FileSystemLoader(str(TEMPLATES)),
+            loader=FileSystemLoader(str(ROOT / "ansible/roles/yxorp/templates")),
             undefined=StrictUndefined,
         )
-        result = env.get_template("nginx.conf.j2").render(yxorp_routes=routes)
-        expected = (
-            "proxy_redirect http://kvar.outer.sanctum:3001/ "
-            "http://kvar.outer.sanctum/;"
-        )
-        self.assertEqual(result.count("\n            proxy_redirect "), 1)
-        self.assertEqual(result.count(expected), 1)
-        before, after = result.split("server_name kuma.nexus.sanctum;")
-        self.assertNotIn("proxy_redirect ", before)
-        self.assertIn(expected, after.split("server_name pihole.nexus.sanctum;")[0])
-        self.assertNotIn("proxy_redirect ", after.split("server_name pihole.nexus.sanctum;")[1])
-        self.assertIn("proxy_set_header Host $host;", result)
-        self.assertIn("proxy_set_header X-Forwarded-Scheme $scheme;", result)
-        self.assertIn("proxy_set_header Upgrade $http_upgrade;", result)
+        rendered = env.get_template("nginx.conf.j2").render(
+            yxorp_routes=[{**r, "enabled": True} for r in self.routes])
+        self.assertNotIn("proxy_redirect ", rendered)
+        self.assertIn("server_name kuma.nexus.sanctum;", rendered)
+        self.assertIn("proxy_set_header Host $host;", rendered)
+        self.assertIn("proxy_set_header X-Forwarded-Scheme $scheme;", rendered)
 
-    def test_stage_guards_explicit_policy_before_publishing(self):
-        pre = self.stage["pre_tasks"]
-        checks = next(
-            task for task in pre
-            if task["name"] ==
-            "Require Kuma stage on top of five accepted local HTTP routes"
-        )["ansible.builtin.assert"]["that"]
-        self.assertIn(
+    def test_stage_does_not_require_obsolete_policy(self):
+        task = next(t for t in self.stage["pre_tasks"] if
+                    t["name"] == "Require Kuma stage on top of five accepted local HTTP routes")
+        checks = task["ansible.builtin.assert"]["that"]
+        self.assertNotIn(
             "yxorp_routes[5].redirect_strip_upstream_port | default(false) | bool",
-            checks,
-        )
-        self.assertIn(
-            "yxorp_routes[5].upstream_host == 'kvar.outer.sanctum'", checks,
-        )
-        self.assertIn(
-            "yxorp_routes[5].upstream_port | int == 3001", checks,
-        )
+            checks)
+        self.assertIn("yxorp_routes[5].upstream_host == 'kvar.outer.sanctum'", checks)
+        self.assertIn("yxorp_routes[5].upstream_port | int == 3001", checks)
 
 
 if __name__ == "__main__":
