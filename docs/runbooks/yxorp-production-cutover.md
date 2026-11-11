@@ -1,5 +1,55 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11 — NEWER read-only native Yarn result: all current paths HTTP200
+
+The follow-up production-only read-only
+`ansible/yxorp-production-yarn-diagnose.yml`
+completed `ok=7 changed=0 failed=0`.
+Bounded classification
+`current_production_yarn_proxy_http_path_answers`.
+Direct Yarn by IP (old/new Host) and
+Yarn by hostname returned HTTP200.
+Rootful production `127.0.0.1:80`
+new `yarn.nexus.sanctum` and
+legacy `yarn.inner.sanctum`
+Host paths **both returned HTTP200**.
+Kuma production control returned HTTP302;
+Yarn DNS resolved correctly to
+`192.168.1.110`.
+No state changed. Earlier production
+post-task transient timeout occurred
+but could not be reproduced. Do not
+rewrite Yarn backend mappings merely
+to hide a transient.
+
+**Next native operation: repeat ONLY
+the existing production playbook**
+to prove complete normal task success,
+idempotence, Kuma and Yarn local
+frontend checks:
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp.yml \
+  -e yxorp_production_cutover_approved=true
+```
+Do **not** repeat the stage removal
+(the stage was already removed in the
+first two-play approved chain).
+Expect `changed=0 failed=0` and
+`Report bounded Kvin YXORP production
+listener readiness` with 8 routes,
+Kuma HTTP 200/302, Yarn HTTP200.
+Source/manifest unchanged; Kvar NPM
+still serves normal Nexus names because
+no DNS or firewall publication has occurred.
+If it fails again, inspect the precise
+failure instead of retrying blindly.
+After a good full play, continue with
+Maintenance's own TCP80 firewall
+preview/application and then the
+separate DNS owner publication.
+
 ## November 11, 15:17 Central — FIRST NATIVE PRODUCTION ATTEMPT BLOCKED BY YARN
 
 Nova authorized stage-removal and production

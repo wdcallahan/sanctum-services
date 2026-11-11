@@ -30,6 +30,32 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — production Yarn timeout NOT REPRODUCED, now responds correctly:**
+The native read-only diagnostic
+`ansible/yxorp-production-yarn-diagnose.yml`
+completed **`ok=7 changed=0 failed=0`**,
+classification
+`current_production_yarn_proxy_http_path_answers`.
+At this new observation, direct
+`192.168.1.110` for both Yarn Hosts,
+named `yarn.inner.sanctum` origin,
+production `127.0.0.1:80` for
+both `yarn.nexus` and `yarn.inner`
+all returned **HTTP200**. Original
+Yarn DNS = `192.168.1.110` and
+production Kuma control = **302**.
+No config, Kvar, DNS or firewall mutation.
+The first production play's post-task
+timeout remains a historical transient
+failure; don't “fix” route/source without
+evidence. Repeat **only** production
+`ansible/yxorp.yml` once for a full
+zero-change local listener acceptance.
+No new staging operation necessary.
+Maintenance's firewall CI is green;
+neither TCP80 nor DNS changes are
+live yet. Kvar remains production.
+
 **November 11 — first Kvin production native attempt FAILED on Yarn:**
 The approved stage removal plus
 production deployment chain progressed

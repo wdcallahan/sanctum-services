@@ -1,5 +1,24 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## November 11 — current production Yarn is responding, full repeat outstanding
+
+The first promoted production Nginx
+play returned `ok=29 changed=5 failed=1`
+after Kuma passed and Yarn timed out.
+A targeted **subsequent** source-owned
+read-only `ansible/yxorp-production-yarn-diagnose.yml`
+on Kvin returned **`ok=7 changed=0 failed=0`**:
+both production Yarn Host paths 200,
+direct Yarn IP/name paths 200,
+Kuma control 302, Yarn DNS exact.
+The failure was not reproducible;
+no source change is justified.
+Now run only the approved production
+playbook again for full convergence,
+then Maintenance TCP80/DNS owner
+release. Kvar remains serving live
+names. [Cutover runbook](yxorp-production-cutover.md).
+
 ## November 11 — YXORP production route promotion source CI PASSED
 
 Eight accepted Kvin stage routes now

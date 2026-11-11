@@ -1,5 +1,77 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11, native production Yarn timeout CLEARED on read-only re-observation; one no-change YXORP repeat next
+
+**Native Kvin production Yarn diagnostic COMPLETED**:
+Nova ran `ansible/yxorp-production-yarn-diagnose.yml`,
+`ok=7 changed=0 unreachable=0 failed=0 skipped=0`.
+Bounded classification
+**`current_production_yarn_proxy_http_path_answers`**.
+`yarn.inner.sanctum` resolved exactly to declared
+`192.168.1.110` (`matches_declared_origin:true`).
+All six live HTTP tests responded:
+direct Yarn by IP with both old/new Host = **200**;
+direct Yarn by DNS with new Host = **200**;
+Kvin rootful production Nginx `127.0.0.1:80`
+new `yarn.nexus` Host = **200**;
+legacy `yarn.inner` Host = **200**;
+production Kuma control = **302**.
+Response bodies remained private/bounded,
+`configuration_changed:false`,
+`kvar_or_dns_or_firewall_changed:false`.
+The prior `ansible/yxorp.yml` initial
+`ok=29 changed=5 failed=1` Yarn timeout was
+**not reproducible at this new observation**.
+Do NOT alter Yarn routing, timeout or proxy
+source without fresh evidence; maintain both
+results in history.
+
+**One next native operator action:** Repeat
+**only** the source-owned guarded production
+play (the stage was already removed in
+the previously approved `&&` chain; don't
+try to remove it again):
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp.yml \
+  -e yxorp_production_cutover_approved=true
+```
+Expectation: full `PLAY RECAP` **`failed=0`**
+and preferably `changed=0` along with
+bounded `Report bounded Kvin YXORP production
+listener readiness` containing the already
+source-owned eight routes, local Kuma HTTP
+200/302 and Yarn HTTP200. This would close
+local production listener convergence only,
+not real LAN DNS/clients/WebSockets.
+
+**After that:** Maintenance source-owned
+TCP80 firewall policy CI
+[#43100611079 PASSED](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43100611079),
+but no live TCP80 admission. Preview/apply
+through Maintenance's existing
+`playbooks/configure-kvin-firewall.yml`
+with exact source revision and reviewed
+operator wrapper. Only after an external
+client can reach Kvin HTTP80 should
+Maintenance publish six DNS alias/wildcard
+names with a new SOA serial. Kvar old
+NPM unchanged for rollback; named
+client/session/WebSocket gates open.
+[Cutover guide](docs/runbooks/yxorp-production-cutover.md).
+
+**No re-opening settled architecture:** On
+rootless Podman/pasta, own-host published
+container hairpin traffic failed (April).
+`Network=host` workaround not a fix;
+two independent Kuma bears on Kvin and
+Peanut already planned, no invented new
+operator request. Kvin Kuma's Wicket
+actual Up and isolated backup/restore
+native accepted. Off-host backup/Vault
+recovery still outstanding.
+
 ## CURRENT — November 11, 15:17 Central: Kvin production YXORP partly installed, Yarn forwarding timed out; no DNS/firewall changes. Podman hairpin design reaffirmed
 
 **Operator's native result:** Nova executed the guarded
