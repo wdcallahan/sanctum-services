@@ -13,6 +13,8 @@ on:
       - "ansible/kuma-stage-remove.yml"
       - "ansible/kuma-admin-bootstrap.yml"
       - "tools/kuma-admin-init.js"
+      - "tools/kuma-set-vault-password.sh"
+      - "tests/test_kuma_vault_password.py"
       - "ansible/kuma-qualify-image.yml"
       - "ansible/group_vars/kuma.yml"
       - "ansible/roles/kuma/**"
@@ -141,6 +143,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_kuma_role_contract.py'
           python3 -m unittest discover -s tests -p 'test_kuma_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_kuma_admin_bootstrap.py'
+          python3 -m unittest discover -s tests -p 'test_kuma_vault_password.py'
           python3 -m unittest discover -s tests -p 'test_kuma_image_qualification.py'
       - name: Check Ansible playbook syntax
         run: |
@@ -212,6 +215,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-stage-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-admin-bootstrap.yml --syntax-check
+          bash -n tools/kuma-set-vault-password.sh
           node --check tools/kuma-admin-init.js
           node tests/fixtures/verify-kuma-admin-init.js
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-qualify-image.yml --syntax-check

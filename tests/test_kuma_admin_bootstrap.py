@@ -47,8 +47,14 @@ class KumaAdminBootstrapTest(unittest.TestCase):
 
     def test_only_read_vault_and_send_password_privately_via_stdin(self):
         check = next(task for task in self.tasks
-                     if task["name"].startswith("Require a nonempty, suitably long Vault"))
+                     if task["name"].startswith("Require a nonempty Vault"))
         self.assertTrue(check["no_log"])
+        self.assertIn(
+            "(vault_kuma_admin_password | default('')) | length > 0",
+            check["ansible.builtin.assert"]["that"],
+        )
+        self.assertNotIn("length >= 16", str(check))
+        self.assertIn("result.password.length === 0", self.source)
         init = next(task for task in self.tasks
                     if task["name"].startswith("Initialize missing administrator"))
         self.assertTrue(init["no_log"])

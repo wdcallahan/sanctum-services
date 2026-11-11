@@ -58,7 +58,7 @@ function credentialsFromStdin() {
     const result = JSON.parse(raw);
     if (result.username !== "sanctum-admin"
         || typeof result.password !== "string"
-        || result.password.length < 16) {
+        || result.password.length === 0) {
         throw new Error("Invalid private administrator secret format");
     }
     return result;

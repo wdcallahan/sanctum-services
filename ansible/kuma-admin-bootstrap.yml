@@ -36,15 +36,16 @@
           Refusing unapproved Kuma administrator changes outside the single
           rootless, local-only, exact-image Kvin instance.
 
-    - name: Require a nonempty, suitably long Vault-owned Kuma administrator secret
+    - name: Require a nonempty Vault-owned Kuma administrator password
       ansible.builtin.assert:
         that:
           - vault_kuma_admin_password is defined
           - vault_kuma_admin_password is string
-          - (vault_kuma_admin_password | default('')) | length >= 16
+          - (vault_kuma_admin_password | default('')) | length > 0
         fail_msg: >-
-          The private Vault file must define a strong
-          vault_kuma_admin_password. This automation never creates it.
+          The private Vault file must define a nonempty
+          vault_kuma_admin_password. Kuma enforces its own password
+          policy during native first-user setup.
       no_log: true
 
     - name: Stat the source-owned Kuma user Quadlet without following symlinks

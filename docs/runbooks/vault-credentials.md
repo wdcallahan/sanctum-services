@@ -22,64 +22,43 @@ the mounted file. Never apply `:Z` to an entire home
 directory or unrelated credentials. No secret file is
 committed to this repository.
 
-## One-time operator action: create the encrypted Kuma password variable
+## Choose or correct the encrypted Kuma password
 
-From Kvin, choose a strong **service-specific** password privately.
-Only the *Vault unlock key* is reused from the existing service.
-The `ansible-vault encrypt_string --stdin-name` command reads
-the password on stdin, not as a command-line argument.
-`umask 077` makes the new encrypted file owner-only.
-The command below uses the already installed Navigator and EE.
-Run it from the project directory:
+Kuma is a home-lab service. Sanctum imposes **no arbitrary
+16-character password rule**. Choose the service password you want;
+Uptime Kuma 2.5.9's actual first-user setup decides whether it
+accepts it.
+
+The user enters the password **twice**, locally. Both prompts hide
+typed characters (normal terminal password entry), but the script
+confirms the values match before encrypting anything. The script
+uses the **existing Vault unlock file** and writes only the encrypted
+`kuma-admin.vault.yml`, outside Git. This is also safe to use when
+correcting the one-entry file made by the earlier workflow,
+**provided Kuma's administrator has not yet been initialized**.
+
+From Kvin after pulling the latest Services code:
 
 ```bash
-cd ~/src/sanctum-services
-(
-  set -euo pipefail
-  set -C
-  umask 077
-  vault_dir="$HOME/.config/sanctum-services/secrets"
-  test -r "$vault_dir/vault.key" || { echo "Existing Vault key missing" >&2; exit 1; }
-  test ! -e "$vault_dir/kuma-admin.vault.yml" || { echo "Kuma Vault file already exists; refusing overwrite" >&2; exit 1; }
-  trap 'unset kuma_password' EXIT
-  read -rsp 'Choose Kuma admin password (16+ characters): ' kuma_password
-  printf '\n'
-  if (( ${#kuma_password} < 16 )); then
-    echo 'Choose a longer service-specific password' >&2
-    exit 1
-  fi
-  printf '%s' "$kuma_password" |
-    ~/.local/bin/ansible-navigator exec \
-      --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
-      --exec-shell false -- \
-      ansible-vault encrypt_string \
-        --vault-password-file "$vault_dir/vault.key" \
-        --stdin-name vault_kuma_admin_password > "$vault_dir/kuma-admin.vault.yml"
-  chmod 600 "$vault_dir/kuma-admin.vault.yml"
-  grep -q '^vault_kuma_admin_password: !vault |' "$vault_dir/kuma-admin.vault.yml"
-  echo 'Kuma Vault variable created (value not shown)'
-)
+cd ~/src/sanctum-services && git pull &&
+bash tools/kuma-set-vault-password.sh
 ```
 
-Check the output file format **without decrypting or printing its
-contents**: its first line should be
-`vault_kuma_admin_password: !vault |`.
-If the command failed, **do not execute the bootstrap**;
-report the nonsecret failure. The generated encrypted file
-contains one variable named `vault_kuma_admin_password`,
-used exclusively by `ansible/kuma-admin-bootstrap.yml`.
-No plaintext local secret file is generated, and nothing
-is checked into Git.
+You'll see **Kuma password:** and **Confirm Kuma password:**
+followed by **Passwords matched.** and
+**Kuma encrypted password saved. Application account unchanged.**
 
-To rotate a credential **after** installation, editing
-`vault_kuma_admin_password` is not enough to authenticate
-to an account using the old credential. Rotation requires
-a separate source-managed, explicitly authorized operation
-that can authenticate with the current password and apply
-the proposed new one. Until that operation is implemented
-and tested, the bootstrap refuses a mismatch rather than
-silently resetting an account. Keep a retrievable previous
-password when planning rotations.
+When they differ, the existing encrypted file is left untouched.
+The script writes the new encryption to a private temporary file and
+moves it into place only after encryption succeeds. No plaintext
+password is stored in the repository, printed to the screen, passed
+as a command argument or saved to the host disk.
+
+**Changing a vaulted password after Kuma has been initialized
+does not itself rotate the application password.** Do not run
+this password-setting script as a rotation procedure once the
+administrator exists. A separately authenticated, explicitly
+approved Kuma rotation is still future work.
 
 ## Native Kvin bootstrap (after encrypted file exists)
 
