@@ -1,5 +1,73 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## November 11 source checkpoint — eighth original NPM Yarn vhost staged in code, native still outstanding
+
+The existing Kvar NPM `yarn.inner.sanctum` 11.conf
+route remains part of the commissioned proxy reconstruction,
+not a DNS naming decision. The upstream is exact
+`http://192.168.1.110:80`; new `yarn.nexus.sanctum`
+is a separate previously accepted vhost.
+
+SS-YX-2 new source:
+`ansible/yxorp-kvin-stage.yml` selects old Yarn only
+through new default-off
+`yxorp_stage_yarn_inner_approved`, *after*
+the seven prior Kvin-stage flags are active,
+and validates exact backend/manifest selection.
+`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+does not mutate anything. It privately checks
+the host-published vs Podman-mounted config
+with byte-faithful trailing newline and verifies
+old/new virtual hosts and original backend.
+`tools/observe-yxorp-kvin-stage-yarn-inner.py`
+performs bounded anonymous GET / from Kvin to
+the direct origin and the isolated old/new
+stage vhosts; checks raw HTTP status and
+Location, media type, complete bounded body
+equality, and unknown Host default denial.
+It prints no raw response bodies, locations,
+cookies, headers or secrets. The root-only
+test is not a full client/browser acceptance.
+
+The known **Kvar host + NPM container old-backend
+timeout** has already been proven. It is *not*
+a gate for this Kvin route: Kvin can reach
+the backend directly. No new Kvar repair
+is needed for the isolated Kvin migration
+test. All other seven stage canaries remain
+banked/accepted at their limited level.
+
+Source-only test contracts and real-Ansible
+stage-selection tests, with synthetic
+Nginx tests against different old/new Yarn
+backends, are in workflow
+[Actions #43048429592](https://github.com/wdcallahan/sanctum-services/actions/runs/43048429592).
+**Do not give the operator the native
+command until full latest-source CI is green.**
+This documentation records SOURCE work,
+not live Kvin acceptance.
+
+**Next once CI passes:** Run exactly one
+Kvin stage reconciliation plus the new
+read-only probe, both with Kvin approval
+and all seven existing host opt-ins PLUS
+`yxorp_stage_yarn_inner_approved=true`.
+Request only their two
+`PLAY RECAP` lines and the sanitized
+`msg` from **“Report only eighth Yarn
+route configuration and wire acceptance
+metadata”**, or failed task/error.
+No raw logs or unrelated diagnostics.
+
+**Leaf exit:** Eight intended application
+virtual hosts qualified for initial
+Kvin local HTTP stage behavior,
+not production/LAN acceptance.
+Continue [SS-YX-3](../ROADMAP.md#active-execution-plan--wednesday-november-11-2026)
+for material original NPM semantics;
+restore/qualify Kvar-hosted applications
+separately before cutover.
+
 ## November 10 correction — the old Yarn NPM route remains a migration requirement
 
 The project objective is **reproduce the actual old Kvar NPM app routes
