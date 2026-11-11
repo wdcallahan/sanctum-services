@@ -1,5 +1,82 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: source-owned Kvin production YXORP 8/8 listener ACCEPTED NATIVE, no DNS/firewall publication
+
+**Native operator report, November 11:** After
+the earlier initial Yarn timeout and an independent
+read-only Kvin production routing diagnostic
+(returning HTTP200 for both Yarn Host names and
+HTTP302 for Kuma), Nova repeated **only**
+`ansible/yxorp.yml` with
+`yxorp_production_cutover_approved=true`.
+**`ok=31 changed=0 unreachable=0 failed=0 skipped=1`.**
+Bounded
+`Report bounded Kvin YXORP production listener readiness`:
+`local_production_listener_accepted:true`,
+`production_service:sanctum-yxorp.service`,
+**`produced_route_count:8`**,
+`kuma_target:127.0.0.1:13001`,
+**`kuma_frontend_http_response:302`**,
+**`yarn_frontend_http_response:200`**,
+`kvars_existing_npm_changed:false`,
+`firewall_changed:false`,
+`dns_changed:false`,
+`real_named_lan_client_accepted:false`,
+`websocket_sessions_accepted:false`.
+This **accepts the real rootful Kvin production
+listener and unchanged source-managed convergence**,
+not yet LAN reachability or hostname switchover.
+Do not rerun stage removal, stage canaries, Yarn
+diagnosis or production deploy just for reassurance.
+The prior Yarn first-run timeout remains a recorded
+historical transient, not a source defect.
+
+**Next dependency: Maintenance-owned TCP80 firewall.**
+The exact reviewed owner source at
+`wdcallahan/sanctum-maintenance` revision
+**`3ba9523befe229af2262194a615c3bc35da5aa01`**
+adds ordinary `80/tcp` to preexisting
+`5432/8084/8085` in `eth0` / `public`
+and retains the two reviewed legacy rich-rule
+removals and preservation of PostgreSQL service
+state. [Scoped Maintenance CI
+#43100611079 PASSED](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43100611079).
+**No native TCP80 preview/application with this
+new revision has happened.**
+Maintenance's runbook explicitly uses
+a separately extracted **exact-commit source
+packet** in ignored `artifacts/`, through the
+active checkout's `tools/run-ansible-logged`;
+do **not** blindly `git pull` the active
+Maintenance scheduling controller checkout.
+One next operator action: source-pinned,
+`--check --diff` Kvin firewall preview,
+then inspect bounded `Show the exact
+firewall-only preview`, final report
+and PLAY RECAP before authorizing live apply.
+The packet's exact command is documented at
+[production cutover runbook](docs/runbooks/yxorp-production-cutover.md).
+The preview must be read-only for host policy,
+although it retains private controller receipts.
+
+**After owned firewall native acceptance:**
+Prove TCP80 from a non-Kvin client
+before Maintenance moves the six reviewed
+Peanut authoritative DNS entries from Kvar
+`192.168.0.7` to Kvin `192.168.0.192`,
+with updated served SOA serial and proper
+owner preview/publish. Kvar NPM remains
+running for DNS rollback. Actual browser
+login, Kuma Socket.IO WebSocket, named
+client/access acceptance still open.
+Long-term two Kuma bears Kvin+Peanut
+are the preexisting independent-peer
+design; old rootless Podman hairpin
+workaround `Network=host` is not an
+upstream fix. Kvin Kuma isolated backup/
+restore is accepted; off-host snapshot
+and Vault-key recovery are still open.
+
 ## CURRENT — November 11, native production Yarn timeout CLEARED on read-only re-observation; one no-change YXORP repeat next
 
 **Native Kvin production Yarn diagnostic COMPLETED**:

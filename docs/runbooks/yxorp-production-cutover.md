@@ -1,5 +1,91 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11 — Kvin production Nginx accepted; next native firewall PREVIEW
+
+**Actual native convergence:** `ansible/yxorp.yml`
+`ok=31 changed=0 failed=0 skipped=1`;
+`local_production_listener_accepted:true`;
+all eight routes present; Kuma frontend
+HTTP302 (`127.0.0.1:13001`),
+Yarn frontend HTTP200. The initial
+Yarn timeout was not reproducible
+and required no source modification.
+No Kvar NPM, Maintenance firewall or
+DNS change. **Do not repeat stage
+removal or production deploy.**
+
+The Maintenance owner’s exact reviewed
+TCP80 source revision is
+`3ba9523befe229af2262194a615c3bc35da5aa01`
+([dedicated CI green](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43100611079)).
+Its normal `~/src/sanctum-maintenance`
+checkout may still be pinned to an older
+scheduling revision, so use a **separate
+exact-revision Git archive** under the
+existing ignored `artifacts/` directory,
+rather than checking out or pulling its
+active root.
+
+### Single next action: exact-source, read-only Kvin firewall preview
+
+Run on **Kvin**. This fetches an exact
+Maintenance Git commit without updating
+the active worktree and stages that
+commit's full tracked source. The
+owner's existing logged Navigator runner
+then observes current runtime/permanent
+firewall state and predicts only its
+reviewed policy changes. `--check --diff`
+does **not** apply them. The command
+does create its ordinary private
+controller transcripts/reports.
+
+```bash
+cd ~/src/sanctum-maintenance &&
+revision=3ba9523befe229af2262194a615c3bc35da5aa01 &&
+packet=artifacts/kvin-firewall-source-3ba9523b &&
+git fetch origin main &&
+git cat-file -e "$revision^{commit}" &&
+test ! -e "$packet" &&
+mkdir -p "$packet" &&
+git archive "$revision" | tar -xf - -C "$packet"
+```
+
+Once extracted, use the existing
+owner-supported runner:
+
+```bash
+cd ~/src/sanctum-maintenance &&
+revision=3ba9523befe229af2262194a615c3bc35da5aa01 &&
+packet=artifacts/kvin-firewall-source-3ba9523b &&
+tools/run-ansible-logged run "$packet/playbooks/configure-kvin-firewall.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit kvin.outer.sanctum --check --diff \
+  -e "sanctum_service_firewall_source_revision=$revision"
+```
+
+The proposed delta is based on the
+**observed** runtime/permanent state,
+not historical assumptions.
+Return the safe `Show the exact
+firewall-only preview` `msg`,
+`Report the saved boundary evidence
+and remaining independent acceptance`
+`msg`, and PLAY RECAP/error.
+Do not paste the private report tree
+or any credentials.
+
+If preview confirms expected 80/tcp
+and other previously reviewed
+service-policy changes with all
+PostgreSQL checks intact, the next
+separately authorized owner operation
+is apply/repeat **from the same pinned
+packet** with the explicit
+`sanctum_service_firewall_apply=true`.
+No independent DNS publication until
+firewall/real LAN TCP80 acceptance.
+
 ## November 11 — NEWER read-only native Yarn result: all current paths HTTP200
 
 The follow-up production-only read-only
@@ -191,8 +277,7 @@ the same approved owner play with
 `sanctum_service_firewall_apply=true`
 and a no-change repeat. Do not bypass
 this with an ad hoc firewalld command.
-The existing Kvin staging Nginx may
-remain active throughout.
+The Kvin staging Nginx is already removed; the accepted production listener remains active.
 
 The source firewall role protects all
 unrelated zone, policy and PostgreSQL

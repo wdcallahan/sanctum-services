@@ -30,6 +30,34 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — production listener native ACCEPTED unchanged:**
+The operator's repeat of only
+`ansible/yxorp.yml` after a transient
+first-run Yarn timeout returned
+**`ok=31 changed=0 failed=0 skipped=1`**.
+Bounded report confirmed 8 enabled
+production routes through
+`sanctum-yxorp.service`,
+Kuma proxy HTTP302 to
+Kvin `127.0.0.1:13001`,
+Yarn proxy HTTP200,
+`local_production_listener_accepted:true`;
+Kvar NPM, DNS and firewall unchanged.
+**Local production listener gate closed.**
+Stage and Yarn probes do not need repetition.
+**Next:** Maintenance's exact source
+`3ba9523befe229af2262194a615c3bc35da5aa01`
+with dedicated CI #43100611079 green
+must run native `--check --diff`
+for TCP80 on Kvin via its established
+staged-source logged runner; then
+approved apply/repeat and peer HTTP.
+Only then modify six named Nexus
+DNS entries and wildcard under
+Maintenance DNS owner with fresh serial.
+No live DNS change yet; client/session/
+WebSocket gates still open.
+
 **November 11 — production Yarn timeout NOT REPRODUCED, now responds correctly:**
 The native read-only diagnostic
 `ansible/yxorp-production-yarn-diagnose.yml`
