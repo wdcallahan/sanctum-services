@@ -30,6 +30,7 @@ on:
       - "tests/test_yxorp_kvin_stage_pihole.py"
       - "tests/test_yxorp_legacy_yarn_observe.py"
       - "tests/test_yxorp_kvar_legacy_yarn_consumer_signal.py"
+      - "tests/test_yxorp_kvar_legacy_yarn_source_classes.py"
       - "tests/test_yxorp_kvin_stage_mounted_config.py"
       - "tests/test_yxorp_config_update_lifecycle.py"
       - "tests/test_yxorp_kvin_yarn_transport_diagnose.py"
@@ -59,6 +60,7 @@ on:
       - "tools/observe-yxorp-pihole-wire.py"
       - "tools/observe-yxorp-legacy-yarn.py"
       - "tools/observe-yxorp-kvar-yarn-usage.js"
+      - "tools/observe-yxorp-kvar-yarn-source-classes.js"
       - "tools/inspect-registry-candidates.py"
       - "data/container-image-candidates.yml"
       - "ansible/yxorp-qualify-image.yml"
@@ -107,6 +109,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_pihole.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_legacy_yarn_observe.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvar_legacy_yarn_consumer_signal.py'
+          python3 -m unittest discover -s tests -p 'test_yxorp_kvar_legacy_yarn_source_classes.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_stage_mounted_config.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_config_update_lifecycle.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_yarn_transport_diagnose.py'
@@ -143,6 +146,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-pihole-probe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-legacy-yarn-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvar-legacy-yarn-consumer-signal.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvar-legacy-yarn-source-classes.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-mounted-config-observe.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-yarn-transport-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-stage-peer-probe.yml --syntax-check
@@ -175,6 +179,7 @@ jobs:
           node --check /tmp/yxorp-npm-node-diagnostic.js
           node --check /tmp/yxorp-npm-node-diagnostic.js
           node --check tools/observe-yxorp-kvar-yarn-usage.js
+          node --check tools/observe-yxorp-kvar-yarn-source-classes.js
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-status.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-qualify-image.yml --syntax-check
