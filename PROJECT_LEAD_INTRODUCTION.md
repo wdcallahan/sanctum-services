@@ -1,5 +1,116 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: six old Yarn NPM access entries, real consumer still unknown; test-source categories next
+
+**Latest exact native report:** Nova ran
+`ansible/yxorp-kvar-legacy-yarn-consumer-signal.yml`
+from Kvin against the existing Kvar NPM,
+with Kvar `ok=5 changed=0 failed=0`.
+The generated proxy-host 11 config was
+present, `exact_access_log_directive=true`.
+Exactly **one** current plain access
+log was found and fully read (no
+tail truncation, no additional or
+compressed rotations observed);
+**six lines**, all six with parseable
+timestamps, all within last seven
+and 30 days, newest age **0 days**.
+These may be requests from Services'
+recent Kvin tests or from actual clients.
+`current_client_use_proven=false` and
+`safe_to_retire_proven=false`.
+A single current log provides no
+assurance older rotated data never
+existed, and it cannot account for
+clients not visiting the old route.
+
+**Earlier independent evidence still valid:**
+The Kvin observer can reach old Yarn
+origin by IP and DNS and via new
+`yarn.nexus.sanctum` stage (all
+HTTP200), whereas Kvin→old Kvar NPM
+times out. Even **Kvar HOST** and its
+NPM container could not reach the
+Yarn origin in earlier native tests.
+The root cause lies in Kvar's
+source/transport/return behavior,
+not proven to be an NPM-specific
+configuration flaw. No need to
+repair Kvar's old path unless an
+actual consumer needs it; don't
+repeat old reachability or route
+tests. Old `yarn.inner.sanctum`
+remains **disabled** in the Kvin
+stage and checked-in production
+manifest. Kvar NPM and wildcard
+DNS still production, no firewalld
+or cutover changes.
+
+**New source-only follow-up:** A
+`ansible/yxorp-kvar-legacy-yarn-source-classes.yml`
+read-only, Kvar-only play executes
+`tools/observe-yxorp-kvar-yarn-source-classes.js`
+inside existing `nginx-proxman`.
+The script reads only the fixed
+current and one plain rotated
+`proxy-host-11_access.log`, max
+1 MiB tail per file. It strictly
+recognizes the NPM access log's
+`[Client IPv4]` field; any other
+format remains unclassified.
+Each recent record falls into
+one of **known Kvin test-host
+source**, **known Kvar host**,
+**Kvar loopback**, **other observed
+source** or **unclassified format**.
+It never emits a client address,
+HTTP request path, log line,
+timestamp, cookie, token,
+exception or full URL. Counts
+can include our own requests;
+source labels do not prove a
+human, process, or real client
+dependency. Retire permission
+remains **false** regardless
+of counts. The source has
+synthetic tests of known/other/
+unrecognized sources and
+sensitive-value redaction.
+
+**Current qualification:** 7/8
+initial anonymous HTTP route
+names accepted on Kvin: Yarn,
+Square, Prism, Search, interim
+LinkStack, interim Kuma and
+interim Pi-hole. Eighth legacy
+`yarn.inner.sanctum` intentionally
+disabled/undecided. LinkStack,
+Kuma and Pi-hole application
+and persistence still live on
+Kvar and require stateful Kvin
+restores before Kvar retirement.
+
+**Next exact command from Kvin,
+after CI passed:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvar-legacy-yarn-source-classes.yml
+```
+Return ONLY Kvar's one-line
+`PLAY RECAP` and `msg`
+from **“Report only old Yarn NPM
+client-source classes and sample
+coverage”**. If it fails, paste
+only failed task/error. No full
+logs or the individual source IPs.
+This is a final bounded consumer
+signal; afterward preserve the
+legacy-name policy for an
+explicit operator decision rather
+than expanding network probes
+indefinitely. Every assistant
+response should end with a
+concrete action.
+
 ## CURRENT — November 10: old Yarn alias reachable from Kvin, broken from Kvar; bounded consumer signal next
 
 **Latest native response from Nova:** The Kvin-only read-only
