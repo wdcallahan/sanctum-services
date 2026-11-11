@@ -1,0 +1,85 @@
+---
+# Read-only, one-time diagnosis after a censored Kuma administrator
+# bootstrap error. No setup/login events, user/database changes or data output.
+- name: Classify existing Kvin Kuma administrator state without mutation
+  hosts: kuma
+  become: false
+  gather_facts: true
+  vars_files:
+    - /home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml
+  vars:
+    kuma_admin_expected_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+    kuma_admin_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-admin-init.js') }}"
+  tasks:
+    - name: Require exact rootless Kvin Kuma and explicit read-only diagnosis approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - kuma_admin_diagnose_approved | default(false) | bool
+          - kuma_image == kuma_admin_expected_image
+          - kuma_data_volume == 'sanctum-kuma-data'
+          - kuma_bind_address == '127.0.0.1'
+          - kuma_host_port | int == 13001
+          - kuma_db_type == 'sqlite'
+        fail_msg: Only the exact rootless Kvin Kuma may undergo this read-only diagnosis.
+
+    - name: Privately validate presence of vaulted administrator credential
+      ansible.builtin.assert:
+        that:
+          - vault_kuma_admin_password is defined
+          - vault_kuma_admin_password is string
+          - (vault_kuma_admin_password | default('')) | length > 0
+      no_log: true
+
+    - name: Observe installed container image without changes
+      ansible.builtin.command:
+        argv: [podman, inspect, --type, container, --format, "{{ '{{.ImageName}}' }}", sanctum-kuma]
+      register: kuma_admin_diagnose_container
+      changed_when: false
+
+    - name: Require the exact source-owned Kuma image to be running
+      ansible.builtin.assert:
+        that:
+          - kuma_admin_diagnose_container.stdout | trim == kuma_admin_expected_image
+        fail_msg: Installed candidate image is not the approved Kuma digest.
+
+    - name: Privately classify upstream Kuma setup status and its own password rule
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - sanctum-kuma
+          - node
+          - -e
+          - "{{ kuma_admin_js }}"
+          - diagnose
+        stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password} | to_json }}"
+        stdin_add_newline: false
+      register: kuma_admin_diagnose_result
+      changed_when: false
+      no_log: true
+
+    - name: Require precisely two Boolean nonsecret diagnosis outputs
+      ansible.builtin.assert:
+        that:
+          - (kuma_admin_diagnose_result.stdout | from_json).needs_setup is boolean
+          - (kuma_admin_diagnose_result.stdout | from_json).password_meets_upstream_setup_rule is boolean
+        fail_msg: Kuma did not return the bounded, nonsecret diagnostic result.
+
+    - name: Report bounded read-only Kuma account diagnosis
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          needs_initial_administrator: "{{ (kuma_admin_diagnose_result.stdout | from_json).needs_setup | bool }}"
+          vaulted_password_meets_kuma_setup_rule: "{{ (kuma_admin_diagnose_result.stdout | from_json).password_meets_upstream_setup_rule | bool }}"
+          administrator_created_or_changed: false
+          authentication_attempted: false
+          database_or_monitor_changed: false
+          vault_secret_changed: false
+          stage: "Kuma 2.5.9 native-readonly password-policy and account-state diagnosis"

@@ -30,6 +30,13 @@ module.exports.io = function () {
     return socket;
 };
 `);
+const pwLib = path.join(temp, "check-password-strength");
+fs.mkdirSync(pwLib, { recursive: true });
+fs.writeFileSync(path.join(pwLib, "index.js"), `
+module.exports.passwordStrength = function (password) {
+    return { value: password.startsWith("test-weak") ? "Too weak" : "Weak" };
+};
+`);
 const code = fs.readFileSync(path.join(__dirname, "../../tools/kuma-admin-init.js"), "utf8");
 function run(mode, input, opts = {}) {
     return child.spawnSync(process.execPath, ["-e", code, mode], {
@@ -44,6 +51,15 @@ try {
     let s = run("status", "", { SIM_NEEDS_SETUP: "yes" });
     assert.equal(s.status, 0, s.stderr);
     assert.deepEqual(JSON.parse(s.stdout), { needs_setup: true });
+    s = run("diagnose", secret, { SIM_NEEDS_SETUP: "yes" });
+    assert.equal(s.status, 0, s.stderr);
+    assert.deepEqual(JSON.parse(s.stdout), { needs_setup: true, password_meets_upstream_setup_rule: true });
+    s = run("diagnose", JSON.stringify({username:"sanctum-admin",password:"test-weak-password"}), { SIM_NEEDS_SETUP: "yes" });
+    assert.equal(s.status, 0, s.stderr);
+    assert.deepEqual(JSON.parse(s.stdout), { needs_setup: true, password_meets_upstream_setup_rule: false });
+    s = run("diagnose", secret, { SIM_NEEDS_SETUP: "no" });
+    assert.equal(s.status, 0, s.stderr);
+    assert.deepEqual(JSON.parse(s.stdout), { needs_setup: false, password_meets_upstream_setup_rule: true });
     s = run("bootstrap", secret, { SIM_NEEDS_SETUP: "yes" });
     assert.equal(s.status, 0, s.stderr);
     assert.deepEqual(JSON.parse(s.stdout), { administrator_created: true, administrator_login_verified: true });

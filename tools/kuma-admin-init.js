@@ -9,7 +9,7 @@
 const { io } = require("socket.io-client");
 
 const mode = process.argv[1];
-if (!["status", "bootstrap"].includes(mode)) {
+if (!["status", "diagnose", "bootstrap"].includes(mode)) {
     process.stderr.write("Unsupported Kuma administrator operation\n");
     process.exit(2);
 }
@@ -67,7 +67,7 @@ function credentialsFromStdin() {
 async function main() {
     // Read the Vault-decrypted secret from stdin, never from arguments or disk
     // inside the managed container. Status is intentionally unauthenticated.
-    const credentials = mode === "bootstrap" ? await credentialsFromStdin() : null;
+    const credentials = mode === "status" ? null : credentialsFromStdin();
     await waitForConnection();
 
     // These events and argument positions are from tagged upstream 2.5.9.
@@ -77,6 +77,17 @@ async function main() {
     }
     if (mode === "status") {
         process.stdout.write(JSON.stringify({ needs_setup: needsSetup }) + "\n");
+        return;
+    }
+    if (mode === "diagnose") {
+        // Exactly the dependency already used by tagged upstream Kuma 2.5.9.
+        // This is read-only: no "setup", "login", database or monitor writes.
+        const { passwordStrength } = require("check-password-strength");
+        const upstreamAllows = passwordStrength(credentials.password).value !== "Too weak";
+        process.stdout.write(JSON.stringify({
+            needs_setup: needsSetup,
+            password_meets_upstream_setup_rule: upstreamAllows,
+        }) + "\n");
         return;
     }
 
