@@ -1,5 +1,95 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Latest Kvin Kuma stage: explicit redirect fix did NOT achieve parity — November 10
+
+The user has **already applied** the first narrowly
+scoped Kuma-only `proxy_redirect` source change
+using the usual six-route Kvin stage play and
+rerun the three-path Kuma parity test:
+- Stage: `ok=44 changed=3 failed=0 skipped=1`.
+- Read-only comparison: `ok=4 changed=0 failed=0`.
+- All three direct Kvar Kuma, incumbent
+  Kvar NPM and Kvin stage routes returned
+  **HTTP302**, with candidate/incumbent
+  status, MIME, redirect scheme/path equal.
+- **Full redirect equality still false**;
+  candidate and incumbent redirect host
+  still differ. Candidate port remains
+  an explicit non-backend-port, while
+  NPM redirect has no explicit port.
+
+**Kuma still not accepted** despite passing
+synthetic real-Nginx CI. The prior native
+authority diagnosis identified candidate
+`loopback:80` versus incumbent Kvar
+host without an explicit port and direct
+backend Kvar:3001; the post-fix source's
+output did not re-classify the new host.
+The original generated Kuma-specific
+`proxy_redirect http://kvar.outer.sanctum:3001/ http://kvar.outer.sanctum/;`
+is still source-controlled and stage
+preflight requires it, but there
+is insufficient evidence yet to
+assert that the live raw HTTP
+response is rewritten as intended.
+**Do not blindly repeat deployment
+or install a second speculative fix.**
+
+The next source-managed **read-only**
+`ansible/yxorp-kvin-stage-kuma-wire-observe.yml`
+checks host-published and container-mounted
+exact Nginx config (privately) and
+reports only whether they match and whether
+the expected Kuma-specific `proxy_redirect`
+line is present and how many times.
+It separately executes
+`tools/observe-yxorp-kuma-wire.py`
+from Kvin with exactly scoped
+direct Kvar :3001, incumbent Kvar NPM :80,
+and local Kvin stage :80 HTTP root
+requests. It uses Python's
+`http.client` to read the **raw
+Location header** before any
+Ansible URI-module transformation
+and sends a fourth request directly
+to Kuma with proxy-style forwarded
+headers to test whether Kuma changes
+its redirect under those inputs.
+No unrecognized hostname, raw
+redirect, query value, cookies,
+app body, error strings, config
+contents or credentials are printed.
+No Nginx/service/host edits occur.
+
+**Next Kvin command (single read-only play):**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-wire-observe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+
+**Output contract:** Return only one
+short `PLAY RECAP` and `msg`
+from **“Report only Kuma wire classes and
+mounted Nginx rule presence”**.
+On failure only the failed task
+and sanitized error.
+Do **not** rerun the already failed
+Kuma reconciliation, dump the raw
+`Location` or whole Nginx config,
+or paste long Ansible logs.
+
+**Project accounting remains 6/8
+attempted; only five initially
+HTTP-accepted:** Yarn, Square,
+Prism, Search and interim LinkStack.
+Kuma blocked on parity, Pi-hole
+and old Yarn inner route untested.
+No Kvar, wildcard DNS, Kvin
+Maintenance-owned firewall or
+production cutover change. Kuma,
+Pi-hole and LinkStack application
+restore on Kvin is a later
+independent migration gate.
+
 ## Kuma redirect root cause and source-only correction — November 10
 
 **Native diagnostic complete; staged correction NOT yet applied.**
