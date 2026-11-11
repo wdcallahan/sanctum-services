@@ -90,11 +90,7 @@ unnecessary raw content private.
   availability and default-deny. New synthetic
   tests verify distinct old/new Yarn Host
   routing and reject wrong-body acceptance.
-  **[Full source CI #43048429592](https://github.com/wdcallahan/sanctum-services/actions/runs/43048429592)
-  must finish green before native invocation**;
-  contract/syntax steps have passed, but
-  this note does not claim full CI completion
-  or native Kvin acceptance. No host or
+  **[Full source CI #43049835644 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43049835644)**: source contracts, Ansible, actual Nginx parser and loopback HTTP tests. Native Kvin acceptance remains unrun. No host or
   production change has occurred.
 
 - **SS-YX-3 — [open; after SS-YX-2] Close meaningful proxy
