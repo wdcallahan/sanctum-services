@@ -1,5 +1,11 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
+## Current browser login after Nexus DNS promotion
+
+From ordinary client Mace, Nova confirmed `getent ahostsv4 kuma.nexus.sanctum` returned `192.168.0.192`, Firefox reached the Kuma login, and the **existing `sanctum-admin` account authenticated successfully** using the application password Nova had saved in Bitwarden. This accepts real named-client DNS, reachable login page and authenticated browser login through Kvin YXORP. It does **not** yet prove sustained Socket.IO connection, UI monitor synchronization or every other Nexus application. Preserve Kvar as rollback.
+
+**Credentials for the operator:** Login username `sanctum-admin`; login password is the *chosen Kuma administrator password* entered at the two `Kuma password:` prompts, encrypted in Kvin's `kuma-admin.vault.yml`. It is **not** the separate `vault.key` Vault unlock secret. See [Vault credentials](vault-credentials.md) for the distinction. Do not repeat setup, change the encrypted password, or create another admin just to log in.
+
 ## November 11 — Wicket actually Up; backup/recovery is the next gate
 
 Nova's native second `ansible/kuma-monitors.yml` run
