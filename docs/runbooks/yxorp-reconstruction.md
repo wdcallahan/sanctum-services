@@ -1,5 +1,75 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Kuma redirect root cause and source-only correction — November 10
+
+**Native diagnostic complete; staged correction NOT yet applied.**
+Nova's safe read-only Kuma authority classification completed
+`ok=4 changed=0 failed=0`. All three anonymous Kuma root
+requests returned HTTP302. The old backend returns Location
+authority **Kvar:3001**; incumbent Kvar NPM emits **Kvar
+without an explicit port**, while new Kvin YXORP stage
+emits **loopback:80**. Candidate/incumbent redirect path,
+query and fragment all match. This specifically identifies
+Nginx's default upstream `proxy_redirect` translation of
+the existing Kvar location into the loopback test request
+authority. Kuma itself is still answering normally.
+
+**Narrow source-managed fix:** Only the disabled Kuma entry
+in `data/yxorp-routes.yml` now declares
+`redirect_strip_upstream_port: true`.
+The Nginx Jinja template uses this opt-in to emit
+a specific `proxy_redirect` mapping from the
+declared `http://kvar.outer.sanctum:3001/` to
+`http://kvar.outer.sanctum/`.
+It intentionally does **not** emit this for the
+other seven routes, avoiding an unreviewed global
+redirect policy. The exact Kuma Kvar backend and
+selected policy are protected by the existing
+Kvin stage play preflight. When Kuma's stateful
+service migrates to Kvin, the route's backend
+and redirect policy need independent review.
+Current production manifest remains Yarn-only.
+
+A **real Nginx synthetic HTTP test** now makes an
+isolated local backend redirect to itself using
+its explicit service port and asserts that the
+Kuma-only policy emits the same backend host
+with no explicit port and preserves URL path,
+query and fragment. An unselected route keeps
+its original default redirect behavior.
+`tests/test_yxorp_kuma_redirect_policy.py`
+checks the manifest and exact scope.
+**[Source CI #42948962676 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/42948962676)**.
+That is source/runtime synthetic validation, **not**
+Kvin native parity proof.
+
+**Next native Kvin action, retain all six previously
+selected stage routes and recompare Kuma:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+**Operator output contract:** Return only
+the stage and comparison **one-line play recaps**
+plus the `msg` dictionary from
+**“Report only Kuma status and redirect authority
+components”**. If a task fails, return only its
+failed task and error. Do not paste full runs.
+Require `candidate_redirect_equals_incumbent=true`,
+candidate/incumbent status equal and content type
+equal before accepting Kuma at the *initial
+anonymous root HTTP* gate. Do not accept
+WebSockets, sessions, monitors, app state restore,
+DNS/failover or production cutover from this test.
+
+**Current count remains 6/8 attempted, 5/8 accepted**
+(Yarn, Square, Prism, Search and interim LinkStack).
+Kuma is pending the native recheck;
+Pi-hole and old `yarn.inner.sanctum`
+remain untested through Kvin. Kvar NPM and
+wildcard DNS remain production. LinkStack,
+Kuma and Pi-hole apps still reside on Kvar;
+Maintenance owns Kvin LAN firewall.
+
 ## Native Kuma result — redirect host and port mismatch; read-only follow-up (November 10)
 
 **Kvin stage:** `ansible/yxorp-kvin-stage.yml`
