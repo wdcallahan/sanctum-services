@@ -1,101 +1,53 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
-## November 11 native eighth-stage result: deploy succeeded, acceptance probe regex fixed
+## November 11 — Eight staged YXORP virtual hosts accepted at native local HTTP level
 
-**Nova's Kvin stage reconcile succeeded:**
-`ok=48 changed=3 failed=0 skipped=1`
-with all eight stage-only approvals,
-including the existing original
-`yarn.inner.sanctum` NPM vhost
-pointing to `192.168.1.110:80`.
-This is still isolated Kvin
-HTTP:80 and **not** production
-publication. **Do not rerun the
-stage reconciliation** to repair
-a read-only probe assertion.
+**SS-YX-2 native acceptance succeeded.** The corrected
+`ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+returned Kvin `ok=8 changed=0 failed=0` with
+`All assertions passed` after source CI
+[#43053056244](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244)
+qualified exact Nginx-line classification. The old Yarn
+`yarn.inner.sanctum` direct origin `192.168.1.110:80`
+and staged Kvin YXORP both returned **HTTP200,
+complete matching 349-byte bodies, matching media type/status,
+no redirect**. `yarn.nexus.sanctum` through Kvin also
+returned HTTP200. Published host config equals the running
+container's mounted config; the original exact upstream, new
+and old vhosts each appear once. The unmatched Host connection
+was refused as designed. All seven earlier HTTP canaries
+remain accepted from earlier native tests. **8/8 initial staged
+virtual-host acceptance is closed**; do not rerun the historical
+Yarn/debugging probes.
 
-The original eighth Yarn
-read-only probe reported
-`ok=7 changed=0 failed=1`
-at `old_vhost_present_once`.
-The classifier used **double-
-escaped regular expressions**
-that do not match Nginx's
-normal `server_name
-yarn.inner.sanctum;`.
-Identical escaping mistakes
-affected its new-Yarn and
-old-upstream counts. The
-failure was from the probe's
-line matcher, not evidence
-that the stage was missing
-the old virtual host.
-The probe's earlier
-sanitized HTTP comparison
-was not supplied in the
-pasted native output; its
-other booleans remain unknown
-until reread.
+**Evidence review of actual NPM configuration:** [Native read-only
+Nov 9 observer](../review/2026-11-09-yxorp-behavior-observation.md)
+found eight original hosts including NPM's excluded administration
+UI; seven retained app hosts plus requested new Yarn name form
+the eight-stage route inventory. Every observed NPM proxy-host
+configuration contained one location, no additional custom
+locations, and no nonempty global custom snippets. The source
+template and synthetic Nginx tests cover default routing, Host,
+X-Forwarded-* headers, WebSocket Upgrade for opted-in routes,
+relative redirects, unknown Host refusal and route replacement.
+The actual Quadlet/Ansible role also verifies Nginx parse,
+reconciles stale single-file bind mounts and confirms mounted
+config. The legacy Prism HTTPS certificate directives are an
+intentional policy difference because the accepted private
+Sanctum routing requirement is HTTP; do not open a new
+mandatory private CA/TLS workstream.
 
-**Source correction:** Count
-each required `server_name`
-and exact `proxy_pass` using
-trimmed-line equality rather
-than fragile regex escaping.
-New
-`tests/fixtures/verify-yxorp-kvin-yarn-inner-config.py`
-executes the **actual Ansible
-set_fact** expression with
-a Jinja-rendered eight-host
-Nginx config and rejects
-missing/duplicate old name,
-missing new name, incorrect
-upstream, and mounted config
-drift. **[CI #43053056244
-PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244)**;
-the run confirms the actual
-Ansible predicate test,
-Ansible syntax and real
-synthetic Nginx behavior.
-The code fix changed only
-the probe, not staging
-or any production setting.
-
-**Next command from Kvin,
-probe-only (NO redeploy):**
-```bash
-cd ~/src/sanctum-services && git pull &&
-~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-yarn-inner-probe.yml \
-  -e yxorp_kvin_stage_approved=true \
-  -e yxorp_stage_square_approved=true \
-  -e yxorp_stage_prism_approved=true \
-  -e yxorp_stage_search_approved=true \
-  -e yxorp_stage_dir_approved=true \
-  -e yxorp_stage_kuma_approved=true \
-  -e yxorp_stage_pihole_approved=true \
-  -e yxorp_stage_yarn_inner_approved=true
-```
-
-**Return only** Kvin's one
-`PLAY RECAP` and the `msg`
-dictionary from **“Report only
-eighth Yarn route configuration
-and wire acceptance metadata”**.
-If it fails, include the failed
-task/error and sanitized
-metadata already printed.
-Do not ask for full logs.
-Accept the eighth only when
-the new native evidence
-passes all actual HTTP,
-content, mount and
-host-deny predicates.
-Next SS-YX-3 examines
-meaningful full NPM proxy
-behavior, then actual
-application migration.
-No Kvar DNS or firewall
-changes are authorized.
+**Exact accepted scope:** local anonymous HTTP proxy mechanism,
+eight selected server names and mounted config. This is **NOT**
+proof of full NPM runtime/client equivalence. Authenticated
+application behavior, Kuma Socket.IO, Prism/Nextcloud
+WebSockets, persistent state, LAN-firewall/DNS,
+actual client use, restore and cutover remain separately
+tracked under [SS-APPS and SS-PUB](../ROADMAP.md#active-execution-plan--wednesday-november-11-2026).
+The old Kvar NPM → Yarn timeout is a documented incumbent
+transport problem, not a failed Kvin acceptance condition.
+No operator action is required to repeat initial YXORP HTTP
+checks. Next substantive work is retained Kvin Kuma build/recovery.
 
 ## November 11 source checkpoint — eighth original NPM Yarn vhost staged in code, native still outstanding
 
