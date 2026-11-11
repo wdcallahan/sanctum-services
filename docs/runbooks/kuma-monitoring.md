@@ -1,5 +1,11 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
+## CURRENT — November 11: Mace Kuma dashboard monitor UP at 100%; live browser Socket.IO still to verify
+
+**New user-visible browser acceptance:** From the normal Mace Firefox session already authenticated through Kvin YXORP at `http://kuma.nexus.sanctum`, Nova confirms the **`Wicket Ollama` monitor is visible and reports Up with 100% uptime**. Combined with Mace name resolution to `192.168.0.192` and the successful `sanctum-admin` login, this accepts **named-client DNS, real proxy/browser authentication, and meaningful monitor state being displayed**. The 100% displayed figure is the app's uptime metric, **not proof that the Socket.IO WebSocket upgrade occurred or stays connected**; require an observed client-side WebSocket exchange for that specific remaining gate. Preserve Kvar NPM as rollback; no source or live infrastructure mutation requested by this browser observation.
+
+**Next one browser-only observation:** In Mace Firefox DevTools Network, inspect WebSocket requests during a Kuma page reload for `socket.io` traffic/101 Switching Protocols and continuing frames (without sharing tokens, frames, or credentials). If Socket.IO remains polling or no 101 appears, classify separately rather than assuming Nginx failure. Then independently check other named application routes and reconcile Maintenance main with the successful DNS promotion.
+
 ## Current browser login after Nexus DNS promotion
 
 From ordinary client Mace, Nova confirmed `getent ahostsv4 kuma.nexus.sanctum` returned `192.168.0.192`, Firefox reached the Kuma login, and the **existing `sanctum-admin` account authenticated successfully** using the application password Nova had saved in Bitwarden. This accepts real named-client DNS, reachable login page and authenticated browser login through Kvin YXORP. It does **not** yet prove sustained Socket.IO connection, UI monitor synchronization or every other Nexus application. Preserve Kvar as rollback.
