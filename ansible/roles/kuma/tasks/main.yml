@@ -5,6 +5,7 @@
     that:
       - ansible_facts['fqdn'] == inventory_hostname
       - inventory_hostname == 'kvin.outer.sanctum'
+      - ansible_facts['architecture'] == 'aarch64'
       - kuma_stage_approved | bool
       - kuma_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')
       - kuma_bind_address == '127.0.0.1'
@@ -65,7 +66,8 @@
     name: "{{ kuma_service_name }}"
     scope: user
     daemon_reload: "{{ kuma_quadlet_result.changed }}"
-    enabled: true
+    # Quadlet-generated units are transient: [Install] WantedBy is
+    # applied by the generator. systemctl enable is unsupported.
     state: "{{ 'restarted' if kuma_quadlet_result.changed else 'started' }}"
   environment:
     XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
@@ -82,9 +84,19 @@
   until: kuma_web_response.status | default(0) in [200, 302]
   changed_when: false
 
-- name: Describe what remains before this is a retained monitor
+- name: Report bounded loopback Kuma candidate staging acceptance
   ansible.builtin.debug:
-    msg: >-
-      A loopback Kuma HTTP endpoint responded. This is NOT evidence that
-      the administrator, monitor database, backup/restore, named YXORP route,
-      Wicket Ollama monitor, or notification policy has been accepted.
+    msg:
+      observer: "{{ inventory_hostname }}"
+      image: "{{ kuma_image }}"
+      candidate_stage_http_status: "{{ kuma_web_response.status | int }}"
+      loopback_endpoint: "http://127.0.0.1:{{ kuma_host_port }}/"
+      data_volume: "{{ kuma_data_volume }}"
+      stage_approved: true
+      persistent_volume_created_or_present: true
+      quadlet_reconciled: true
+      initial_http_only: true
+      administrator_and_monitor_state_accepted: false
+      backup_restore_and_recovery_accepted: false
+      named_lan_or_production_route_accepted: false
+      next_gate: qualify actual login, monitor reconciliation, restart and recovery before upstream cutover

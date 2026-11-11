@@ -21,11 +21,16 @@ class KumaRoleContract(unittest.TestCase):
 
     def test_source_requires_explicit_approval_and_image(self):
         self.assertIs(self.vars["kuma_stage_approved"], False)
-        self.assertEqual(self.vars["kuma_image"], "")
+        self.assertEqual(self.vars["kuma_image"], (
+            "docker.io/louislam/uptime-kuma@sha256:"
+            "302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+        ))
         self.assertEqual(self.vars["kuma_host_port"], 13001)
         self.assertEqual(self.vars["kuma_bind_address"], "127.0.0.1")
         self.assertEqual(self.vars["kuma_data_volume"], "sanctum-kuma-data")
         self.assertIn("kuma_stage_approved | bool",
+                      self.tasks[0]["ansible.builtin.assert"]["that"])
+        self.assertIn("ansible_facts['architecture'] == 'aarch64'",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
         self.assertIn("kuma_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
@@ -42,6 +47,22 @@ class KumaRoleContract(unittest.TestCase):
         self.assertIn("Network=slirp4netns", self.quadlet)
         self.assertNotIn("firewall-cmd", str(self.tasks))
         self.assertNotIn("kuma_monitors", str(self.tasks))
+        systemd = next(t["ansible.builtin.systemd_service"] for t in self.tasks
+                       if "ansible.builtin.systemd_service" in t)
+        # Quadlet generator applies [Install], so enabling the transient
+        # generated service through systemctl is unsupported.
+        self.assertNotIn("enabled", systemd)
+        self.assertEqual(systemd["scope"], "user")
+        self.assertIn("WantedBy=default.target", self.quadlet)
+
+    def test_stage_reports_only_bounded_http_not_monitor_or_recovery_acceptance(self):
+        report = self.tasks[-1]["ansible.builtin.debug"]["msg"]
+        self.assertIs(report["stage_approved"], True)
+        self.assertIs(report["initial_http_only"], True)
+        for key in ("administrator_and_monitor_state_accepted",
+                    "backup_restore_and_recovery_accepted",
+                    "named_lan_or_production_route_accepted"):
+            self.assertIs(report[key], False)
 
 
 if __name__ == "__main__":

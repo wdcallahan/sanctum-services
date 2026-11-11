@@ -1,7 +1,8 @@
 ---
-# Select an actual linux/arm64 Uptime Kuma 2 image digest on Kvin.
-# Do not use a mutable upstream :2 tag as permanent desired state.
-kuma_image: ""
+# Native-qualified on Kvin, November 11, 2026: Podman inspect linux/arm64
+# and disposable offline Node runtime passed (ok=8 changed=0 failed=0).
+# Exact digest is desired state; upgrades require deliberate source update.
+kuma_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
 # Explicit operator decision is required even for the isolated staged copy.
 kuma_stage_approved: false
 kuma_bind_address: "127.0.0.1"
