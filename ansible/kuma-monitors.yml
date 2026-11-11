@@ -1,0 +1,131 @@
+---
+# Reconcile exactly the Project Joule Wicket health monitor, no alerts.
+# Native Kuma 2.5.9 Socket.IO and an existing Vault-backed administrator.
+- name: Reconcile the declared Wicket monitor on retained Kvin Kuma
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars_files:
+    - /home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml
+  vars:
+    kuma_monitors_desired: "{{ (lookup('ansible.builtin.file', playbook_dir ~ '/../data/kuma-monitors.yml') | from_yaml).kuma_monitors }}"
+    kuma_monitor_quadlet: /home/wdc2/.config/containers/systemd/sanctum-kuma.container
+    kuma_monitor_expected_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+    kuma_monitor_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-reconcile-monitors.js') }}"
+  tasks:
+    - name: Require Kvin, qualified rootless image and explicit monitored-service approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - not ansible_check_mode
+          - kuma_monitors_approved | default(false) | bool
+          - not (kuma_stage_remove_approved | default(false) | bool)
+          - kuma_image == kuma_monitor_expected_image
+          - kuma_data_volume == 'sanctum-kuma-data'
+          - kuma_bind_address == '127.0.0.1'
+          - kuma_host_port | int == 13001
+          - kuma_db_type == 'sqlite'
+        fail_msg: Monitor changes require explicit approval on exact Kvin Kuma.
+
+    - name: Require the single wanted Project Joule monitor contract
+      ansible.builtin.assert:
+        that:
+          - kuma_monitors_desired | length == 1
+          - kuma_monitors_desired[0].key == 'wicket_ollama'
+          - kuma_monitors_desired[0].name == 'Wicket Ollama'
+          - kuma_monitors_desired[0].type == 'http'
+          - kuma_monitors_desired[0].method == 'GET'
+          - kuma_monitors_desired[0].url == 'http://wicket.arcane.sanctum:11435/healthz'
+          - kuma_monitors_desired[0].interval_seconds | int == 60
+          - kuma_monitors_desired[0].accepted_status_codes == ['200-299']
+          - kuma_monitors_desired[0].intended_state == 'active_after_retained_kuma_acceptance'
+        fail_msg: Refusing undeclared or changed monitor configuration.
+
+    - name: Require Vault administrator credential without showing it
+      ansible.builtin.assert:
+        that:
+          - vault_kuma_admin_password is defined
+          - vault_kuma_admin_password is string
+          - (vault_kuma_admin_password | default('')) | length > 0
+      no_log: true
+
+    - name: Stat the source-owned Kvin Kuma user Quadlet
+      ansible.builtin.stat:
+        path: "{{ kuma_monitor_quadlet }}"
+        follow: false
+      register: kuma_monitor_quadlet_stat
+
+    - name: Require an actual regular Kuma user Quadlet
+      ansible.builtin.assert:
+        that:
+          - kuma_monitor_quadlet_stat.stat.isreg | default(false)
+          - not (kuma_monitor_quadlet_stat.stat.islnk | default(false))
+
+    - name: Privately read the owned Kuma Quadlet
+      ansible.builtin.slurp:
+        src: "{{ kuma_monitor_quadlet }}"
+      register: kuma_monitor_quadlet_contents
+      no_log: true
+
+    - name: Require exact volume, image, container and loopback binding
+      ansible.builtin.assert:
+        that:
+          - "('Image=' ~ kuma_monitor_expected_image) in kuma_monitor_quadlet_lines"
+          - "'ContainerName=sanctum-kuma' in kuma_monitor_quadlet_lines"
+          - "'PublishPort=127.0.0.1:13001:3001/tcp' in kuma_monitor_quadlet_lines"
+          - "'Volume=sanctum-kuma-data:/app/data' in kuma_monitor_quadlet_lines"
+          - "'Environment=UPTIME_KUMA_DB_TYPE=sqlite' in kuma_monitor_quadlet_lines"
+          - "kuma_monitor_quadlet_lines | select('match', '^Image=') | list | length == 1"
+          - "kuma_monitor_quadlet_lines | select('match', '^PublishPort=') | list | length == 1"
+          - "kuma_monitor_quadlet_lines | select('match', '^Volume=') | list | length == 1"
+        fail_msg: Refusing monitor mutation in unexpected Kuma candidate.
+      vars:
+        kuma_monitor_quadlet_lines: "{{ (kuma_monitor_quadlet_contents.content | b64decode).splitlines() }}"
+
+    - name: Reconcile wanted monitor by name through Kuma native Socket.IO
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - sanctum-kuma
+          - node
+          - -e
+          - "{{ kuma_monitor_js }}"
+          - reconcile
+        stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password, 'monitor': kuma_monitors_desired[0]} | to_json }}"
+        stdin_add_newline: false
+      register: kuma_monitor_result
+      changed_when: (kuma_monitor_result.stdout | from_json).changed | bool
+      no_log: true
+
+    - name: Verify exact monitor persisted without notifications
+      ansible.builtin.assert:
+        that:
+          - (kuma_monitor_result.stdout | from_json).action in ['created', 'updated', 'unchanged']
+          - (kuma_monitor_result.stdout | from_json).monitor_name == 'Wicket Ollama'
+          - (kuma_monitor_result.stdout | from_json).monitor_id | int > 0
+          - (kuma_monitor_result.stdout | from_json).persisted_configuration_verified | bool
+          - not ((kuma_monitor_result.stdout | from_json).notifications_attached | bool)
+          - not ((kuma_monitor_result.stdout | from_json).actual_up_accepted | bool)
+        fail_msg: Kuma persisted monitor contract did not verify.
+
+    - name: Report bounded Wicket monitor configuration acceptance
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          monitor: Wicket Ollama
+          endpoint: http://wicket.arcane.sanctum:11435/healthz
+          action: "{{ (kuma_monitor_result.stdout | from_json).action }}"
+          monitor_id: "{{ (kuma_monitor_result.stdout | from_json).monitor_id | int }}"
+          configuration_persisted_and_verified: true
+          notifications_attached: false
+          actual_up_accepted: false
+          backup_restore_accepted: false
+          named_client_and_production_accepted: false
+          next_gate: repeat with changed zero, then verify actual Up in Kuma and independent backup/restore

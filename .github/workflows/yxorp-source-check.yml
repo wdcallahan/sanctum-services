@@ -12,6 +12,8 @@ on:
       - "ansible/kuma.yml"
       - "ansible/kuma-stage-remove.yml"
       - "ansible/kuma-admin-bootstrap.yml"
+      - "ansible/kuma-monitors.yml"
+      - "tools/kuma-reconcile-monitors.js"
       - "ansible/kuma-admin-diagnose.yml"
       - "tools/kuma-admin-init.js"
       - "tools/kuma-set-vault-password.sh"
@@ -22,6 +24,8 @@ on:
       - "tests/test_kuma_role_contract.py"
       - "tests/test_kuma_stage_removal.py"
       - "tests/test_kuma_admin_bootstrap.py"
+      - "tests/test_kuma_monitors.py"
+      - "tests/fixtures/verify-kuma-monitor-reconcile.js"
       - "tests/test_kuma_admin_diagnose.py"
       - "tests/fixtures/verify-kuma-admin-init.js"
       - "tests/test_kuma_image_qualification.py"
@@ -145,6 +149,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_kuma_role_contract.py'
           python3 -m unittest discover -s tests -p 'test_kuma_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_kuma_admin_bootstrap.py'
+          python3 -m unittest discover -s tests -p 'test_kuma_monitors.py'
           python3 -m unittest discover -s tests -p 'test_kuma_admin_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_kuma_vault_password.py'
           python3 -m unittest discover -s tests -p 'test_kuma_image_qualification.py'
@@ -218,6 +223,9 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-stage-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-admin-bootstrap.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-monitors.yml --syntax-check
+          node --check tools/kuma-reconcile-monitors.js
+          node tests/fixtures/verify-kuma-monitor-reconcile.js
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-admin-diagnose.yml --syntax-check
           bash -n tools/kuma-set-vault-password.sh
           node --check tools/kuma-admin-init.js
