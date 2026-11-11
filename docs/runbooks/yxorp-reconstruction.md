@@ -1,5 +1,81 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Native source-class result: 3 Kvin, 3 other old Yarn log requests; exact addresses next (November 10)
+
+**Kvar NPM old Yarn source-category probe completed**
+`ok=5 changed=0 failed=0`.
+Six records in one readable
+proxy-host 11 access log,
+all from the last 30 days,
+none lost to a truncated tail:
+three from the known Kvin
+observer address, zero from
+known Kvar host or loopback,
+**three from other IP
+addresses**, none unclassified.
+A log source is not necessarily
+a distinct client; NAT or
+proxy forwarding may be present.
+Exact other addresses remain
+**unobserved**, so do not guess
+which device or person made
+those requests.
+
+Nova asked why addresses
+had been redacted. For his
+own LAN, an IP address is
+a useful operational identifier,
+not a password or credential.
+A new narrowly scoped **read-only
+exact-address** diagnostic
+returns IPs and request counts,
+while still suppressing
+request paths, query strings,
+tokens, cookies, and raw log
+lines. No NPM config, DNS,
+firewall or host is modified.
+
+**Next exact operator command from Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvar-legacy-yarn-source-addresses.yml
+```
+
+This play targets only the
+existing Kvar NPM, checks
+the legacy Yarn route remains
+disabled, reads a bounded
+tail of only the fixed current
+and first plain rotated
+`proxy-host-11_access.log`,
+and emits precise source
+IP/count pairs and log-coverage
+metadata. It never exposes
+HTTP request lines or credentials.
+**Return only** the one-line
+Kvar `PLAY RECAP` and `msg`
+from **“Report only old Yarn
+NPM logged source addresses
+and counts”**, or failed task
+and error. No full logs.
+
+**Current policy remains**
+7/8 Kvin anonymous local HTTP
+routes qualified. The eighth
+old `yarn.inner.sanctum`
+name is **disabled**, not
+accepted or retired.
+Kvin can reach the origin,
+but Kvar host and Kvar
+NPM container could not
+reach it in prior native
+tests. Its actual consumers
+and alias need remain a
+deliberate operator decision.
+Kvar NPM/wildcard DNS still
+production; cutover,
+firewall and Kvar retirement
+are not approved.
+
 ## Native Kvar NPM old Yarn access count — six recent entries; classify fixed source buckets next (November 10)
 
 **Completed native privacy-preserving log
