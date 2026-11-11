@@ -1,83 +1,55 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: seven accepted routes; Yarn DNS-direct vs old NPM vhost decision
+## Current YXORP milestone — November 10: restore existing NPM routes; seventh stage pass, eighth pending
 
-Kvin stage has **seven
-accepted bounded local HTTP
-virtual hosts**: Yarn,
-Square, Prism, Search,
-interim LinkStack, Kuma
-and Pi-hole. Full browser/
-app state/LAN acceptance
-and actual migration remain
-independent.
+**Corrected scope after Nova's review:** Rebuild the existing
+Kvar NPM *application* proxy hosts under reproducible, plain
+Nginx on Kvin. Preserve their routing inventory, rather
+than treating the last one as an optional service-retirement
+decision. Seven incumbent app hosts appear in the
+Nov 9 eight-host NPM inventory; only the old
+`yxorp.nexus` NPM graphical administration UI is
+intentionally excluded from the plain-Nginx replacement.
+The newly requested `yarn.nexus` is an addition.
+The Services route manifest therefore covers seven
+existing proxy-app names plus that new Yarn name.
 
-**Old Yarn NPM log source
-IP evidence now complete.**
-`ansible/yxorp-kvar-legacy-yarn-source-addresses.yml`
-ran from Kvin against Kvar,
-`ok=5 changed=0 failed=0`.
-The old NPM host 11 access
-log contains six recent
-entries from exactly two
-sources: Kvin
-**192.168.0.192 — three**,
-and **192.168.0.104 — three**.
-One file was readable,
-no tail truncation or
-unclassified entries.
-Maintenance's DNS source
-names .104 as
-`hop.inner.sanctum`
-but its historical future
-reservation and Inner
-address transition make
-current physical identity
-uncertain. A router/NAT
-source could represent
-other clients; this does
-not prove a needed old
-NPM route.
+**Seven of eight Kvin stage routes passed their
+bounded anonymous local HTTP checks:** Yarn new name,
+Square, Prism, Search, LinkStack, Kuma and Pi-hole.
+The eighth existing `yarn.inner.sanctum` proxy
+route remains default-off **solely because it
+has not been staged/qualified on Kvin**. Previous
+proposal to omit it because DNS already points
+straight at the Yarn origin is withdrawn.
+A DNS A/PTR mapping is not a proxy-migration
+policy decision. No name-change vote is needed.
 
-**Name versus proxy is key:**
-Maintenance DNS already
-declares
-`yarn.inner.sanctum` →
-Yarn origin **192.168.1.110**,
-not to Kvar NPM. Kvin
-direct DNS/HTTP tests
-proved that old DNS name
-reaches HTTP200 at Yarn;
-the old NPM vhost itself
-times out because earlier
-Kvar host and NPM container
-could not reach Yarn.
-Thus preserving the old
-DNS hostname does **not**
-require porting the old
-NPM virtual host to Kvin.
-Proposed disposition is to
-retain the direct DNS
-name while excluding the
-redundant old proxy host
-from YXORP reconstruction.
-Nova must authorize this
-policy before removing
-the disabled eighth
-manifest entry. No DNS,
-Kvar, Kvin firewall or
-cutover change was made.
+**Last diagnostic facts:** Kvar NPM access-log
+host 11 contains six recent requests, three from
+Kvin `192.168.0.192`, three from
+`192.168.0.104`. Nova confirmed the latter
+is `hop.inner.sanctum`, Inner's NAT egress
+which can aggregate requests from any Inner
+clients. Individual clients require historical
+connection/NAT data at the request timestamps;
+reverse DNS alone cannot identify them. Kvar
+host and NPM container both previously timed
+out to Yarn, whereas Kvin direct/new-stage
+HTTP worked. That old Kvar transport problem
+does not prove the route should be dropped.
 
-Next step is an explicit
-operator decision, not
-another network probe.
-LinkStack, Kuma and
-Pi-hole still need
-app/data restoration
-on Kvin and
-functional acceptance.
-Kvar retirement remains
-separately gated.
+**Next Services work:** qualify the eighth
+existing Yarn virtual host on isolated Kvin
+with explicit guarded staging, including raw
+wire headers/body where appropriate. Then
+continue app-level recovery and state
+migration (LinkStack, Kuma, Pi-hole),
+LAN firewall acceptance with Maintenance,
+and separately approved production
+cutover. The current Kvar NPM and wildcard
+DNS remain production; do not edit them
+or tear down the old proxy.
 
 ## Current YXORP milestone — November 10: 7 HTTP routes accepted; legacy Yarn IPs next
 
