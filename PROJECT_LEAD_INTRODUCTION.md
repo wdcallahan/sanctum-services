@@ -1,5 +1,77 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Kuma redirect diagnosed, targeted source fix implemented, native stage retest next
+
+**Native Kuma redirect root cause now specifically classified.**
+The user ran `ansible/yxorp-kvin-stage-kuma-redirect-diagnose.yml`
+on Kvin; read-only play recap `ok=4 changed=0 failed=0`.
+The three `Host: kuma.nexus.sanctum` anonymous root redirects:
+- Direct Kuma on Kvar `:3001`: **HTTP302**, Location host class
+  `kvar_backend_host` with explicit `kuma_backend_port_3001`.
+- Incumbent Kvar NPM `:80`: **HTTP302**, same Kvar backend hostname
+  with **no explicit port**.
+- New Kvin staged YXORP `127.0.0.1:80`: **HTTP302**, Location host
+  class **`loopback`** and port **`stage_http_port_80`**.
+- All redirect path, query, fragment match incumbent, and the
+  direct/incumbent hostname is equal. Candidate/incumbent host and
+  full Location are different. `configuration_changed=false`.
+
+**Root cause:** Existing template's implicit Nginx
+`proxy_redirect default` rewrites the backend absolute
+`Location` into the incoming Kvin loopback test authority.
+Kvar NPM instead strips backend port `3001` from its
+absolute Kvar-host redirect while retaining the Kvar hostname.
+The current stage has NOT yet been reconciled with the fix.
+
+**Source-managed targeted correction implemented:**
+`data/yxorp-routes.yml` adds only to disabled Kuma entry
+`redirect_strip_upstream_port: true`. The shared
+`ansible/roles/yxorp/templates/nginx.conf.j2` renders,
+ONLY when that policy is true:
+`proxy_redirect http://kvar.outer.sanctum:3001/ http://kvar.outer.sanctum/;`
+(generalized from declared upstream fields). This overrides
+Nginx's unwanted localhost:80 rewrite **only for Kuma**.
+The Kvin stage's guarded Kuma task additionally asserts that
+the flag is present and the backend is the exact old Kvar :3001.
+No other routes' policies or enabled states were modified;
+checked-in production manifest remains **Yarn only**.
+The source change must be reviewed/removed when Kuma's
+application actually migrates to Kvin.
+
+**Synthetic proof:** `tools/test-yxorp-http.py` now uses
+a real local Nginx and synthetic origin which redirects
+with an explicit backend port, and asserts that Kuma policy
+produces exactly the backend hostname without its service
+port while retaining redirect path/query/fragment. It
+also asserts the other host's default behavior remains
+unchanged. New `tests/test_yxorp_kuma_redirect_policy.py`
+checks exact manifest scope, template rendering and
+preflight. All tests are in the YXORP source workflow.
+Do **not** declare the sixth route accepted until
+native Kvin rerun reports actual Location parity.
+
+**Current accounting:** 6/8 routes attempted; 5 passed first
+local HTTP checks (Yarn, Square, Prism, Search and interim
+LinkStack). Kuma pending; Pi-hole and legacy Yarn inner
+untested. Kvar NPM and wildcard DNS still production;
+Kvin LAN HTTP80 firewall owned by Maintenance.
+LinkStack, Kuma and Pi-hole applications/data still
+reside on Kvar, not migrated to Kvin.
+
+**Next exact operator command on Kvin AFTER CI passed:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-stage-kuma-probe.yml -e yxorp_kvin_stage_approved=true -e yxorp_stage_square_approved=true -e yxorp_stage_prism_approved=true -e yxorp_stage_search_approved=true -e yxorp_stage_dir_approved=true -e yxorp_stage_kuma_approved=true
+```
+**Request only two one-line PLAY RECAP results and
+the `msg` dictionary from “Report only Kuma status
+and redirect authority components”**, or a failed
+task/error if failure occurs. No verbose logs,
+no reruns of accepted other routes.
+**Acceptance requires actual
+`candidate_redirect_equals_incumbent:true`**,
+not just matching 302. No production changes.
+Every turn ends with a concrete next action.
+
 ## CURRENT — November 10: Kuma stage HTTP302 REDIRECT MISMATCH (6 attempted, 5 accepted); read-only diagnosis next
 
 **Exact native Kuma evidence received:** The Kvin staged
