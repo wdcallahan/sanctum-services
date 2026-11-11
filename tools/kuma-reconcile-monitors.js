@@ -75,8 +75,8 @@ async function main(){
     const code=last?Number(last.status):null;
     const rawTime=typeof last?.time==="string"?last.time:"";
     const normalized=rawTime.replace(" ","T");
-    const timeMs=/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d/.test(normalized)?
-      Date.parse(/(?:Z|[+-]\\d\\d:\\d\\d)$/.test(normalized)?normalized:normalized+"Z"):NaN;
+    const timeMs=/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d/.test(normalized)?
+      Date.parse(/(?:Z|[+-]\d\d:\d\d)$/.test(normalized)?normalized:normalized+"Z"):NaN;
     const ageSeconds=Number.isFinite(timeMs)?Math.floor((Date.now()-timeMs)/1000):null;
     const recent=ageSeconds!==null&&ageSeconds>=-120&&ageSeconds<=180;
     const status=code===1?"Up":code===0?"Down":code===2?"Pending":code===3?"Maintenance":"Unknown";
@@ -86,7 +86,7 @@ async function main(){
       heartbeat_age_seconds:ageSeconds,heartbeat_recent_within_180_seconds:recent,
       actual_up_accepted:recent&&code===1,
       notifications_attached:false,changed:false,
-    })+"\\n");
+    })+"\n");
     return;
   }
   const list=(await getList()).filter(m=>m?.name===expected.name);
