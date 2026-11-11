@@ -1,5 +1,107 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: three of six old Yarn log requests are NOT from Kvin's known observer source; exact addresses next
+
+**Nova's latest native Kvar source-category report:**
+`ansible/yxorp-kvar-legacy-yarn-source-classes.yml`
+finished `ok=5 changed=0 failed=0`.
+Current NPM proxy-host 11 log has **six**
+records within last 30 days, with:
+`known_kvin_observer:3`,
+`other_observed_source:3`,
+`known_kvar_host:0`,
+`known_kvar_loopback:0`,
+`unclassified_format:0`.
+No log truncation; one readable
+file. `all_classified_sources_known_tests=false`.
+**The other three may be one
+or several machines**, NAT/proxies
+could affect IP identity; they
+are not proof of a human user
+or required old hostname.
+**Do not retire or activate**
+old `yarn.inner.sanctum` based
+on this count alone.
+
+**User explicitly asked why source IP
+addresses were hidden and whether they
+are secrets.** Correct response:
+addresses from their private
+network are operational identifiers,
+not credentials; excessive
+redaction was an obstacle to
+debugging. Keep tokens, raw
+queries/paths, passwords/cookies
+and full log lines protected,
+but source addresses and aggregate
+request counts are now appropriate
+to display to the operator.
+
+**New narrow diagnostic:**
+`ansible/yxorp-kvar-legacy-yarn-source-addresses.yml`
+targets ONLY existing Kvar
+NPM via known SSH inventory,
+checks cutover false and disabled
+old Yarn manifest route, and runs
+`tools/observe-yxorp-kvar-yarn-source-addresses.js`
+through Podman's existing NPM
+Node. The helper reads at most
+1MiB each from the same fixed
+proxy-host 11 access log and
+one plain rotation, counts only
+30-day records with explicit
+`[Client IPv4]` syntax, and
+emits exact IP and count of each
+observed source, with known
+Kvin and Kvar labels. It never
+emits access log lines, HTTP
+paths, queries, credentials,
+cookies or raw errors. It reports
+coverage and truncation, and
+always keeps `safe_to_retire_proven:false`.
+Source contract and synthetic
+test include three Kvin requests
+and three other requests from
+two different IPs, plus
+ambiguous log format handling.
+The exact other IPs are
+**not yet known**; don't
+invent them.
+
+**Next Kvin command after source CI green:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvar-legacy-yarn-source-addresses.yml
+```
+Ask only Kvar's `PLAY RECAP`
+and `msg` dictionary from
+**“Report only old Yarn NPM logged
+source addresses and counts”**,
+or failed task/error. Once actual
+addresses known, compare against
+existing device inventory where
+available and ask for a
+deliberate alias policy;
+do not keep multiplying
+probes indefinitely.
+
+**Architecture unchanged:** 7 of 8
+route names qualified in Kvin's
+limited local anonymous HTTP
+stage. Legacy old Yarn name
+disabled on Kvin; Kvar NPM and
+wildcard DNS still production.
+Earlier Kvar host and container
+both failed to connect to old
+Yarn despite Kvin direct HTTP200;
+this is not isolated to NPM.
+LinkStack, Kuma and Pi-hole
+application state still on
+Kvar and not migrated.
+No Kvar network repair,
+firewall, cutover or retirement
+authorized. End with
+concrete operator action.
+
 ## CURRENT — November 10: six old Yarn NPM access entries, real consumer still unknown; test-source categories next
 
 **Latest exact native report:** Nova ran
