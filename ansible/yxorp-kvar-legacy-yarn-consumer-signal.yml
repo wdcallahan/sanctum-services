@@ -1,0 +1,56 @@
+---
+# Old yarn.inner.sanctum name remains unapproved for Kvin stage and removal.
+# Inspect ONLY aggregate request counts in known NPM proxy-host 11 logs.
+# No app config edits, network changes, raw access logs, IPs or URLs emitted.
+- name: Review old Yarn NPM access-log signal without changing Kvar
+  hosts: npm_proxy_legacy
+  gather_facts: true
+  become: true
+  vars_files:
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact incumbent Kvar NPM identity and disabled legacy Yarn route
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - "'npm_proxy_legacy' in group_names"
+          - not ansible_check_mode
+          - not (yxorp_production_cutover_approved | default(false) | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[7].hostname == 'yarn.inner.sanctum'
+          - not (yxorp_routes[7].enabled | bool)
+          - yxorp_routes[7].upstream_host == '192.168.1.110'
+          - yxorp_routes[7].upstream_port | int == 80
+        fail_msg: >-
+          Only exact incumbent Kvar NPM may inspect bounded legacy Yarn
+          access-log metadata. Old Yarn Kvin route remains disabled.
+
+    - name: Aggregate selected access logs inside existing NPM container privately
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - nginx-proxman
+          - node
+          - -e
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-kvar-yarn-usage.js') }}"
+      register: yxorp_yarn_client_signal
+      no_log: true
+      changed_when: false
+      failed_when: false
+
+    - name: Require bounded Kvar aggregate reader succeeded
+      ansible.builtin.assert:
+        that:
+          - yxorp_yarn_client_signal.rc == 0
+          - yxorp_yarn_client_signal.stdout | length > 0
+        fail_msg: >-
+          Read-only NPM aggregate unavailable; do not infer that the
+          legacy Yarn route has no consumers or can be retired.
+
+    - name: Report only old Yarn NPM access-log coverage and aggregate counts
+      ansible.builtin.debug:
+        msg: "{{ yxorp_yarn_client_signal.stdout | from_json }}"
