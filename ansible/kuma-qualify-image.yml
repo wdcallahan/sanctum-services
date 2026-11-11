@@ -1,0 +1,101 @@
+---
+# One-time native image qualification for the RETAINED Kvin Kuma role.
+# The published digest comes from data/container-image-candidates.yml;
+# it is a registry observation, not proof of native platform or runtime.
+# Running this play explicitly permits only an OCI pull into wdc2's
+# ROOTLESS Kvin image cache. No app, volume, service, login or proxy change.
+- name: Qualify the exact arm64 Uptime Kuma 2 candidate without installing Kuma
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars_files:
+    - ../data/container-image-candidates.yml
+  tasks:
+    - name: Require exact Kvin rootless-only cache qualification and closed app stage
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - kuma_image_qualification_approved | default(false) | bool
+          - not (kuma_stage_approved | default(false) | bool)
+          - kuma_candidate.tag_at_lookup == '2.5.9'
+          - kuma_candidate.platform == 'linux/arm64'
+          - kuma_candidate.status == 'registry_only'
+          - kuma_candidate.image is match('^docker.io/louislam/uptime-kuma@sha256:[a-f0-9]{64}$')
+        fail_msg: >-
+          Only the explicit Linux ARM64 Kuma 2.5.9 digest may be
+          qualified in Kvin's rootless image store. App staging,
+          Kvar, DNS, firewall and client paths remain unapproved.
+
+    - name: Check the rootless OCI image cache for the exact candidate digest
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ kuma_candidate.image }}"]
+      register: kuma_qualify_image_exists
+      changed_when: false
+      failed_when: kuma_qualify_image_exists.rc not in [0, 1]
+      check_mode: false
+
+    - name: Pull the exact arm64 digest into the rootless image cache only when missing
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ kuma_candidate.image }}"]
+      register: kuma_qualify_image_pulled
+      changed_when: kuma_qualify_image_pulled.rc == 0
+      when: kuma_qualify_image_exists.rc == 1
+      no_log: true
+
+    - name: Inspect the exact cached image privately
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ kuma_candidate.image }}"]
+      register: kuma_qualify_image_info
+      changed_when: false
+      no_log: true
+
+    - name: Require native Linux ARM64 metadata and real loaded image
+      ansible.builtin.assert:
+        that:
+          - (kuma_qualify_image_info.stdout | from_json | length) == 1
+          - (kuma_qualify_image_info.stdout | from_json)[0].Architecture == 'arm64'
+          - (kuma_qualify_image_info.stdout | from_json)[0].Os == 'linux'
+          - (kuma_qualify_image_info.stdout | from_json)[0].Id is match('^sha256:[a-f0-9]{64}$')
+        fail_msg: The selected cached image is not verified as Linux ARM64.
+
+    - name: Verify Node starts inside a disposable offline rootless candidate
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - none
+          - --read-only
+          - --security-opt
+          - no-new-privileges
+          - --entrypoint
+          - node
+          - "{{ kuma_candidate.image }}"
+          - --version
+      register: kuma_qualify_node
+      changed_when: false
+      no_log: true
+
+    - name: Require the native runtime actually executed
+      ansible.builtin.assert:
+        that:
+          - kuma_qualify_node.rc == 0
+          - kuma_qualify_node.stdout is match('^v[0-9]+\\.[0-9]+\\.[0-9]+')
+        fail_msg: Exact ARM64 image was inspected but its Node runtime did not execute.
+
+    - name: Report bounded image-only qualification metadata
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          candidate_tag: "{{ kuma_candidate.tag_at_lookup }}"
+          candidate_image: "{{ kuma_candidate.image }}"
+          native_platform: linux/arm64
+          runtime_executed: true
+          application_installed: false
+          persistent_data_or_volume_changed: false
+          host_or_network_changed: false
+          qualification_level: rootless_cached_image_and_offline_runtime_only
+          next_gate: pin native-qualified digest and independently authorize loopback Kuma stage
