@@ -1,52 +1,48 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
-## Pending Yarn name-versus-proxy disposition (November 10)
+## November 10 correction — preserve existing Yarn NPM proxy host in the reconstruction baseline
 
-The latest Services read-only Kvar NPM access-log
-sample observed six requests for old NPM proxy-host
-`yarn.inner.sanctum` over the last 30 days:
-three from Kvin (`192.168.0.192`) and three
-from `192.168.0.104`, the latter mapped in
-Maintenance's checked-in DNS to
-`hop.inner.sanctum` (a nominal Inner
-network hop; actual live address ownership
-remains unconfirmed due the Bunny address
-transition). These counts neither prove
-three independent clients nor establish
-that the old NPM proxy host must survive.
-Logs did not expose request contents.
+The existing Kvar NPM `yarn.inner.sanctum` proxy-host 11 is
+**part of the incumbent application's proxy inventory**.
+Services must rebuild the incumbent application routes
+under plain Nginx on Kvin, not invent a keep-or-retire
+decision about the corresponding ordinary DNS hostname.
+The earlier suggestion to omit NPM virtual host 11 because
+Maintenance DNS directly resolves `yarn.inner.sanctum`
+to the Yarn origin was an **unsupported recommendation,
+now withdrawn**. DNS naming and proxy vhost migration are
+independent concerns.
 
-**Do not confuse old DNS hostname with NPM
-proxy host.** Maintenance's authoritative
-DNS desired state separately maps
-`yarn.inner.sanctum` directly to
-`192.168.1.110:80`'s *IP* (the Yarn
-origin); the extra `yarn.inner.sanctum`
-NPM virtual host on Kvar is a redundant
-historical route. Kvin's live direct DNS
-Yarn observation got HTTP200; the Kvar
-NPM path timed out and Kvar host plus
-NPM container both previously failed
-to connect to the origin. No old
-Kvar transport repair is authorized.
+The original NPM review observed eight proxy-host
+configurations: seven application routes plus the NPM
+management UI `yxorp.nexus.sanctum`. The management UI
+is intentionally not reproduced because the replacement
+is plain Nginx. The new requested `yarn.nexus.sanctum`
+is separately added, so the Services manifest has eight
+app-route entries. The old `yarn.inner.sanctum` entry
+stays present and default-off in Kvin **staging only**
+until an explicit bounded test; this flag is not a
+retirement signal.
 
-**Proposed disposition pending Nova approval:**
-retain `yarn.inner.sanctum` as an
-origin-direct DNS hostname while omitting
-the obsolete NPM virtual host from
-the intended Kvin YXORP route set.
-The currently checked-in eighth YXORP
-entry remains disabled; no DNS or
-proxy route was changed, and no live
-retirement/cutover follows from this
-proposal. Seven new Kvin stage names
-are already accepted at the
-bounded anonymous HTTP level.
-LinkStack, Kuma, Pi-hole restoration
-and Kvar retirement remain
-separate future work.
+Kvar NPM's recent old-Yarn access log had six
+records from two source addresses:
+Kvin `192.168.0.192` (three)
+and Inner NAT egress `192.168.0.104` (three).
+Nova confirmed the latter is `hop.inner.sanctum`
+and could represent requests from any client behind
+Inner. Retrospective identification needs request
+timestamps correlated with retained Inner NAT/session
+records and may be impossible if those were not
+logged. The recorded Kvar-to-Yarn transport failure,
+despite Kvin reaching the same origin, needs
+no new deprecation decision.
 
-**Decision register and reconstruction inventory · 2026-11-08.** This document is the Services-owned reference for the intended service estate, including externally owned containers and retired definitions. It is not a live deployment authorization or a claim that reconstruction has passed. Maintain it alongside [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2) and the [roadmap](ROADMAP.md).
+No DNS, Kvar NPM, Kvin proxy stage, firewalld
+or cutover changed under this correction.
+Seven initial local HTTP stage routes remain
+accepted; eighth pending qualification. Kvar
+app/data restores and Kvar eventual retirement
+remain separately gated.
 
 ## Settled operating intentions (Nova, November 8)
 
