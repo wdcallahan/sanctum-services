@@ -1,5 +1,51 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
+## Pending Yarn name-versus-proxy disposition (November 10)
+
+The latest Services read-only Kvar NPM access-log
+sample observed six requests for old NPM proxy-host
+`yarn.inner.sanctum` over the last 30 days:
+three from Kvin (`192.168.0.192`) and three
+from `192.168.0.104`, the latter mapped in
+Maintenance's checked-in DNS to
+`hop.inner.sanctum` (a nominal Inner
+network hop; actual live address ownership
+remains unconfirmed due the Bunny address
+transition). These counts neither prove
+three independent clients nor establish
+that the old NPM proxy host must survive.
+Logs did not expose request contents.
+
+**Do not confuse old DNS hostname with NPM
+proxy host.** Maintenance's authoritative
+DNS desired state separately maps
+`yarn.inner.sanctum` directly to
+`192.168.1.110:80`'s *IP* (the Yarn
+origin); the extra `yarn.inner.sanctum`
+NPM virtual host on Kvar is a redundant
+historical route. Kvin's live direct DNS
+Yarn observation got HTTP200; the Kvar
+NPM path timed out and Kvar host plus
+NPM container both previously failed
+to connect to the origin. No old
+Kvar transport repair is authorized.
+
+**Proposed disposition pending Nova approval:**
+retain `yarn.inner.sanctum` as an
+origin-direct DNS hostname while omitting
+the obsolete NPM virtual host from
+the intended Kvin YXORP route set.
+The currently checked-in eighth YXORP
+entry remains disabled; no DNS or
+proxy route was changed, and no live
+retirement/cutover follows from this
+proposal. Seven new Kvin stage names
+are already accepted at the
+bounded anonymous HTTP level.
+LinkStack, Kuma, Pi-hole restoration
+and Kvar retirement remain
+separate future work.
+
 **Decision register and reconstruction inventory · 2026-11-08.** This document is the Services-owned reference for the intended service estate, including externally owned containers and retired definitions. It is not a live deployment authorization or a claim that reconstruction has passed. Maintain it alongside [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2) and the [roadmap](ROADMAP.md).
 
 ## Settled operating intentions (Nova, November 8)
