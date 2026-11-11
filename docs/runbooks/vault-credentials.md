@@ -34,24 +34,31 @@ Run it from the project directory:
 
 ```bash
 cd ~/src/sanctum-services
-umask 077
-set -C
-vault_dir="$HOME/.config/sanctum-services/secrets"
-test -r "$vault_dir/vault.key" || { echo "Existing Vault key missing" >&2; exit 1; }
-test ! -e "$vault_dir/kuma-admin.vault.yml" || { echo "Kuma Vault file already exists; refusing overwrite" >&2; exit 1; }
-read -rsp 'Choose Kuma admin password: ' kuma_password
-printf '\n'
-printf '%s' "$kuma_password" |
-  ~/.local/bin/ansible-navigator exec \
-    --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
-    --exec-shell false -- \
-    ansible-vault encrypt_string \
-      --vault-password-file "$vault_dir/vault.key" \
-      --stdin-name vault_kuma_admin_password > "$vault_dir/kuma-admin.vault.yml"
-unset kuma_password
-chmod 600 "$vault_dir/kuma-admin.vault.yml"
-grep -q '^vault_kuma_admin_password: !vault |' "$vault_dir/kuma-admin.vault.yml" &&
+(
+  set -euo pipefail
+  set -C
+  umask 077
+  vault_dir="$HOME/.config/sanctum-services/secrets"
+  test -r "$vault_dir/vault.key" || { echo "Existing Vault key missing" >&2; exit 1; }
+  test ! -e "$vault_dir/kuma-admin.vault.yml" || { echo "Kuma Vault file already exists; refusing overwrite" >&2; exit 1; }
+  trap 'unset kuma_password' EXIT
+  read -rsp 'Choose Kuma admin password (16+ characters): ' kuma_password
+  printf '\n'
+  if (( ${#kuma_password} < 16 )); then
+    echo 'Choose a longer service-specific password' >&2
+    exit 1
+  fi
+  printf '%s' "$kuma_password" |
+    ~/.local/bin/ansible-navigator exec \
+      --eev "$vault_dir/vault.key:$vault_dir/vault.key:ro,Z" \
+      --exec-shell false -- \
+      ansible-vault encrypt_string \
+        --vault-password-file "$vault_dir/vault.key" \
+        --stdin-name vault_kuma_admin_password > "$vault_dir/kuma-admin.vault.yml"
+  chmod 600 "$vault_dir/kuma-admin.vault.yml"
+  grep -q '^vault_kuma_admin_password: !vault |' "$vault_dir/kuma-admin.vault.yml"
   echo 'Kuma Vault variable created (value not shown)'
+)
 ```
 
 Check the output file format **without decrypting or printing its
