@@ -52,7 +52,7 @@ class KumaRawWireTests(unittest.TestCase):
             "not (yxorp_production_cutover_approved | bool)",
             "yxorp_routes[5].upstream_host == 'kvar.outer.sanctum'",
             "yxorp_routes[5].upstream_port | int == 3001",
-            "yxorp_routes[5].redirect_strip_upstream_port | default(false) | bool",
+            "not (yxorp_routes[5].redirect_strip_upstream_port | default(false) | bool)",
         ):
             self.assertIn(check, guard)
         for task in p["tasks"]:
