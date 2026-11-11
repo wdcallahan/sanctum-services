@@ -221,6 +221,44 @@
               - kuma_recovery_original_after.stdout | trim == 'active'
             fail_msg: Original Kuma did not recover its active state; stop here.
 
+    - name: Verify restarted live Kuma HTTP returns a real local response
+      ansible.builtin.uri:
+        url: http://127.0.0.1:13001/
+        status_code: [200, 302]
+        follow_redirects: none
+        timeout: 5
+      register: kuma_recovery_original_http
+      retries: 20
+      delay: 3
+      until: kuma_recovery_original_http.status | default(0) in [200, 302]
+      changed_when: false
+
+    - name: Verify live Kuma retained Vault authentication after restart
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - sanctum-kuma
+          - node
+          - -e
+          - "{{ kuma_recovery_admin_js }}"
+          - verify
+        stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password} | to_json }}"
+        stdin_add_newline: false
+      register: kuma_recovery_original_login
+      changed_when: false
+      no_log: true
+
+    - name: Require original login succeeded without account creation
+      ansible.builtin.assert:
+        that:
+          - not ((kuma_recovery_original_login.stdout | from_json).administrator_created | bool)
+          - (kuma_recovery_original_login.stdout | from_json).administrator_login_verified | bool
+      no_log: true
+
     - name: Validate private archive SQLite integrity and saved admin/monitor
       ansible.builtin.command:
         argv:
@@ -445,6 +483,7 @@
           backup_sha256: "{{ kuma_recovery_archive_final.stat.checksum }}"
           backup_bytes: "{{ kuma_recovery_archive_final.stat.size | int }}"
           original_service_restarted_and_active: true
+          original_http_and_vault_login_verified_after_restart: true
           isolated_restore_volume_imported: true
           isolated_restored_sqlite_integrity: ok
           isolated_application_started_without_network: true
