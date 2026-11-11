@@ -1,94 +1,89 @@
 # Sanctum Services — Roadmap
 
-## Current YXORP milestone — November 10: 7 accepted initial HTTP routes; 6 recent legacy Yarn requests
+## Current YXORP milestone — November 10: 7 HTTP routes accepted; legacy Yarn IPs next
 
-**Seven of eight declared Kvin
-YXORP route names passed bounded
-initial local HTTP checks**:
-Yarn, Square, Prism, Search,
-interim LinkStack, Kuma and
-Pi-hole. The eighth,
-`yarn.inner.sanctum`, remains
-disabled in the Kvin stage
-and checked-in manifest.
-It is a legacy NPM alias,
-distinct from the accepted
-new `yarn.nexus.sanctum`.
-Kvar NPM and wildcard DNS
-remain production, without
-a cutover approval.
+**Seven of eight Kvin staged
+YXORP names passed initial
+local anonymous HTTP routing
+checks:** Yarn, Square,
+Prism, Search, interim
+LinkStack, Kuma, Pi-hole.
+Their broader application
+sessions, data, persistent
+state and production client
+acceptance remain separate.
+The last legacy
+`yarn.inner.sanctum`
+remains disabled on Kvin
+and unresolved for retirement.
 
-**Native Kvin transport results:**
-The old Yarn backend responded
-HTTP200 by IP and hostname
-under both old and new Host
-headers; new YXORP forwarded
-Yarn successfully. Kvar's
-incumbent old alias timed
-out. Earlier direct **Kvar
-host and NPM container**
-queries also failed to reach
-Yarn, despite valid selected
-routes; this is a Kvar-side
-transport/return-path issue,
-not a proven NPM-only
-configuration defect.
-Old-path repairs are deferred
-without real client demand.
+A Kvin-only direct/old-NPM
+observation found Yarn responds
+HTTP200 via literal origin
+IP, origin DNS name, both
+old/new Host headers and
+new Kvin YXORP frontend,
+but the old Kvar NPM
+route times out. Earlier
+direct Kvar host and NPM
+container requests both
+failed to reach that
+same origin, despite
+selected routes being
+present; not an isolated
+NPM configuration defect.
+Old Kvar-path repairs
+remain deferred.
 
-**Native bounded Kvar access-log
-summary, `ok=5 changed=0 failed=0`:**
-The old NPM host 11 generated
-file and exact access-log
-directive were present. One
-current plain log file yielded
-six fully parseable entries,
-**all six within seven and
-30 days**, newest age 0 days.
-The available tail was not
-truncated and no additional
-rotations were observed.
-This can be our own
-diagnostic requests, actual
-clients, or both; no identity
-or source class was reported.
-`current_client_use_proven=false`
-and `safe_to_retire_proven=false`.
+**Recent bounded NPM
+access evidence:** Exactly
+six requests in one current
+log, all last week.
+The next native source-category
+check (`ok=5 changed=0 failed=0`)
+identified **three logged
+source requests from Kvin's
+known observer address,
+and three from other IP
+addresses**; none from
+Kvar host/loopback or
+unknown log format.
+Those three do not necessarily
+represent separate clients,
+and sources can be NAT/proxies.
+No consumer/retirement
+decision yet.
 
-**Next exact read-only evidence:**
-`ansible/yxorp-kvar-legacy-yarn-source-classes.yml`
-reads the same fixed bounded
-NPM log files and counts only
-source *categories* (known
-Kvin/Kvar test hosts, other,
-or unrecognized format).
-No IPs, URLs, paths,
-queries, cookies or raw
-access records are printed.
-[Source CI #42954553049 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/42954553049),
-including synthetic redaction
-and source-class tests.
-Next Kvin command is in
-[YXORP runbook](runbooks/yxorp-reconstruction.md).
-Treat this as the last
-bounded evidence before
-explicit operator decision
-on old-name consumers and
-retention; neither 0 nor
-6 log records authorizes
-route removal or eighth
-route activation.
+Nova requested that useful
+source IP addresses **not
+be unnecessarily redacted**
+in his own infrastructure
+diagnostics. A new read-only
+Kvar NPM observer
+`ansible/yxorp-kvar-legacy-yarn-source-addresses.yml`
+will return **exact source
+IPs and counts** (not raw
+HTTP log lines, paths,
+queries, credentials,
+cookies or tokens).
+[Source CI #42955380159 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/42955380159)
+with local synthetic parsing
+and safety tests.
+See the [YXORP runbook](runbooks/yxorp-reconstruction.md)
+for the exact single Kvin
+command and short output
+contract.
 
-Kvar-hosted LinkStack,
-Kuma and Pi-hole still
-require separate actual
-app/data restoration on
-Kvin, browser/functional
-acceptance, LAN firewall
-and eventual production
-cutover. Kvar retirement
-remains separately approved
-future work.
+No old legacy route enable/
+disable/retirement, Kvar
+NPM/DNS, firewall or
+production cutover change
+is authorized by these
+observations. LinkStack,
+Kuma and Pi-hole still need
+actual Kvin application/data
+restores. Kvar retirement
+remains a distinct approval.
 
 
 ## Nova's available-week priority — November 1–8, 2026
