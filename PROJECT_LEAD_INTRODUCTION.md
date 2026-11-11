@@ -1,5 +1,84 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — Wednesday, November 11: eighth existing Yarn NPM stage coded, real-Nginx CI pending
+
+**Actual work this morning:** Implemented SS-YX-2 in source:
+- `ansible/vars/yxorp-kvin-stage.yml` has new
+  **default-off** `yxorp_stage_yarn_inner_approved: false`.
+- `ansible/yxorp-kvin-stage.yml` has one
+  **Kvin-stage-only**, exact backend `192.168.1.110:80`
+  and prior-seven-vhost guard, followed by
+  in-memory enabling of ONLY existing NPM host
+  `yarn.inner.sanctum` as the eighth vhost.
+  `data/yxorp-routes.yml` desired enabled flags
+  remain unchanged. Kvar NPM, DNS, firewall,
+  production cutover and app state are NOT touched.
+- `ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+  separately asserts exact seven prior approvals,
+  source manifest and Kvin scope; privately compares
+  published and mounted Nginx config and checks exact
+  two different Yarn vhosts plus old origin backend;
+  invokes `tools/observe-yxorp-kvin-stage-yarn-inner.py`
+  for bounded GET / from direct Yarn origin
+  `192.168.1.110` and old Kvin virtual host,
+  new `yarn.nexus` Kvin host, and unmatched Host.
+  Returns statuses, MIME/body/redirect comparison
+  booleans and default deny without leaking raw
+  content or credentials. Accepts only genuine
+  HTTP200 plus complete identical old-route body,
+  new-host HTTP200, default deny and current
+  mounted config. If comparison fails, sanitized
+  `msg` prints before the failure.
+  The Kvar NPM old route's TIMEOUT is known;
+  it is NOT a required HTTP parity comparator.
+- Synthetic **real Nginx** test in
+  `tools/test-yxorp-http.py` now exercises
+  old/new Yarn names against **different**
+  synthetic backend identities, their forwarded
+  Host and relative Location; unknown host denied.
+  `tests/test_yxorp_kvin_stage_yarn_inner.py`
+  tests the fixed scope and actual local wire
+  comparator (including deliberately incorrect
+  body and raw-data redaction).
+  `tests/fixtures/verify-yxorp-kvin-yarn-inner-stage.py`
+  tests **real Ansible** one/seven/eight route
+  selection and refusal of illegal eighth-only
+  approval. CI workflow includes these.
+
+**Source CI:** [GitHub Actions run #43048429592](https://github.com/wdcallahan/sanctum-services/actions/runs/43048429592).
+The source contract and Ansible syntax parts passed.
+At writing, runner is still performing Nginx package
+installation/syntax/real HTTP checks. **Check final
+conclusion before giving operator the command.**
+Don't pretend a green interim step is full CI
+acceptance. The newest source commit includes
+`strip_empty_ends:false` when reading container
+Nginx config so the host-versus-mount byte equality
+does not fail solely on a stripped trailing newline.
+
+**Single intended native operator action, ONLY AFTER
+latest CI fully green:** from Kvin run the standard
+eight-route stage reconciliation with all seven
+previous stage flags plus
+`-e yxorp_stage_yarn_inner_approved=true`,
+then `ansible/yxorp-kvin-stage-yarn-inner-probe.yml`
+with the SAME flags in one `&&` chain. Ask for
+the **two PLAY RECAP** lines and the sanitized
+`msg` from `Report only eighth Yarn route
+configuration and wire acceptance metadata`;
+if failed, just failed task + error and the
+already printed sanitized classification
+(if any). Never ask for full logs, user
+DNS decisions, or retesting the other seven
+accepted vhosts.
+
+**Following leaf:** SS-YX-3 scoped actual NPM
+behavior/cross-route coverage, then clean retained
+Kuma install/monitor recovery; consult the
+[active outcome plan](docs/ROADMAP.md#active-execution-plan--wednesday-november-11-2026).
+No arbitrary time limits. No native changes yet
+this morning. Owner: Services.
+
 ## CURRENT — Wednesday, November 11: planned execution, no arbitrary timeboxes
 
 **Morning source of truth:** [The active November 11 Services
