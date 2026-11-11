@@ -1,0 +1,53 @@
+---
+# Last unresolved NPM name: DO NOT enable yarn.inner.sanctum on Kvin by default.
+# Source manifest's newly requested yarn.nexus.sanctum is a DIFFERENT host.
+# This play only compares bounded HTTP reachability from Kvin, no restarts.
+- name: Investigate old Yarn NPM alias from Kvin without activating the route
+  hosts: yxorp
+  gather_facts: false
+  become: false
+  vars_files:
+    - vars/yxorp-kvin-stage.yml
+    - ../data/yxorp-routes.yml
+  tasks:
+    - name: Require exact Kvin observer and disabled old Yarn alias
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - yxorp_deployment_scope == 'kvin_stage'
+          - yxorp_kvin_stage_approved | bool
+          - not (yxorp_production_cutover_approved | bool)
+          - yxorp_routes | length == 8
+          - yxorp_routes[0].hostname == 'yarn.nexus.sanctum'
+          - yxorp_routes[0].enabled | bool
+          - yxorp_routes[7].hostname == 'yarn.inner.sanctum'
+          - not (yxorp_routes[7].enabled | bool)
+          - yxorp_routes[7].upstream_scheme == 'http'
+          - yxorp_routes[7].upstream_host == '192.168.1.110'
+          - yxorp_routes[7].upstream_port | int == 80
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum']
+        fail_msg: >-
+          Legacy Yarn probe is authorized only from Kvin with the old
+          route disabled; production, Kvar and DNS are not to be changed.
+
+    - name: Observe only bounded existing Yarn alias and origin HTTP paths
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-yxorp-legacy-yarn.py') }}"
+      register: yxorp_legacy_yarn_http
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Require complete private legacy Yarn observer output
+      ansible.builtin.assert:
+        that:
+          - yxorp_legacy_yarn_http.rc == 0
+          - yxorp_legacy_yarn_http.stdout | length > 0
+        fail_msg: Old Yarn alias observer failed; do not enable the route.
+
+    - name: Report only old Yarn alias HTTP transport classifications
+      ansible.builtin.debug:
+        msg: "{{ yxorp_legacy_yarn_http.stdout | from_json }}"
