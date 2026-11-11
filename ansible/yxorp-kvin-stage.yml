@@ -285,6 +285,34 @@
         yxorp_routes: "{{ yxorp_routes[:5] + [(yxorp_routes[5] | combine({'enabled': true}))] + yxorp_routes[6:] }}"
       when: yxorp_stage_kuma_approved | default(false) | bool
 
+    # Pi-hole remains on the old Kvar :82. This is only the next isolated
+    # Kvin proxy host canary; no DNS resolver or UI app migration occurs.
+    - name: Require Pi-hole staging on top of six approved Kvin stage routes
+      ansible.builtin.assert:
+        that:
+          - yxorp_stage_square_approved | bool
+          - yxorp_stage_prism_approved | bool
+          - yxorp_stage_search_approved | bool
+          - yxorp_stage_dir_approved | bool
+          - yxorp_stage_kuma_approved | bool
+          - yxorp_routes | length == 8
+          - yxorp_routes[6].hostname == 'pihole.nexus.sanctum'
+          - not (yxorp_routes[6].enabled | bool)
+          - yxorp_routes[6].upstream_scheme == 'http'
+          - yxorp_routes[6].upstream_host == 'kvar.outer.sanctum'
+          - yxorp_routes[6].upstream_port | int == 82
+          - not (yxorp_routes[6].websocket | bool)
+          - (yxorp_routes | selectattr('enabled', 'equalto', true) | map(attribute='hostname') | list) == ['yarn.nexus.sanctum', 'square.nexus.sanctum', 'joule.nexus.sanctum', 'search.nexus.sanctum', 'dir.nexus.sanctum', 'kuma.nexus.sanctum']
+        fail_msg: >-
+          Pi-hole stage trial requires the exact old Kvar :82 UI backend
+          and the previous six selected Kvin-stage route hosts only.
+      when: yxorp_stage_pihole_approved | default(false) | bool
+
+    - name: Enable only interim Pi-hole with six retained Kvin stage routes
+      ansible.builtin.set_fact:
+        yxorp_routes: "{{ yxorp_routes[:6] + [(yxorp_routes[6] | combine({'enabled': true}))] + yxorp_routes[7:] }}"
+      when: yxorp_stage_pihole_approved | default(false) | bool
+
     # Host firewalld is intentionally not a deployment prerequisite:
     # its LAN admission is independently owned by Maintenance. A local
     # HTTP:80 stage can bind and be accepted on Kvin without opening
