@@ -1,5 +1,84 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma SQLite no-op verified; administrator bootstrap now automated in source
+
+**Fresh operator evidence:** Nova reconciled the SQLite Quadlet
+on Kvin, `ok=9 changed=2 failed=0 skipped=2`, then ran the
+same guarded Kuma playbook again: **`ok=9 changed=0 failed=0
+skipped=2`**. Bounded report says `desired_database_backend:sqlite`,
+`candidate_stage_http_status:302`, exact image, named data volume,
+and `administrator_and_monitor_state_accepted:false`.
+Using an SSH tunnel, Nova opened both the live Kuma database
+selection and **Create your admin account** screens in Firefox.
+This proves actual browser UI reachable through the tunnel,
+**not** a completed admin account, database restore, monitor,
+client routing or production change. Do not rerun the routine
+SQLite reconciliation or 8/8 YXORP route probes.
+
+**Architecture correction from Nova:** He challenged a proposed
+manual creation of the admin account because **a reproducible
+service should initialize its own application state through
+source-managed automation**. Agreed. Verified the **exact
+Uptime Kuma 2.5.9 upstream source**: its `needSetup`,
+`setup(username,password,ack)` and `login` Socket.IO
+events support first-user creation and credential verification.
+We must not invent a write REST endpoint or modify SQLite
+directly. The initial setup refuses reinitialization if the
+user table is nonempty.
+
+**New independently approved source-owned automation:**
+`ansible/kuma-admin-bootstrap.yml` is guarded by
+`kuma_admin_bootstrap_approved=true` (default off),
+checks exact Kvin/wdc2/aarch64, pinned image, source-owned
+Quadlet, local-only binding, named volume and SQLite.
+It queries the real Kuma Socket.IO `needSetup`; if
+fresh it creates one `0600` private credential JSON at
+`/home/wdc2/.config/sanctum-services/secrets/kuma-admin.json`
+within a `0700` directory, with fixed username
+`sanctum-admin` and a cryptographically random password.
+`tools/kuma-admin-init.js` then calls Kuma's native
+setup API and independently authenticates. On repeat
+it verifies the same credential with no creation.
+If an administrator already exists without the owned
+secret file, it **fails closed rather than overwriting,
+resetting or adopting the account**. Secret passes over
+stdin to a Node process **inside** the running Kuma
+container, never argv, raw logs, git or chat; all
+authentication command tasks are `no_log`.
+Backup of this private file OFF Kvin must be included
+in the later independent recovery plan.
+
+Source tests plus mocked real Node protocol tests and
+full [CI #43072165068 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43072165068).
+**Bootstrap has NOT run natively on Kvin.** The old
+browser setup path is a fallback, not the next
+required action. A prior CI fake-transport timeout
+was corrected in the simulator; no host mutation.
+
+**One next native action from Kvin, explicitly approves
+only the retained Kuma admin bootstrap and verifies
+repeatability:**
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kuma-admin-bootstrap.yml \
+  -e kuma_admin_bootstrap_approved=true &&
+~/.local/bin/ansible-navigator run ansible/kuma-admin-bootstrap.yml \
+  -e kuma_admin_bootstrap_approved=true
+```
+
+Ask only for **both Kvin PLAY RECAP** lines and the
+`msg` from final `Report only safe administrator bootstrap
+acceptance`, or the failed task/error. Neither output should
+contain secret values. On native acceptance, use existing
+browser tunnel to log in with locally retrieved private
+credential; do not paste the password here. Then
+develop source-owned, version-qualified authenticated
+`Wicket Ollama` monitor reconciliation and independently
+prove it Up, no duplicate alerts, backup/restore, update,
+reversal and real named client outcome before touching Kvar.
+See [Kuma runbook](docs/runbooks/kuma-monitoring.md).
+
 ## CURRENT — November 11: Kuma rootless stage NATIVELY ACCEPTED, SQLite declared; next is repeat and administrator setup
 
 **Actual native stage receipt supplied by Nova:** From Kvin,

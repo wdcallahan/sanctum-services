@@ -153,7 +153,36 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — native Kvin loopback stage ACCEPTED; real UI and recovery remain:**
+  **November 11 — SQLite stage convergence accepted, admin bootstrap source green:**
+  Nova's Kvin SQLite reconciliation finished `ok=9 changed=2
+  failed=0`; the immediately repeated guarded Kuma run
+  finished **`ok=9 changed=0 failed=0`**. The actual
+  browser reached Kuma's `/setup-database` and
+  `/setup` pages via SSH tunnel. These are verified
+  application bootstrap-screen observations, not
+  completed admin authentication or a useful monitor.
+
+  User feedback correctly rejected hand-created admin
+  state as the default automation strategy. Exact
+  upstream Kuma **2.5.9** sources confirm first-user
+  `needSetup`, `setup` and `login` Socket.IO events.
+  Created separately opt-in
+  `ansible/kuma-admin-bootstrap.yml`, guarded by
+  `kuma_admin_bootstrap_approved=true`, with a
+  0700 Kvin-local directory, random private 0600
+  admin credential, native Socket.IO initialization,
+  no-log processing and login verification. Repeat
+  verifies the same account; an existing unauthorized
+  user is not overwritten. [Source and Node protocol
+  tests in CI #43072165068 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43072165068).
+  **Admin bootstrap not yet run natively.**
+  Next run the one approved bootstrap+repeat command
+  in the [Kuma runbook](runbooks/kuma-monitoring.md).
+  Plan an off-host backup of both the volume and
+  private credential before claiming recovery.
+  No Kvar or YXORP cutover.
+
+  **Historical initial stage (accepted):**
   Nova's first approved `ansible/kuma.yml`
   completed `ok=10 changed=3 failed=0 skipped=1`
   and returned HTTP 302 at
@@ -169,18 +198,13 @@ unnecessary raw content private.
   `UPTIME_KUMA_DB_TYPE=sqlite` in the Quadlet
   through `kuma_db_type`, with source contract
   and [CI #43065990976 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43065990976).
-  Native SQLite reconciliation and unchanged
-  repeat remain pending; use the two-call bounded
-  Kvin command in the [Kuma runbook](runbooks/kuma-monitoring.md).
-  Then access the loopback service from a desktop
-  through an SSH tunnel for administrator
-  bootstrap, without putting credentials into
-  the public repo or this chat. A maintained
-  Socket.IO integration library is a candidate
-  for desired monitor reconciliation, but published
-  library testing only reaches Kuma 2.5.0; our
-  installed 2.5.9 requires real compatibility
-  qualification before we accept monitor writes.
+  That SQLite reconciliation and actual browser
+  access have subsequently been observed, as
+  recorded above. Administrator provisioning is
+  now a separately authorized automated gate,
+  not a manual browser instruction. Authenticated
+  Wicket monitor reconciliation still requires
+  actual Kuma 2.5.9-compatible testing.
 
   **Historical stage preparation (now accepted):**
   Nova's corrected Kvin run passed `ok=8 changed=0 failed=0
