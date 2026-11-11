@@ -1,5 +1,88 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11 — scoped DNS native preview accepted; live publication is next
+
+Native owner preview of exact scoped
+Maintenance candidate
+`0858020065777070bf6e9a36b0d0f3056f7f5334`
+on Peanut returned
+**`ok=10 changed=1 failed=0 skipped=8`**
+with `check_mode:true`,
+`published_change_accepted:false`.
+Both **served** SOA serials were
+`2026101904` and proposed new
+`2026111101`. Both zone files
+would change; expected candidate
+source differences are exactly six
+Nexus proxy A records to
+`192.168.0.192` and the common
+SOA serial advance. The reverse PTR
+source records, old
+`yxorp.nexus` Kvar admin, DB aliases
+and all other source records stay
+unchanged. The full rendered/installed
+zone diff was in private check-mode
+log `artifacts/transcripts/publish-yxorp-nexus-dns-2026-11-11T22-58-41Z.log`.
+The bounded report does not contain
+it; if an unexpected extra installed
+diff exists, review before publication.
+
+### Next native operation: publish DNS live, owner-guarded
+
+Run on Kvin using the **same already
+extracted** immutable candidate packet
+and existing Maintenance logger. This
+changes only Peanut's managed authoritative
+forward+reverse files through existing
+SOA-guarded publisher. Kvar NPM,
+Kvin proxy, firewalld and other
+service data remain untouched.
+
+```bash
+cd ~/src/sanctum-maintenance &&
+packet=artifacts/yxorp-dns-release-0858020 &&
+tools/run-ansible-logged run \
+  "$packet/playbooks/publish-yxorp-nexus-dns.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit peanut.arcane.sanctum \
+  -e sanctum_publish_dns_zones=true \
+  -e sanctum_yxorp_dns_publish_approved=true
+```
+
+The existing role first rereads the
+**actual served** forward and reverse
+SOA serials and checks advancing serial.
+It validates rendered BIND files
+with `named-checkzone` before either
+is installed, saves backups of existing
+files, reloads zones with `rndc`,
+verifies both served serials,
+and proves all six proxy aliases
+actually answer `192.168.0.192`
+from Peanut, including wildcard test,
+while `yxorp.nexus.sanctum` still
+answers old Kvar `192.168.0.7`.
+Do not claim native publication
+unless `failed=0` and bounded
+`published_change_accepted:true`.
+
+Afterward separately verify
+DNS from real non-Peanut clients and
+login/session + Kuma Socket.IO
+WebSockets by the production names.
+A real rollback, if needed, is
+a **new, higher SOA serial** that
+returns six names to Kvar
+`192.168.0.7`. Merely restoring
+old source files without a serial
+advance cannot reliably reverse
+client-visible DNS. Keep old Kvar
+NPM working until browser acceptance.
+Finally reconcile the Maintenance
+release branch with main and its
+unfinished broader core-renumbering
+alias assumptions.
+
 ## November 11 — Peanut HTTP80 route accepted; exact scoped DNS preview next
 
 Peanut independently tested the live Kvin production

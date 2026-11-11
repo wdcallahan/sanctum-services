@@ -1,5 +1,101 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Peanut DNS PREVIEW accepted; live guarded six-Nexus publication next
+
+**Native Maintenance DNS preview result ACCEPTED:**
+Nova ran exact immutable Maintenance scoped DNS candidate
+`0858020065777070bf6e9a36b0d0f3056f7f5334`
+from the extracted `artifacts/yxorp-dns-release-0858020`
+packet, existing `tools/run-ansible-logged`,
+target `peanut.arcane.sanctum`, `--check --diff`,
+`sanctum_publish_dns_zones=true` and
+`sanctum_yxorp_dns_preview_approved=true`.
+Native `ok=10 changed=1 unreachable=0 failed=0
+skipped=8`; Navigator exit0; run completed.
+Bounded report `check_mode:true`,
+`published_change_accepted:false`,
+`candidate_serial:2026111101`,
+`served_forward_serial_before:2026101904`,
+`served_reverse_serial_before:2026101904`,
+`forward_zone_file_would_change:true`,
+`reverse_zone_file_would_change:true`,
+`changed_proxy_alias_count:6`,
+`proxy_target_ipv4:192.168.0.192`,
+`old_npm_administration_address_retained:true`,
+`db_and_nonproxy_addresses_retained:true`,
+`reverse_ptr_records_unchanged_in_source:true`,
+`production_proxy_or_app_changed:false`,
+`real_named_client_sessions_and_websocket_accepted:false`.
+Private controller transcript
+`artifacts/transcripts/publish-yxorp-nexus-dns-2026-11-11T22-58-41Z.log`.
+No native publication or DNS mutation yet.
+**Both SOAs are below proposed new serial, and
+the scoped source CI #43115349084 was green.**
+No unexpected diff was reported by operator,
+but the bounded msg itself does not contain
+the actual zone-file diff; do not invent
+byte-for-byte installed zone equality.
+
+**Next one native operator command — LIVE six-record DNS publication:**
+Use the exact already extracted Maintenance packet,
+NOT active main:
+```bash
+cd ~/src/sanctum-maintenance &&
+packet=artifacts/yxorp-dns-release-0858020 &&
+tools/run-ansible-logged run \
+  "$packet/playbooks/publish-yxorp-nexus-dns.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit peanut.arcane.sanctum \
+  -e sanctum_publish_dns_zones=true \
+  -e sanctum_yxorp_dns_publish_approved=true
+```
+Do **not** add `--check`, and don't set
+`sanctum_yxorp_dns_preview_approved`.
+This is intentional live Peanut zone
+install/reload for five explicit
+`dir/joule/kuma/pihole/search.nexus`
+A records and `*.nexus`, mapping
+from Kvar `192.168.0.7` to peer-qualified
+Kvin `192.168.0.192`.
+It uses owner SOA advancement guard,
+BIND `named-checkzone` validation,
+preexisting-file backups,
+per-zone `rndc reload` with
+served-serial verification, and live
+authoritative `dig` checks of all six
+plus old `yxorp.nexus` on Kvar.
+If failure, DO NOT assume half-applied
+DNS; inspect where it stopped and
+preserve fallback. Return native
+PLAY RECAP, bounded `Report bounded
+proxy DNS candidate scope and publication gate`
+msg, or failed task. **No
+live cutover acceptance until actual
+named client, session/Socket.IO tests.**
+Kvar NPM remains running; rollback
+requires republishing six old A records
+with new (strictly advancing) SOA serial,
+not merely copying an older zone.
+
+**Already accepted:** Kvin production
+8-route YXORP `ok=31 changed=0`,
+Kuma proxy 302, Yarn proxy 200;
+Maintenance live TCP80 with no-diff
+repeat; Peanut independent
+`192.168.0.192` Kuma302/Yarn200
+`ok=5 changed=0`.
+No `192.168.1.192` Kvin proxy reachability
+from Peanut; do not use it for proxy DNS.
+Kvin Kuma Vault admin, Wicket Up, isolated
+app restore accepted; off-host backup and
+external Vault recovery remain outstanding.
+Two-bear cross-monitor Kvin+Peanut is
+longstanding plan. Main Maintenance branch
+still has older whole-network cutover alias
+assumptions; after native DNS success
+reconcile carefully rather than lose
+source of truth.
+
 ## CURRENT — November 11: Peanut independently reaches Kvin YXORP via 192.168.0.192; six-record DNS release preview NEXT
 
 **Native Peer HTTP acceptance (banked):**

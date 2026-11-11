@@ -30,6 +30,38 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — dedicated Maintenance DNS native preview ACCEPTED:**
+Exact scoped `yxorp-dns-release-20261111`
+candidate commit
+`0858020065777070bf6e9a36b0d0f3056f7f5334`
+previewed on Peanut with owner logged Navigator,
+`--check --diff`, `ok=10 changed=1 failed=0 skipped=8`.
+Actual served forward and reverse SOA
+both **`2026101904`**;
+candidate `2026111101` is newer.
+Both forward and reverse zone files
+would change, with source-aligned
+six proxy aliases to
+`192.168.0.192`, source PTR,
+Kvar old-NPM admin, DB and nonproxy
+records unchanged. No live DNS
+mutation. The full installed-file
+diff is retained in the private
+logged preview; bounded message
+alone cannot prove there were no
+other installed-file differences.
+**Next:** same exact Maintenance
+candidate packet, explicit LIVE
+`sanctum_yxorp_dns_publish_approved=true`
+(without check mode), then real
+named-client DNS answers and
+authenticated browser/Socket.IO
+acceptance. Kvar NPM retained
+for fallback. After native acceptance,
+repair Maintenance main and the
+older core-renumber alias projection
+to preserve the live migration.
+
 **November 11 — Peanut independent Kvin HTTP80 ACCEPTED; six-name Nexus DNS release source candidate ready:**
 Native Peanut `ansible/yxorp-kvin-peer-http.yml`
 `ok=5 changed=0 failed=0`:
