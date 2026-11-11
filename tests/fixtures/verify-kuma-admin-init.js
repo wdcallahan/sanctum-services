@@ -12,6 +12,9 @@ fs.writeFileSync(path.join(lib, "index.js"), `
 const EventEmitter = require("node:events");
 module.exports.io = function () {
     const socket = new EventEmitter();
+    // Real Socket.IO tracks connected state, including when a connection
+    // completed before a caller attaches its handler.
+    socket.connected = false;
     socket.timeout = () => socket;
     const emit = socket.emit.bind(socket);
     socket.emit = (event, ...args) => {
@@ -23,7 +26,7 @@ module.exports.io = function () {
         return socket;
     };
     socket.disconnect = () => {};
-    process.nextTick(() => emit("connect"));
+    process.nextTick(() => { socket.connected = true; emit("connect"); });
     return socket;
 };
 `);
