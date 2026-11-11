@@ -1,0 +1,457 @@
+---
+# Explicit one-shot consistent backup and isolated restore proof.
+# This briefly stops the live rootless Kuma service; always starts it again.
+# The test uses a distinct volume and network-none container. No Kvar,
+# proxy, DNS, firewall or live-volume import is ever permitted here.
+- name: Create a consistent retained Kuma backup and verify isolated recovery
+  hosts: kuma
+  become: false
+  gather_facts: true
+  vars_files:
+    - /home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml
+  vars:
+    kuma_recovery_expected_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+    kuma_recovery_backup_dir: /home/wdc2/.local/share/sanctum-services/backups/kuma
+    kuma_recovery_stamp: "{{ ansible_date_time.iso8601_basic_short | lower }}"
+    kuma_recovery_partial: "{{ kuma_recovery_backup_dir }}/sanctum-kuma-{{ kuma_recovery_stamp }}.tar.partial"
+    kuma_recovery_archive: "{{ kuma_recovery_backup_dir }}/sanctum-kuma-{{ kuma_recovery_stamp }}.tar"
+    kuma_recovery_volume: "sanctum-kuma-restore-test-{{ kuma_recovery_stamp }}"
+    kuma_recovery_container: "sanctum-kuma-restore-test-{{ kuma_recovery_stamp }}"
+    kuma_recovery_quadlet: /home/wdc2/.config/containers/systemd/sanctum-kuma.container
+    kuma_recovery_archive_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-backup-verify.py') }}"
+    kuma_recovery_admin_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-admin-init.js') }}"
+    kuma_recovery_monitor_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-reconcile-monitors.js') }}"
+    kuma_recovery_monitor: "{{ (lookup('ansible.builtin.file', playbook_dir ~ '/../data/kuma-monitors.yml') | from_yaml).kuma_monitors[0] }}"
+  tasks:
+    - name: Require exact Kvin rootless SQLite Kuma and intentional brief service interruption
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - not ansible_check_mode
+          - kuma_backup_restore_trial_approved | default(false) | bool
+          - not (kuma_stage_remove_approved | default(false) | bool)
+          - kuma_image == kuma_recovery_expected_image
+          - kuma_data_volume == 'sanctum-kuma-data'
+          - kuma_bind_address == '127.0.0.1'
+          - kuma_host_port | int == 13001
+          - kuma_db_type == 'sqlite'
+          - kuma_recovery_volume is match('^sanctum-kuma-restore-test-[a-z0-9t]+$')
+          - kuma_recovery_container is match('^sanctum-kuma-restore-test-[a-z0-9t]+$')
+          - kuma_recovery_volume != kuma_data_volume
+        fail_msg: >-
+          Explicit approval and an exact Kvin candidate are required.
+          This operation briefly stops Kuma for a consistent local backup;
+          it never imports into the live volume or changes production.
+
+    - name: Require existing private Vault password without revealing it
+      ansible.builtin.assert:
+        that:
+          - vault_kuma_admin_password is defined
+          - vault_kuma_admin_password is string
+          - (vault_kuma_admin_password | default('')) | length > 0
+          - kuma_recovery_monitor.name == 'Wicket Ollama'
+          - kuma_recovery_monitor.url == 'http://wicket.arcane.sanctum:11435/healthz'
+      no_log: true
+
+    - name: Stat the exact running Kuma Quadlet without following links
+      ansible.builtin.stat:
+        path: "{{ kuma_recovery_quadlet }}"
+        follow: false
+      register: kuma_recovery_quadlet_stat
+
+    - name: Require owned regular user Quadlet
+      ansible.builtin.assert:
+        that:
+          - kuma_recovery_quadlet_stat.stat.isreg | default(false)
+          - not (kuma_recovery_quadlet_stat.stat.islnk | default(false))
+
+    - name: Privately read deployed Kuma Quadlet
+      ansible.builtin.slurp:
+        src: "{{ kuma_recovery_quadlet }}"
+      register: kuma_recovery_quadlet_raw
+      no_log: true
+
+    - name: Require exact service image, name, volume and loopback binding
+      ansible.builtin.assert:
+        that:
+          - "('Image=' ~ kuma_recovery_expected_image) in kuma_recovery_lines"
+          - "'ContainerName=sanctum-kuma' in kuma_recovery_lines"
+          - "'PublishPort=127.0.0.1:13001:3001/tcp' in kuma_recovery_lines"
+          - "'Volume=sanctum-kuma-data:/app/data' in kuma_recovery_lines"
+          - "'Environment=UPTIME_KUMA_DB_TYPE=sqlite' in kuma_recovery_lines"
+          - "kuma_recovery_lines | select('match', '^Image=') | list | length == 1"
+          - "kuma_recovery_lines | select('match', '^Volume=') | list | length == 1"
+          - "kuma_recovery_lines | select('match', '^PublishPort=') | list | length == 1"
+        fail_msg: Refusing to interrupt an unexpected Kuma deployment.
+      vars:
+        kuma_recovery_lines: "{{ (kuma_recovery_quadlet_raw.content | b64decode).splitlines() }}"
+
+    - name: Require source-owned rootless data volume already exists
+      ansible.builtin.command:
+        argv: [podman, volume, exists, sanctum-kuma-data]
+      register: kuma_recovery_live_volume
+      changed_when: false
+      failed_when: kuma_recovery_live_volume.rc not in [0, 1]
+
+    - name: Require retained named volume available before stopping Kuma
+      ansible.builtin.assert:
+        that:
+          - kuma_recovery_live_volume.rc == 0
+
+    - name: Observe live Kuma user service before interrupting
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, sanctum-kuma.service]
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      register: kuma_recovery_initial_service
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse backup when original Kuma is not running
+      ansible.builtin.assert:
+        that:
+          - kuma_recovery_initial_service.rc == 0
+          - kuma_recovery_initial_service.stdout | trim == 'active'
+        fail_msg: Start/qualify the retained Kuma service first; no service change made.
+
+    - name: Check backup directory is not a symlink
+      ansible.builtin.stat:
+        path: "{{ kuma_recovery_backup_dir }}"
+        follow: false
+      register: kuma_recovery_directory_existing
+
+    - name: Refuse unsafe backup storage type
+      ansible.builtin.assert:
+        that:
+          - not (kuma_recovery_directory_existing.stat.islnk | default(false))
+          - not (kuma_recovery_directory_existing.stat.exists | default(false))
+            or (kuma_recovery_directory_existing.stat.isdir | default(false))
+        fail_msg: Backup directory must be an ordinary owner-controlled directory.
+
+    - name: Create private local Kuma backup directory
+      ansible.builtin.file:
+        path: "{{ kuma_recovery_backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Stat fresh archive and partial output without following links
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ kuma_recovery_partial }}"
+        - "{{ kuma_recovery_archive }}"
+      register: kuma_recovery_outputs
+
+    - name: Refuse any backup filename collision or attempted overwrite
+      ansible.builtin.assert:
+        that:
+          - not (kuma_recovery_outputs.results[0].stat.exists | default(false))
+          - not (kuma_recovery_outputs.results[1].stat.exists | default(false))
+        fail_msg: Backup output path already exists; refuse overwriting prior data.
+
+    - name: Reserve private partial archive with restrictive permissions
+      ansible.builtin.file:
+        path: "{{ kuma_recovery_partial }}"
+        state: touch
+        mode: '0600'
+
+    - name: Quiesce live Kuma only for a consistent Podman volume export
+      block:
+        - name: Stop only retained Kuma rootless user service for SQLite consistency
+          ansible.builtin.systemd_service:
+            name: sanctum-kuma.service
+            scope: user
+            state: stopped
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+        - name: Observe Kuma is inactive before volume export
+          ansible.builtin.command:
+            argv: [systemctl, --user, is-active, sanctum-kuma.service]
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+          register: kuma_recovery_stopped
+          changed_when: false
+          failed_when: false
+
+        - name: Require stopped application before reading SQLite files
+          ansible.builtin.assert:
+            that:
+              - kuma_recovery_stopped.rc != 0
+              - kuma_recovery_stopped.stdout | trim != 'active'
+            fail_msg: Live Kuma is still running; never archive an active SQLite volume.
+
+        - name: Export only stopped retained Kuma data into private partial archive
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - export
+              - sanctum-kuma-data
+              - --output
+              - "{{ kuma_recovery_partial }}"
+          register: kuma_recovery_export
+          changed_when: kuma_recovery_export.rc == 0
+      always:
+        - name: Start original Kuma regardless of backup outcome
+          ansible.builtin.systemd_service:
+            name: sanctum-kuma.service
+            scope: user
+            state: started
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+        - name: Verify original Kuma user service recovered its active state
+          ansible.builtin.command:
+            argv: [systemctl, --user, is-active, sanctum-kuma.service]
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+          register: kuma_recovery_original_after
+          changed_when: false
+          failed_when: false
+
+        - name: Require original Kuma active after backup interruption
+          ansible.builtin.assert:
+            that:
+              - kuma_recovery_original_after.rc == 0
+              - kuma_recovery_original_after.stdout | trim == 'active'
+            fail_msg: Original Kuma did not recover its active state; stop here.
+
+    - name: Validate private archive SQLite integrity and saved admin/monitor
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ kuma_recovery_archive_validator }}"
+          - archive
+          - "{{ kuma_recovery_partial }}"
+      register: kuma_recovery_archive_validated
+      changed_when: false
+      no_log: true
+
+    - name: Require supported archive content before attempted isolated restore
+      ansible.builtin.assert:
+        that:
+          - (kuma_recovery_archive_validated.stdout | from_json).sqlite_integrity == 'ok'
+          - (kuma_recovery_archive_validated.stdout | from_json).administrator_record_present | bool
+          - (kuma_recovery_archive_validated.stdout | from_json).wicket_monitor_persisted | bool
+          - (kuma_recovery_archive_validated.stdout | from_json).notification_subscriptions_absent | bool
+
+    - name: Check isolated restore volume does not already exist
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ kuma_recovery_volume }}"]
+      register: kuma_recovery_test_volume_exists
+      changed_when: false
+      failed_when: kuma_recovery_test_volume_exists.rc not in [0, 1]
+
+    - name: Refuse collision with preexisting restore test volume
+      ansible.builtin.assert:
+        that:
+          - kuma_recovery_test_volume_exists.rc == 1
+
+    - name: Restore into a new disposable volume and qualify the real app offline
+      block:
+        - name: Create distinct empty rootless test volume
+          ansible.builtin.command:
+            argv: [podman, volume, create, "{{ kuma_recovery_volume }}"]
+          register: kuma_recovery_created_test_volume
+          changed_when: kuma_recovery_created_test_volume.rc == 0
+
+        - name: Import archive only into newly created isolated test volume
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - import
+              - "{{ kuma_recovery_volume }}"
+              - "{{ kuma_recovery_partial }}"
+          register: kuma_recovery_import
+          changed_when: kuma_recovery_import.rc == 0
+
+        - name: Observe isolated volume mount point
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - inspect
+              - --format
+              - "{{ '{{.Mountpoint}}' }}"
+              - "{{ kuma_recovery_volume }}"
+          register: kuma_recovery_mount
+          changed_when: false
+
+        - name: Verify imported SQLite state directly from test volume
+          ansible.builtin.command:
+            argv:
+              - python3
+              - -c
+              - "{{ kuma_recovery_archive_validator }}"
+              - restored
+              - "{{ kuma_recovery_mount.stdout | trim }}"
+          register: kuma_recovery_volume_verified
+          changed_when: false
+          no_log: true
+
+        - name: Require isolated test volume preserves admin and Wicket
+          ansible.builtin.assert:
+            that:
+              - (kuma_recovery_volume_verified.stdout | from_json).sqlite_integrity == 'ok'
+              - (kuma_recovery_volume_verified.stdout | from_json).administrator_record_present | bool
+              - (kuma_recovery_volume_verified.stdout | from_json).wicket_monitor_persisted | bool
+              - (kuma_recovery_volume_verified.stdout | from_json).notification_subscriptions_absent | bool
+
+        - name: Start disposable restored Kuma with networking completely disabled
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --detach
+              - --name
+              - "{{ kuma_recovery_container }}"
+              - --network
+              - none
+              - --pull
+              - never
+              - --env
+              - UPTIME_KUMA_DB_TYPE=sqlite
+              - --volume
+              - "{{ kuma_recovery_volume }}:/app/data"
+              - "{{ kuma_recovery_expected_image }}"
+          register: kuma_recovery_test_container
+          changed_when: kuma_recovery_test_container.rc == 0
+
+        - name: Observe restored Kuma HTTP startup inside its disconnected namespace
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ kuma_recovery_container }}"
+              - node
+              - -e
+              - "const http=require('node:http'); const r=http.get('http://127.0.0.1:3001/',res=>{res.resume();process.exit([200,302].includes(res.statusCode)?0:1)});r.on('error',()=>process.exit(1));r.setTimeout(3000,()=>{r.destroy();process.exit(1)});"
+          register: kuma_recovery_http
+          changed_when: false
+          failed_when: false
+          until: kuma_recovery_http.rc == 0
+          retries: 20
+          delay: 3
+
+        - name: Require disconnected restored app actually started
+          ansible.builtin.assert:
+            that:
+              - kuma_recovery_http.rc == 0
+            fail_msg: Restored Kuma could not start in its isolated no-network container.
+
+        - name: Verify existing Vault admin authenticates to restored application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - --interactive
+              - --workdir
+              - /app
+              - "{{ kuma_recovery_container }}"
+              - node
+              - -e
+              - "{{ kuma_recovery_admin_js }}"
+              - verify
+            stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password} | to_json }}"
+            stdin_add_newline: false
+          register: kuma_recovery_login_result
+          changed_when: false
+          no_log: true
+
+        - name: Require authentication succeeded without creating new admin
+          ansible.builtin.assert:
+            that:
+              - not ((kuma_recovery_login_result.stdout | from_json).administrator_created | bool)
+              - (kuma_recovery_login_result.stdout | from_json).administrator_login_verified | bool
+          no_log: true
+
+        - name: Verify restored Kuma returns the saved Wicket monitor over Socket.IO
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - --interactive
+              - --workdir
+              - /app
+              - "{{ kuma_recovery_container }}"
+              - node
+              - -e
+              - "{{ kuma_recovery_monitor_js }}"
+              - observe
+            stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password, 'monitor': kuma_recovery_monitor} | to_json }}"
+            stdin_add_newline: false
+          register: kuma_recovery_monitor_result
+          changed_when: false
+          no_log: true
+
+        - name: Require Wicket persisted and no notifications in restored Kuma
+          ansible.builtin.assert:
+            that:
+              - (kuma_recovery_monitor_result.stdout | from_json).monitor_id | int == 1
+              - (kuma_recovery_monitor_result.stdout | from_json).persisted_configuration_verified | bool
+              - not ((kuma_recovery_monitor_result.stdout | from_json).notifications_attached | bool)
+              - not ((kuma_recovery_monitor_result.stdout | from_json).changed | bool)
+          no_log: true
+      always:
+        - name: Remove only the disposable offline test container if started
+          ansible.builtin.command:
+            argv: [podman, rm, --force, "{{ kuma_recovery_container }}"]
+          when: kuma_recovery_test_container is defined and kuma_recovery_test_container.changed | default(false)
+          changed_when: true
+
+        - name: Remove only isolated restored test volume created in this run
+          ansible.builtin.command:
+            argv: [podman, volume, rm, "{{ kuma_recovery_volume }}"]
+          when: kuma_recovery_created_test_volume is defined and kuma_recovery_created_test_volume.changed | default(false)
+          changed_when: true
+
+    - name: Publish validated backup by no-clobber hard link followed by unlink
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys;os.link(sys.argv[1],sys.argv[2]);os.unlink(sys.argv[1])"
+          - "{{ kuma_recovery_partial }}"
+          - "{{ kuma_recovery_archive }}"
+      changed_when: true
+
+    - name: Stat final local archive and SHA256
+      ansible.builtin.stat:
+        path: "{{ kuma_recovery_archive }}"
+        follow: false
+        checksum_algorithm: sha256
+      register: kuma_recovery_archive_final
+
+    - name: Require owner-only, actual persisted local archive
+      ansible.builtin.assert:
+        that:
+          - kuma_recovery_archive_final.stat.isreg | default(false)
+          - kuma_recovery_archive_final.stat.mode == '0600'
+          - kuma_recovery_archive_final.stat.size | int > 0
+          - kuma_recovery_archive_final.stat.checksum | length == 64
+
+    - name: Report bounded live restart and isolated Kuma backup recovery
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          backup_file: "{{ kuma_recovery_archive }}"
+          backup_sha256: "{{ kuma_recovery_archive_final.stat.checksum }}"
+          backup_bytes: "{{ kuma_recovery_archive_final.stat.size | int }}"
+          original_service_restarted_and_active: true
+          isolated_restore_volume_imported: true
+          isolated_restored_sqlite_integrity: ok
+          isolated_application_started_without_network: true
+          restored_vault_login_verified: true
+          restored_wicket_configuration_verified: true
+          isolated_test_volume_and_container_removed: true
+          backup_copied_off_host: false
+          vault_secret_and_key_recovery_accepted: false
+          production_or_proxy_changed: false
+          next_gate: off-host archive and independent Vault recovery, then named browser client access and update/rollback
