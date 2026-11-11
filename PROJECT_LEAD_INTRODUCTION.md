@@ -1,5 +1,41 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma image cached on Kvin; Podman Id assertion corrected, native retry next
+
+Nova's first native `ansible/kuma-qualify-image.yml` run on Kvin
+returned `ok=5 changed=1 failed=1` at the metadata assertion;
+the exact image was pulled into wdc2's rootless cache. The single-image,
+Linux and ARM64 checks passed. The only failed predicate mistakenly
+required the `sha256:` prefix on Podman's `Id`, which is actually
+a bare 64-character hexadecimal image ID; `Digest` has the prefix.
+The disposable offline `node --version` check did NOT execute.
+No Kuma app, volume, Quadlet, monitoring data, DNS, firewall, Kvar
+service or YXORP config was changed.
+
+The source fix now checks Podman's documented bare Id form.
+`tests/test_kuma_image_qualification.py` checks the exact predicate,
+and `tests/fixtures/verify-kuma-image-metadata.py` executes the
+REAL production assert locally via Ansible against valid/invalid image
+metadata. Full [source CI #43059304269 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43059304269).
+[Repair commit](https://github.com/wdcallahan/sanctum-services/commit/919344e3b7ffac45b8de75740ce05ab874e1660f).
+
+**Next exact operator command, on Kvin** (same command; cached digest
+should skip the pull):
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kuma-qualify-image.yml \
+  -e kuma_image_qualification_approved=true
+```
+
+Ask only for Kvin's `PLAY RECAP` and `msg` dictionary from
+"Report bounded image-only qualification metadata", or failed task/error.
+**Image not yet native qualified; no application stage approved.**
+On native image acceptance, pin the tested digest and separately
+prepare/authorize loopback Kuma installation, wanted monitor reconciliation,
+persistence, no-op repeat and recovery. Do not rerun YXORP route probes
+or confuse this image cache with a retained application.
+
 ## CURRENT — November 11: SS-YX-2 ACCEPTED, all eight initial Kvin HTTP hosts; Kuma next
 
 **Latest native eighth-Yarn acceptance supplied by Nova:** Kvin ran the corrected

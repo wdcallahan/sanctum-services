@@ -167,9 +167,21 @@ unnecessary raw content private.
   in a disposable read-only container.
   It creates **no service or volume**.
   [Source CI #43055414958 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43055414958).
-  The native result remains unobserved:
-  use the **one image-only operator command**
+  **November 11 native checkpoint:** Nova's first
+  Kvin run pulled the exact image (`ok=5 changed=1 failed=1`)
+  but stopped before disposable Node execution:
+  the image `Id` assertion incorrectly required
+  `sha256:`; Podman reports a bare 64-hex `Id`
+  (the prefixed value is `Digest`). Linux/ARM64
+  and singleton inspect predicates had passed.
+  Corrected the playbook and added real-Ansible
+  positive/negative metadata regression tests;
+  [CI #43059304269 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43059304269).
+  The cached digest should avoid another pull
+  on the **same image-only operator command**
   in the [Kuma runbook](runbooks/kuma-monitoring.md).
+  Node has NOT been natively executed; the image
+  remains unqualified until that native retry.
   Do not pin/deploy the application
   until Kvin confirms the image.
   Next finish actual UI, monitor,

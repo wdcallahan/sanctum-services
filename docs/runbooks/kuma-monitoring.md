@@ -23,9 +23,20 @@ No Kuma app, volume, port, Quadlet, monitor, DNS, firewall,
 YXORP route or Kvar service is touched. A successful
 image qualification proves image and runtime only.
 
-**[Source CI #43055414958 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43055414958)**,
-including source guards, play syntax and other Services
-regressions. To qualify on the real Kvin host from Kvin:
+**November 11 native checkpoint:** First Kvin run:
+`ok=5 changed=1 failed=1` — the exact image was downloaded,
+and the single-image, Linux and ARM64 checks passed.
+The playbook then incorrectly required `sha256:` on Podman's
+bare hexadecimal `Id` (distinct from its prefixed `Digest`).
+The runtime check did not execute, so this is NOT yet
+native image acceptance. The assertion has been corrected,
+and a new real-Ansible metadata regression checks both valid and
+deliberately invalid inspect data. [Corrected full source
+CI #43059304269 passed](https://github.com/wdcallahan/sanctum-services/actions/runs/43059304269).
+No application, volume, service, network or Kvar changes occurred.
+
+To resume the image-only qualification on Kvin, the same
+playbook will reuse the cached image if present:
 
 ```bash
 cd ~/src/sanctum-services && git pull &&
