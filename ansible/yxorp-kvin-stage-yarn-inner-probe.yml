@@ -68,14 +68,20 @@
             {{ (yxorp_yarn_eighth_host_config.content | b64decode) ==
                yxorp_yarn_eighth_container_config.stdout }}
           old_vhost_present_once: >-
-            {{ (yxorp_yarn_eighth_container_config.stdout |
-                regex_findall('server_name yarn\\.inner\\.sanctum;') | length) == 1 }}
+            {{ (yxorp_yarn_eighth_container_config.stdout.splitlines()
+                | map('trim')
+                | select('equalto', 'server_name yarn.inner.sanctum;')
+                | list | length) == 1 }}
           new_vhost_present_once: >-
-            {{ (yxorp_yarn_eighth_container_config.stdout |
-                regex_findall('server_name yarn\\.nexus\\.sanctum;') | length) == 1 }}
+            {{ (yxorp_yarn_eighth_container_config.stdout.splitlines()
+                | map('trim')
+                | select('equalto', 'server_name yarn.nexus.sanctum;')
+                | list | length) == 1 }}
           exact_old_backend_present_once: >-
-            {{ (yxorp_yarn_eighth_container_config.stdout |
-                regex_findall('proxy_pass http://192\\.168\\.1\\.110:80;') | length) == 1 }}
+            {{ (yxorp_yarn_eighth_container_config.stdout.splitlines()
+                | map('trim')
+                | select('equalto', 'proxy_pass http://192.168.1.110:80;')
+                | list | length) == 1 }}
       no_log: true
 
     - name: Collect bounded real-wire old-Yarn candidate and direct-origin result
