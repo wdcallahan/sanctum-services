@@ -2,6 +2,10 @@
 
 ## Active execution plan — Wednesday, November 11, 2026
 
+## CURRENT — November 11: Mace named Kuma authentication accepted; browser monitor/Socket.IO next
+
+Nova confirmed from Mace that `kuma.nexus.sanctum` resolves to **`192.168.0.192`**, Firefox loaded its live login, and the existing **`sanctum-admin`** user successfully authenticated through Kvin YXORP. Mark actual Mace client resolution and browser login accepted. The visible monitor state, sustained browser Socket.IO/WebSocket updates, and other apps' named-client behavior are **not yet evidenced**. Keep Kvar fallback. The previous instructions omitted the browser username and blurred the distinction between the saved Kuma login password and unrelated Vault unlock key; corrected operational docs, no account rotation needed.
+
 ## CURRENT — November 11: live guarded Peanut six-Nexus DNS publication ACCEPTED; named client acceptance NEXT
 
 **New native operator receipt (23:32Z):** Nova ran the previously accepted exact Maintenance release packet `artifacts/yxorp-dns-release-0858020` with `sanctum_publish_dns_zones=true`, `sanctum_yxorp_dns_publish_approved=true`, target `peanut.arcane.sanctum`, **without `--check`**. Report `Report bounded proxy DNS candidate scope and publication gate` returned **`check_mode:false`**, **`published_change_accepted:true`**, `candidate_serial:2026111101`, prior served forward/reverse SOA `2026101904`, both zone-file changes true, six proxy aliases directed to Kvin **`192.168.0.192`**, `old_npm_administration_address_retained:true`, `db_and_nonproxy_addresses_retained:true`, `reverse_ptr_records_unchanged_in_source:true`, `production_proxy_or_app_changed:false`, `real_named_client_sessions_and_websocket_accepted:false`. Actual play **`ok=18 changed=3 unreachable=0 failed=0 skipped=0`**, Navigator exit0, run completed. Private logged transcript: `artifacts/transcripts/publish-yxorp-nexus-dns-2026-11-11T23-32-01Z.log` and matching `.json`.
