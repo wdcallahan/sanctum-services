@@ -1,5 +1,40 @@
 # Uptime Kuma — retained monitors and source-managed recovery
 
+## November 11 — native Vault-backed administrator creation accepted
+
+Nova's first approved `ansible/kuma-admin-bootstrap.yml`
+run returned **`ok=12 changed=1 failed=0 skipped=0`**.
+The bounded report independently proved that Kuma
+**created `sanctum-admin` and verified actual login**
+using the already encrypted private Vault value:
+`administrator_created_this_run:true`,
+`administrator_login_verified:true`,
+`encrypted_credentials_loaded:true`. It
+generated or modified no credential and
+did not change proxy, Kvar or production.
+The earlier intentionally bad password
+test is historical; a real user-chosen
+Vault password succeeded. **Do not run
+the setup wizard or reset the account.**
+
+**Next: no-change administrator bootstrap repeat.**
+Use the exact command in
+[the Vault credential runbook](vault-credentials.md)
+one more time. It should return
+`changed=0`, `administrator_created_this_run:false`,
+`administrator_login_verified:true`.
+This verifies existing-account authentication
+without account recreation or Vault mutation.
+
+After that, build and prove the wanted
+`Wicket Ollama` monitor through Kuma 2.5.9's
+authenticated Socket.IO `getMonitorList`, `add`
+and `editMonitor` interfaces; source declarations
+exist at `data/kuma-monitors.yml`. Exact Up status,
+restart, no duplicate notifications, off-host
+Vault + data backup/restore and actual named
+client access are still open. No live cutover.
+
 ## November 11 — native Kuma startup and SQLite repeat accepted, Vault administrator next
 
 **Banked Kvin results:** Qualified Linux/ARM64 Uptime Kuma

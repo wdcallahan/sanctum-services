@@ -153,7 +153,24 @@ unnecessary raw content private.
   already authorized; no speculative old-DB
   recovery task is needed.
 
-  **November 11 — accepted shared Vault credential design (admin still pending):**
+  **November 11 — actual Vault-backed Kuma administrator native ACCEPTED:**
+  Nova's native approved bootstrap finished **`ok=12 changed=1
+  failed=0`**, with `administrator_created_this_run:true`
+  and `administrator_login_verified:true`. The
+  user-selected, existing Vault credential was loaded
+  without generating or modifying a password,
+  writing a separate secret to the host, or
+  touching Kvar, YXORP, DNS or firewall.
+  **The administrator first-run acceptance is closed.**
+  A second unchanged bootstrap run must still
+  prove `changed=0` with the same account login.
+  Then source-manage the wanted `Wicket Ollama`
+  2.5.9 Socket.IO monitor, prove actual Up,
+  no duplicates/alerts, browser usage, restart
+  and independent recovery. Do not prematurely
+  retarget Kvar's live `kuma.nexus` route.
+
+  **Historical approved Vault design and preparation:**
   Nova selected a single established Ansible Vault
   password file as the unlock authority for independently
   encrypted, per-service credentials, including Kuma.

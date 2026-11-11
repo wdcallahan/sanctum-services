@@ -1,5 +1,60 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kuma administrator CREATED + VERIFIED on native Kvin via Vault; repeat outstanding
+
+**Native acceptance received from Nova:** The approved
+`ansible/kuma-admin-bootstrap.yml` run on exact Kvin
+finished `ok=12 changed=1 unreachable=0 failed=0 skipped=0`.
+The bounded `Report only safe administrator bootstrap acceptance`
+confirmed **`administrator_created_this_run:true`**,
+**`administrator_login_verified:true`**, username
+`sanctum-admin`, **`encrypted_credentials_loaded:true`**,
+`credentials_generated_or_changed:false`,
+`credentials_written_to_host:false`,
+`private_credentials_not_logged:true`, and
+`production_or_proxy_changed:false`.
+This is first real source-managed Kuma administrator
+creation using Nova's chosen Vault password and
+Kuma's native 2.5.9 Socket.IO setup+login, **not
+merely HTTP 302 or a displayed setup wizard**.
+The prior intentionally bad test password had failed
+before this successful run; no need to reopen that
+password-policy investigation.
+
+**Next native acceptance:** Execute the **same separately
+approved admin bootstrap a second time** with the
+two exact read-only secret mounts, `--senv` for
+the existing `vault.key`, and `--pae false` as
+in [vault runbook](docs/runbooks/vault-credentials.md).
+Expected `changed=0`,
+`administrator_created_this_run:false`,
+`administrator_login_verified:true`.
+Use `git pull` normally. Ask only for PLAY RECAP
+and safe bounded `msg`, or failed task and error;
+never paste secret material. This repeat does
+not create/rotate credentials, affect Kvar,
+proxy, DNS or firewall.
+
+**Next actual useful app:** `data/kuma-monitors.yml`
+already declares Project Joule's **Wicket Ollama**
+HTTP `GET http://wicket.arcane.sanctum:11435/healthz`
+60-second interval and HTTP 200–299. Tagged Kuma
+2.5.9 native source provides authenticated
+`monitorList`, `getMonitorList`, `getMonitor`,
+`add` and `editMonitor` Socket.IO interfaces.
+Services should implement **guarded source-owned**
+monitor reconciliation by stable name, verify
+persisted target, then prove actual **Up** in
+Kuma; no duplicates or notifications. Do not
+call an untested source-only design production
+or infer Up from direct curl. Other open gates
+are startup/restart/recovery and independent
+backup of volume + encrypted Vault files/key,
+actual browser authenticated use, and named
+client/LAN/production acceptance. Existing
+Kvar Kuma and Kvar NPM remain authoritative
+until separate cutover.
+
 ## CURRENT — November 11: Simplified Kuma Vault entry at Nova's request; no arbitrary minimum, confirmation required
 
 Nova pointed out that the previous one-time Vault command imposed an
