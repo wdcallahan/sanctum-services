@@ -36,9 +36,11 @@ class KumaAdminDiagnosticTest(unittest.TestCase):
         self.assertEqual(diag["ansible.builtin.command"]["argv"][-1], "diagnose")
         self.assertNotIn("setup", diag["ansible.builtin.command"]["argv"])
         self.assertNotIn("login", diag["ansible.builtin.command"]["argv"])
-        self.assertNotIn("ansible.builtin.copy", self.source)
-        self.assertNotIn("ansible.builtin.file", self.source)
-        self.assertNotIn("ansible.builtin.script", self.source)
+        for task in self.tasks:
+            for forbidden_module in ("ansible.builtin.copy",
+                                     "ansible.builtin.file",
+                                     "ansible.builtin.script"):
+                self.assertNotIn(forbidden_module, task)
         report = self.tasks[-1]["ansible.builtin.debug"]["msg"]
         for field in ("administrator_created_or_changed", "authentication_attempted",
                       "database_or_monitor_changed", "vault_secret_changed"):
