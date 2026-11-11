@@ -45,7 +45,7 @@ unnecessary raw content private.
   It does **not** qualify browser sessions, WebSockets,
   app state, LAN firewall reachability, production or cutover.
 
-- **SS-YX-2 — [source implemented; real-Nginx CI and native qualification pending] Eighth existing
+- **SS-YX-2 — [Kvin stage installed; corrected native acceptance pending] Eighth existing
   NPM virtual host `yarn.inner.sanctum`.**
   Reuse the checked-in eight-route manifest; the existing old
   `yarn.inner` proxy host in original `11.conf`
@@ -77,6 +77,23 @@ unnecessary raw content private.
   **Owner:** Services. **Do not** revisit keeping the
   ordinary Yarn DNS hostname: the old NPM route is a
   migration requirement, not a discretionary deletion.
+
+  **November 11 native outcome (after source checkpoint):** Kvin
+  eight-route stage reconciliation passed
+  `ok=48 changed=3 failed=0`. The following
+  read-only observer failed `old_vhost_present_once`
+  because its double-escaped regex was malformed,
+  **not because the Nginx stage was proven wrong**.
+  The probe was fixed to count exact trimmed
+  config lines, with new real-Ansible
+  regression covering present, absent,
+  duplicate and wrong upstream cases.
+  **[Full CI #43053056244 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43053056244)**.
+  Native HTTP/content/config acceptance remains
+  pending a **probe-only rerun**; do not redeploy
+  eight routes or reopen previous routing questions.
+  Operator command is in the
+  [YXORP runbook](runbooks/yxorp-reconstruction.md).
 
   **November 11 source checkpoint:** Exact eighth
   opt-in `yxorp_stage_yarn_inner_approved: false` now
