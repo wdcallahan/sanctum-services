@@ -1,0 +1,133 @@
+---
+# Reverses only the source-owned, rootless Kvin Kuma candidate Quadlet.
+# The retained named data volume and the cached image are deliberately
+# preserved. This is NOT a production route rollback or data purge.
+- name: Remove only the explicitly approved Kvin Kuma candidate service
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars_files:
+    - roles/kuma/defaults/main.yml
+  tasks:
+    - name: Require exact Kvin scope and separate removal authorization
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - kuma_stage_remove_approved | default(false) | bool
+          - not (kuma_stage_approved | default(false) | bool)
+          - not ansible_check_mode
+          - kuma_quadlet_file == '/home/wdc2/.config/containers/systemd/sanctum-kuma.container'
+          - kuma_service_name == 'sanctum-kuma.service'
+          - kuma_container_name == 'sanctum-kuma'
+          - kuma_bind_address == '127.0.0.1'
+          - kuma_host_port | int == 13001
+          - kuma_data_volume == 'sanctum-kuma-data'
+        fail_msg: >-
+          Only the exact rootless Kvin Kuma candidate may be removed with
+          explicit approval. Never remove the data volume, cache, Kvar
+          service, YXORP route, DNS or host firewall as a side effect.
+
+    - name: Observe the candidate Quadlet without following symlinks
+      ansible.builtin.stat:
+        path: "{{ kuma_quadlet_file }}"
+        follow: false
+      register: kuma_remove_quadlet
+
+    - name: Reject an unexpected symlink or nonregular candidate Quadlet
+      ansible.builtin.assert:
+        that:
+          - kuma_remove_quadlet.stat.isreg | default(false)
+          - not (kuma_remove_quadlet.stat.islnk | default(false))
+      when: kuma_remove_quadlet.stat.exists
+
+    - name: Privately read the installed candidate Quadlet before reversal
+      ansible.builtin.slurp:
+        src: "{{ kuma_quadlet_file }}"
+      register: kuma_remove_quadlet_data
+      no_log: true
+      when: kuma_remove_quadlet.stat.exists
+
+    - name: Require the installed Quadlet to be the exact owned candidate
+      ansible.builtin.assert:
+        that:
+          - "'ContainerName=sanctum-kuma' in kuma_remove_lines"
+          - "('Image=' ~ kuma_image) in kuma_remove_lines"
+          - "'Network=slirp4netns' in kuma_remove_lines"
+          - "'PublishPort=127.0.0.1:13001:3001/tcp' in kuma_remove_lines"
+          - "'Volume=sanctum-kuma-data:/app/data' in kuma_remove_lines"
+          - "kuma_remove_lines | select('match', '^Image=') | list | length == 1"
+          - "kuma_remove_lines | select('match', '^ContainerName=') | list | length == 1"
+          - "kuma_remove_lines | select('match', '^PublishPort=') | list | length == 1"
+          - "kuma_remove_lines | select('match', '^Volume=') | list | length == 1"
+        fail_msg: Installed Kuma Quadlet differs from owned stage; refuse removal.
+      vars:
+        kuma_remove_lines: "{{ (kuma_remove_quadlet_data.content | b64decode).splitlines() }}"
+      when: kuma_remove_quadlet.stat.exists
+
+    - name: Observe candidate user-service activation without changing it
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, "{{ kuma_service_name }}"]
+      register: kuma_remove_unit_active
+      changed_when: false
+      failed_when: false
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+    - name: Refuse stopping an active service lacking an owned Quadlet
+      ansible.builtin.assert:
+        that:
+          - kuma_remove_unit_active.rc != 0 or (kuma_remove_quadlet.stat.isreg | default(false))
+        fail_msg: Active candidate-named user service is not backed by an owned Quadlet.
+
+    - name: Stop the exact candidate user service only when active
+      ansible.builtin.systemd_service:
+        name: "{{ kuma_service_name }}"
+        scope: user
+        state: stopped
+      when: kuma_remove_unit_active.rc == 0
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+    - name: Remove only the verified candidate Quadlet generator input
+      ansible.builtin.file:
+        path: "{{ kuma_quadlet_file }}"
+        state: absent
+      when: kuma_remove_quadlet.stat.exists
+      register: kuma_removed_quadlet
+
+    - name: Reload user systemd after removing the candidate Quadlet
+      ansible.builtin.systemd_service:
+        scope: user
+        daemon_reload: true
+      when: kuma_removed_quadlet.changed | default(false)
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+    - name: Independently check that candidate user service is no longer active
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, "{{ kuma_service_name }}"]
+      register: kuma_remove_unit_after
+      changed_when: false
+      failed_when: false
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+    - name: Require no staged Kuma service still running
+      ansible.builtin.assert:
+        that:
+          - kuma_remove_unit_after.rc != 0
+
+    - name: Report bounded non-destructive Kuma candidate reversal
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          candidate_service_removed_or_already_absent: true
+          preserved_data_volume: "{{ kuma_data_volume }}"
+          data_volume_deleted: false
+          cached_image_deleted: false
+          kvar_service_changed: false
+          yxorp_changed: false
+          dns_or_host_firewall_changed: false
+          note: This is candidate-only reversal; persistent data remains for explicit recovery or later approved disposal.
