@@ -1,5 +1,100 @@
 # YXORP — plain Nginx on a rootful Podman Quadlet
 
+## Native Kvar NPM old Yarn access count — six recent entries; classify fixed source buckets next (November 10)
+
+**Completed native privacy-preserving log
+check** `ansible/yxorp-kvar-legacy-yarn-consumer-signal.yml`
+returned Kvar `ok=5 changed=0 failed=0`.
+The old NPM generated host 11 config
+exists and explicitly declares the
+fixed access log. One plain current
+file was found and fully sampled.
+Six entries, all six timestamps
+parseable, were recorded within
+the last 7 and 30 days, newest
+less than a day old. No selected
+tail truncation or additional
+rotation was observed. The
+6 entries **could all be our own
+test requests**; they could also
+contain an actual client. The
+report did not expose source
+addresses, requests or client
+identities. Neither real consumer
+use nor safety to retire the
+old hostname has been proven.
+
+The old `yarn.inner.sanctum`
+Kvar NPM route **still timed
+out** through the last independent
+Kvin observation. Kvin reaches
+the origin directly by hostname
+and IP and forwards successfully
+under the accepted new
+`yarn.nexus.sanctum` stage.
+Earlier direct **Kvar-host
+and Kvar-NPM-container**
+origin requests also failed,
+so NPM-only misconfiguration
+is not demonstrated. The
+old path remains deliberately
+**disabled on Kvin** pending
+a consumer/retirement decision.
+No Kvar-specific network repair
+is approved from these counts.
+
+**One last bounded consumer signal:**
+`ansible/yxorp-kvar-legacy-yarn-source-classes.yml`
+runs only on the existing Kvar
+NPM container; it reads at most
+1MiB each from the fixed current
+and plain-rotated proxy-host-11
+logs. It counts 30-day entries
+by the explicit NPM `[Client IPv4]`
+field, using predefined buckets:
+known Kvin test-host source,
+known Kvar source, known Kvar
+loopback, other, or
+unclassified log syntax.
+It **does not print IPs or any
+raw log data**, and does
+not claim a source is a
+particular person or a
+genuine user rather than
+another internal test. A
+missing or unparseable source
+remains **unknown** rather
+than inferred, and even
+all entries matching our
+test hosts cannot justify
+automatic hostname removal.
+No route, NPM configuration,
+file, DNS, firewall or
+service is modified.
+
+**Next exact command from Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvar-legacy-yarn-source-classes.yml
+```
+Ask only **Kvar's one-line
+`PLAY RECAP`** and the
+`msg` dictionary from
+**“Report only old Yarn NPM
+client-source classes and sample
+coverage”**. On failure only
+failed task/error. No raw logs.
+After this review, leave the
+legacy hostname explicitly
+held for Nova's client-use/
+retirement decision, not an
+eighth Kvin activation. The
+seven accepted new Kvin
+local HTTP routes and Kvar
+production proxy are unchanged.
+App state migration and
+client cutover are still
+separate work.
+
 ## Legacy Yarn old name: healthy from Kvin, Kvar transport broken; usage evidence next (November 10)
 
 **Native Kvin-only observation complete:**
