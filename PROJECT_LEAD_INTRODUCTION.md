@@ -1,5 +1,48 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Simplified Kuma Vault entry at Nova's request; no arbitrary minimum, confirmation required
+
+Nova pointed out that the previous one-time Vault command imposed an
+unannounced **16-character** minimum and accepted one hidden password
+entry with **no confirmation**. This was unsuitable for his home
+network and his chosen credential workflow. The first encrypted
+Kuma Vault file may already exist, but **administrator bootstrap
+has not been run**, so the encrypted value can still be corrected
+safely without touching a live account.
+
+Source correction committed: `tools/kuma-set-vault-password.sh`
+prompts for the **user-selected** password twice, checks that the
+two values match and the input is nonempty, and encrypts it with
+the **existing** `/home/wdc2/.config/sanctum-services/secrets/vault.key`.
+It writes an encrypted temporary file and only replaces the
+existing `kuma-admin.vault.yml` after encryption succeeds.
+Mismatched entries or encryption errors preserve the existing file.
+The Kuma bootstrap Ansible guard and internal Node client no
+longer impose a 16-character limit; **Kuma 2.5.9 itself**
+determines whether it accepts the password at first-user
+setup. The user's password is not in Git, process argv or output.
+Tests cover shorter passwords, confirmation, preservation on
+mismatch/failure and replacement.
+[Full CI #43079245718 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43079245718).
+
+**One next native Kvin operator action** (replaces the old
+one-entry shell block; allows correction of already-created encrypted
+file, no Kuma application change):
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+bash tools/kuma-set-vault-password.sh
+```
+
+Ask only whether the script printed
+`Passwords matched.` and
+`Kuma encrypted password saved. Application account unchanged.`
+or a nonsecret failure. Then run separately authorized
+Vault-aware Kuma administrator bootstrap from
+`docs/runbooks/vault-credentials.md`. The existing key
+is retained. Neither manual wizard setup nor password
+rotation is approved or needed at this stage.
+
 ## CURRENT — November 11: Kuma native SQLite convergence accepted; shared Vault credential authority selected, admin NOT bootstrapped
 
 **Nova's accepted native results remain unchanged.** The Kvin Kuma
