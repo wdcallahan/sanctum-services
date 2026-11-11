@@ -1,67 +1,116 @@
 # Sanctum Services — Session Continuation
 
-## CURRENT — November 10: CORRECTION — migrate incumbent NPM routing, do not invent a DNS/retirement decision
+## CURRENT — Wednesday, November 11: planned execution, no arbitrary timeboxes
 
-**Operator correction, authoritative:** Nova expects Services to **rebuild
-the existing Nginx Proxy Manager routing on Kvin** as plain, reproducible
-Nginx. The user could have supplied the existing route list directly.
-The old `yarn.inner.sanctum` NPM virtual host is an **existing route**,
-not a hostname whose continued DNS existence or proxy inclusion was
-subject to a new referendum. Services' earlier suggestion to "keep
-its DNS name while dropping its NPM virtual host" was **not requested,
-not supported by evidence, and is WITHDRAWN**. Do not ask the operator
-whether ordinary machine-name DNS should continue resolving to its machine.
+**Morning source of truth:** [The active November 11 Services
+outcome-driven plan](docs/ROADMAP.md#active-execution-plan--wednesday-november-11-2026)
+is now the SINGLE owning execution sequence. It is committed
+on November 10 before Nova went to sleep.
+**No source execution or live network actions happen asynchronously**.
+Do not imply we spent the night actively running after
+this chat turn. User instructed **no arbitrary time limits**:
+a task should take the time needed to be right.
+Do not resurrect the misguided deadline-based
+"limit Nova's time" framing. Instead require
+correct outcome, meaningful independent evidence,
+specific real blocker and high-value next action.
 
-**Authoritative migration baseline:** Eight proxy-host records were observed
-from old Kvar NPM on Nov 9: seven ordinary app-routing records
-(`dir.nexus`, `joule.nexus`, `kuma.nexus`, `pihole.nexus`,
-`search.nexus`, `square.nexus`, `yarn.inner`) plus old
-`yxorp.nexus` NPM management UI. **Old NPM admin UI is intentionally
-not reconstructed**, because plain Nginx has no matching UI.
-Add new requested `yarn.nexus` proxy route separately. Thus
-the Services eight-entry migration manifest contains **seven existing
-app routes plus the new Yarn route**. The eighth, old `yarn.inner`,
-is still **disabled in live Kvin STAGING only pending HTTP qualification**,
-not flagged for removal. Do not turn the staging flag into a desired
-retirement decision. Current Kvin stage has **7/8 initial anonymous
-HTTP canaries passing**, and no Kvar/DNS/firewall/cutover change.
+**First concrete engineering assignment: SS-YX-2.**
+Rebuild the existing **eighth** Kvar NPM app vhost
+`yarn.inner.sanctum` (NPM `11.conf` →
+`192.168.1.110:80`) on *isolated Kvin stage*
+as a **new default-off explicit stage opt-in**
+layered atop the seven already native-accepted
+stage routes. This must not edit
+Maintenance DNS, Kvar NPM, firewall,
+production cutover or source-manifest enabled
+defaults. Write source and real Nginx synthetic
+tests/Ansible selection tests, run CI,
+then deliver one bounded native Kvin
+stage+probe action. Test HTTP200 and stable
+direct-origin content/metadata with original
+`Host: yarn.inner.sanctum`, old/new vhost
+distinction, default deny, and raw redirects
+if applicable. Kvar incumbent old proxy
+path has already timed out from both Kvar
+host and NPM container, so do not manufacture
+a parity requirement against absent
+incumbent HTTP. Do not repeat seven accepted
+route probes. Do not reopen the ridiculous
+DNS keep/retire question: the existing
+NPM vhost is in scope by definition.
 
-**Exact last operator data:** Read-only
-`ansible/yxorp-kvar-legacy-yarn-source-addresses.yml` ran on Kvar,
-`ok=5 changed=0 failed=0`, and found six recent requests from
-`192.168.0.192` (Kvin, three) and `192.168.0.104` (three).
-Nova independently confirmed `.104` reverse-resolves to
-`hop.inner.sanctum` and explained it is the **Inner network's
-NAT egress**, potentially representing *any Inner client* rather
-than the router as the originating process. A currently assigned
-name/IP or reverse DNS is not the original Inner client identity.
-If needed, correlate the **timestamps and connections** in Kvar's
-original access logs against **historical Inner router connection/NAT
-logs**. Retrospective identification may be impossible without
-retained session mappings; do not claim that `host .104` identifies
-an end client or recommend repeated coarse counts.
+**Next:** SS-YX-3 checks only material
+remaining proxy custom-location, forwarded
+headers, WebSockets and actual user behaviors;
+do not confuse seven short HTTP
+checks with fully equivalent NPM.
+Then SS-APPS-1 builds a clean
+retained **Kuma** on Kvin (old PoC
+database migration NOT required),
+and qualifies wanted monitor
+`Wicket Ollama` actual Up +
+persistence/recovery, with
+notifications not duplicated.
+SS-APPS-2 migrates LinkStack's
+real `linkstack` volume at
+`/htdocs` by backed-up restore
+and actual named directory use.
+SS-APPS-3 restores Pi-hole's
+rootful config volumes and tests
+opt-in ad filtering, not general
+DNS; Maintenance's accepted
+evidence already says no
+current intended Pi-hole clients
+after DHCP DNS change.
+SS-APPS-4 accounts for on-Kvin
+Nextcloud, EyesOnly Search,
+Project Joule Prism and Maintenance
+PostgreSQL without duplicating
+their ownership. Last, SS-PUB
+qualifies actual clients after
+Maintenance-approved Kvin HTTP80
+firewall publication, then
+distinct approved DNS/Kvar
+cutover and host retirement.
+Peanut standby is a future
+resilience gate, not a claim
+that yesterday's test equals
+working automatic failover.
 
-**Do not conflate DNS and proxy:** Maintenance's
-`yarn.inner.sanctum → 192.168.1.110` A record establishes
-the ordinary direct machine name. It does NOT decide what
-NPM proxy-host 11's role was, or authorize omission of an
-existing configured virtual host. The Kvar NPM legacy path
-timed out, and earlier Kvar-host and NPM-container paths
-to that backend also timed out, while Kvin origin access
-returned HTTP200. That's useful migration diagnostic,
-not a basis to declare the old route obsolete.
-Do not change Maintenance-owned DNS.
+**Proof discipline:** Our actual
+current Kvin stage has seven of
+eight routes accepted at **initial
+anonymous localhost HTTP only**,
+no production publication.
+Kvar NPM/DNS remain production.
+Kvar Kuma, LinkStack and Pi-hole
+still run there, not migrated.
+Old Yarn NPM log had three
+requests from Kvin .192 and
+three from Inner NAT egress .104;
+the .104 address doesn't identify
+an individual Inner client
+without retained historical
+session/NAT data. These were
+diagnostics, not architecture choices.
 
-**Next engineering direction:** Preserve the existing eighth Yarn
-virtual host in the target routing contract and separately qualify
-it on isolated Kvin stage with the same narrow stage approval and
-raw-wire tests as the other names; investigate any difference
-without guessing. Record functional acceptance separately
-from Nginx process/HTTP testing and from actual Kvar-hosted
-LinkStack/Kuma/Pi-hole application/data migration.
-No production cutover or Kvar retirement is approved.
-Do not ask the operator to approve keeping a hostname
-or removing a known baseline route.
+**Operator relationship:** Pixel writes/
+revises source, CI tests, GitHub docs
+and boards directly; asks Nova
+only for necessary native runs,
+relevant informed authorization
+and meaningful real-client
+acceptance. No unnecessary
+daily report, repeated full logs
+or sequential one-off probes.
+Every next action advances a
+named outcome and has a
+specific evidence-based exit.
+
+**Historical notes below preserve
+earlier investigation, NOT current
+instructions.**
 
 ## CURRENT — November 10: three of six old Yarn log requests are NOT from Kvin's known observer source; exact addresses next
 
