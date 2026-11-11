@@ -166,6 +166,7 @@ jobs:
         run: |
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-remove.yml --syntax-check
           python3 tests/fixtures/verify-yxorp-production-routes.py
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-preflight.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-peanut-dns-observe.yml --syntax-check

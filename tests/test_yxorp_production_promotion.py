@@ -68,6 +68,29 @@ class ProductionPromotionTest(unittest.TestCase):
         self.assertNotIn("firewall-cmd",PROD.read_text())
         self.assertNotIn("data/dns.yml",PROD.read_text())
 
+    def test_explicit_production_reversal_preserves_incumbent_and_app_data(self):
+        path=ROOT/"ansible/yxorp-production-remove.yml"
+        reverse=yaml.safe_load(path.read_text())[0]
+        self.assertEqual(reverse["hosts"],"yxorp")
+        self.assertTrue(reverse["become"])
+        self.assertEqual(reverse["vars_files"],["roles/yxorp/defaults/main.yml"])
+        guard=reverse["tasks"][0]["ansible.builtin.assert"]["that"]
+        for clause in ("inventory_hostname == 'kvin.outer.sanctum'",
+                       "yxorp_deployment_scope == 'kvin_production'",
+                       "yxorp_production_remove_approved | default(false) | bool",
+                       "not (yxorp_production_cutover_approved | bool)"):
+            self.assertIn(clause,guard)
+        text=path.read_text()
+        self.assertIn("sanctum-yxorp.service",text)
+        self.assertNotIn("sanctum-yxorp-kvin-stage",text)
+        self.assertNotIn("podman volume rm",text)
+        self.assertNotIn("firewall-cmd",text)
+        self.assertIn("Kvar is untouched",text)
+        names=[task["name"] for task in reverse["tasks"]]
+        self.assertIn("Stop only the verified production service when active",names)
+        self.assertIn("Remove only the verified production Quadlet",names)
+        self.assertIn("Require no production service still running",names)
+
     def test_real_ansible_projection_fixture_and_source_ci(self):
         c=CI.read_text()
         self.assertIn("test_yxorp_production_promotion.py",c)
