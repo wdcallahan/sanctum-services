@@ -1,5 +1,97 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 10: Pi-hole seventh Kvin route passes; legacy Yarn alias investigation next
+
+**Native Pi-hole Kvin HTTP acceptance:** Nova ran the
+seven-route stage reconciliation with
+Yarn+Square+Prism+Search+LinkStack+Kuma+Pi-hole,
+obtaining `ok=46 changed=3 failed=0 skipped=1`.
+The read-only `ansible/yxorp-kvin-stage-pihole-probe.yml`
+returned `ok=4 changed=0 failed=0`
+with the following raw-wire results for
+`Host: pihole.nexus.sanctum`:
+- **GET /**: direct Kvar :82, incumbent Kvar NPM :80
+  and Kvin stage localhost :80 all **HTTP404**,
+  all status equal, candidate/incumbent media type equal,
+  and no redirect at any path. No redirect equality
+  is comparable; 404 here is an expected/consistent
+  result, **not** a UI availability failure.
+- **GET /admin/**: direct, incumbent and stage
+  **HTTP302**, all statuses equal; candidate/incumbent
+  MIME type equal. All three redirect types are
+  `relative`, and candidate/direct and
+  candidate/incumbent **original raw Location
+  headers exactly equal**.
+- `application_migrated_to_kvin=false`;
+  this is anonymous UI proxy behavior, **not**
+  Pi-hole DNS filtering, ad lists, login, client
+  settings, persisted data or app restore on Kvin.
+
+**Current count: 7/8 named routes tested on
+new Kvin YXORP stage, all 7 passed
+limited initial HTTP checks**: Yarn, Square,
+Prism, Search, interim LinkStack, interim
+Kuma, interim Pi-hole. The only unqualified
+name is legacy `yarn.inner.sanctum` →
+`192.168.1.110:80`. It **must remain
+disabled** until an explicit consumer/use
+and route-retirement decision, not
+enabled simply to make the count 8/8.
+Its incumbent Kvar NPM path previously
+timed out in earlier route observations.
+The new `yarn.nexus.sanctum` route
+is separately requested, accepted and
+does not itself prove the old name can
+be retired.
+
+**Next source-managed bounded task:**
+`ansible/yxorp-kvin-legacy-yarn-observe.yml`
+executes **only read-only HTTP observations**
+from the exact Kvin observer with the old
+route checked to be disabled, cutover
+approval false, no Kvar/DNS/firewall
+changes. The companion
+`tools/observe-yxorp-legacy-yarn.py`
+checks five anonymous root GET paths:
+old origin by literal IP `192.168.1.110`
+with old Host, old origin by DNS name
+with old Host, existing Kvar NPM `:80`
+with old Host, accepted Kvin stage
+with new `yarn.nexus.sanctum` Host as
+control, and old origin IP with new
+Host to test name/header sensitivity.
+Reports only bounded HTTP status,
+outcome, redirect *kind*, media-type
+presence and comparable status booleans;
+no raw URL, response content, redirect,
+cookie, secrets or errors. Timeouts/
+failure on individual paths are nonfatal
+and classified without guessing.
+This can establish reachability but
+**cannot decide client usage or
+retirement**; follow with consumer
+inventory if appropriate. There is
+no eighth-stage route activation.
+
+**Next operator command on Kvin,
+after source CI passes:**
+```bash
+cd ~/src/sanctum-services && git pull && ~/.local/bin/ansible-navigator run ansible/yxorp-kvin-legacy-yarn-observe.yml -e yxorp_kvin_stage_approved=true
+```
+**Request only** the one-line `PLAY RECAP`
+and the `msg` object from **“Report only
+old Yarn alias HTTP transport
+classifications”**, or the failed task
+and error. No long logs or reruns
+of accepted seven routes. Kvar NPM
+and wildcard DNS remain production.
+Maintenance owns Kvin firewall.
+Kvar-hosted LinkStack, Kuma and Pi-hole
+still need separate application/state
+migration before cutover or Kvar
+retirement. Every assistant turn
+ends with one concrete operator task.
+
 ## CURRENT — November 10: Kuma raw-wire redirect ACCEPTED; Pi-hole seventh candidate ready
 
 **Decisive actual operator result:** The read-only
