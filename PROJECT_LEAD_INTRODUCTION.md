@@ -37,24 +37,55 @@ client/LAN reachability and replay/rollback gates remain open** and
 belong to SS-APPS and SS-PUB. Do not claim full NPM/runtime behavior
 equivalence, current LAN publication or production cutover.
 
-**Now execute SS-APPS-1 (first real application migration):** Kvar Kuma
-was a proof of concept and a **clean retained Kvin installation is
-already approved**. Source skeleton already exists at `ansible/kuma.yml`,
-`ansible/group_vars/kuma.yml`,
-`ansible/roles/kuma/tasks/main.yml`, and
-`ansible/roles/kuma/templates/kuma.container.j2`, but
-`kuma_image` is still empty (explicit guard): it has not deployed.
-First establish a verifiable **ARM64 Kuma 2 image digest** and
-version-compatible monitor management interface without manual
-database edits. Build/qualify a new **rootless, loopback-only Kvin Kuma
-candidate** using existing safe-approval gates. Persist and restore
-its own volume, verify live UI and desired `Wicket Ollama` monitor
-(`http://wicket.arcane.sanctum:11435/healthz`) actually **Up**,
-reconcile an unchanged repeat and keep old/test alerts from duplicating.
-Only after app acceptance move `kuma.nexus.sanctum` upstream off Kvar
-and prove actual client use. Nova supplies native commands only when
-Kvin evidence is indispensable; Pixel handles source/CI/docs itself.
-No arbitrary time limits or speculative additional probes.
+**Next executable leaf — SS-APPS-1 Kuma native image qualification:**
+Existing source skeleton remains safe/default-off
+(`ansible/kuma.yml`, `ansible/group_vars/kuma.yml`,
+`ansible/roles/kuma/tasks/main.yml` and Quadlet),
+and `kuma_image` remains **empty**, not deployed.
+The existing
+`data/container-image-candidates.yml` contains
+one exact published linux/arm64 Uptime Kuma
+**2.5.9** digest, `status: registry_only`:
+`docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9`.
+Pixel created `ansible/kuma-qualify-image.yml`
+with exact Kvin/aarch64 and
+`kuma_image_qualification_approved=true`
+guards; it runs **without become** under
+wdc2 rootless Podman and demands
+`kuma_stage_approved=false`.
+Only the image cache may change: inspect
+or pull exact digest, verify Linux ARM64
+metadata and run `node --version` inside
+a disposable offline/read-only container;
+**no app, volume, Quadlet, DNS, firewall,
+Kvar or YXORP change**.
+`tests/test_kuma_image_qualification.py`
+and Ansible syntax are included in
+**[CI #43055414958 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43055414958)**.
+**One next operator command from Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kuma-qualify-image.yml \
+  -e kuma_image_qualification_approved=true
+```
+Request only Kvin's single `PLAY RECAP`
+and `msg` from **“Report bounded
+image-only qualification metadata”**,
+or failed task/error. No pull logs.
+After native success, promote the
+native-qualified digest, separately
+stage the rootless loopback app on
+Kvin, and qualify UI + wanted monitor
+`Wicket Ollama` actually Up at
+`http://wicket.arcane.sanctum:11435/healthz`,
+idempotence, data recovery and no
+duplicate alerts. Only then retarget
+`kuma.nexus` away from Kvar and test
+real clients. A clean Kvin Kuma install
+is accepted; preserving the abandoned
+Kvar PoC monitor database is not required.
+Do not invent arbitrary time limits
+or unsupported data migration.
 
 **Production still unchanged:** Kvar NPM and DNS remain authoritative,
 Maintenance owns Kvin LAN firewall, no production cutover is approved,
