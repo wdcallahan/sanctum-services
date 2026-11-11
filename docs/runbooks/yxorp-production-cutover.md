@@ -1,5 +1,70 @@
 # YXORP production release — staged Kvin Nginx to live Sanctum Nexus
 
+## November 11 — Kvin firewall repeat empty, peer-address distinction before DNS
+
+Native `check_mode:false` owner report
+`would_change:false` with
+**empty `add_ports` and
+`remove_rich_rules` in BOTH stores**.
+The first actual Kvin TCP80 apply had
+already succeeded. The repeat's
+full PLAY RECAP was not provided;
+don't fabricate its counters.
+The production YXORP listener was
+already accepted `ok=31 changed=0`
+with eight routes, Kuma 302 and Yarn 200.
+
+**Important existing owner-source address
+discrepancy:** Maintenance
+`data/dns.yml` has
+`kvin.outer.sanctum` and the
+three direct DB service aliases pointing
+to **`192.168.0.192`**. The separate
+Peanut host-health `host_vars` expects
+Kvin DNS to return
+**`192.168.1.192`**.
+Do not assume these are equivalent
+or “fix” either record without actual
+cross-segment connectivity evidence.
+
+After source-only Services CI, from Kvin:
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-peer-http.yml
+```
+
+This executes on actual **Peanut**,
+using the existing `yxorp_test`
+inventory and strict FQDN/architecture/user
+guards. It directly requests Kvin
+at **both** competing IP addresses
+with `Host: kuma.nexus.sanctum`
+and `Host: yarn.nexus.sanctum`,
+returning only safe outcome/status
+and `qualified_peer_client_addresses`.
+It also reports how Peanut currently
+resolves `kvin.outer.sanctum`.
+No production DNS or firewall edits;
+no Kvar contact or credentials.
+Request only `PLAY RECAP` and
+`Report safe Peanut LAN reachability
+and exact Kvin address candidates`
+msg. Mark real peer HTTP path accepted
+only if one candidate yields Kuma
+HTTP200/302 **and** Yarn HTTP200.
+This is not named-browser login or
+WebSocket acceptance.
+
+Then reconcile authoritative
+Nexus publication target against this
+observed endpoint using Maintenance
+DNS source, valid served SOA serial
+and rollback. Preserve the incumbent
+Kvar NPM until clients have accepted
+real names and sessions.
+
 ## November 11 — Kvin firewall TCP80 native APPLY accepted, no DNS cutover
 
 Nova ran Maintenance's exact pinned owner-source

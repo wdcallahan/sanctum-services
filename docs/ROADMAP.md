@@ -30,6 +30,40 @@ unnecessary raw content private.
 
 ### SS-YX — Finish a faithful and operable YXORP
 
+**November 11 — owner Kvin TCP80 policy repeat has EMPTY runtime/permanent diff:**
+Nova's supplied safe task report
+`check_mode:false` and
+`would_change:false`,
+`public`/`eth0`, with no
+runtime or permanent add_ports or
+remove_rich_rules. The separate
+full PLAY RECAP from this repeat
+wasn't supplied; don't invent one.
+Native initial live TCP80 apply was
+already `ok=28 changed=1 failed=0`
+with full PostgreSQL/fwall preservation.
+
+**Next source-owned LAN observer:**
+A new read-only Services playbook
+`ansible/yxorp-kvin-peer-http.yml`
+targets **Peanut**, not Kvin; queries
+production Kvin via both
+`192.168.0.192` and
+`192.168.1.192`, with Kuma and
+Yarn Host headers, and reports actual
+Kvin FQDN DNS answer on Peanut.
+The two address contracts conflict:
+Maintenance zone maps `kvin.outer`
+to `192.168.0.192`, but Peanut
+health checks expect
+`192.168.1.192`. Do not change
+the six Nexus DNS aliases to an
+assumed address. Confirm actual
+Peanut reachability and use owner
+serial/zone publication afterward.
+No native Peer test or DNS
+publication accepted yet.
+
 **November 11 — live owner TCP80 Kvin firewall APPLY ACCEPTED:**
 Maintenance's reviewed revision
 `3ba9523befe229af2262194a615c3bc35da5aa01`

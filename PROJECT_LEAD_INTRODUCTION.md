@@ -1,5 +1,85 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: owner Kvin TCP80 firewall repeat has EMPTY diff; independent Peanut LAN HTTP test NEXT
+
+**Native Maintenance firewall report (subsequent LIVE-repeat):**
+Nova supplied the exact bounded task
+`Show the exact firewall-only preview` from the
+same staged reviewed source
+`3ba9523befe229af2262194a615c3bc35da5aa01`,
+`check_mode:false`, `zone:public`,
+`interface:eth0`, **`would_change:false`**,
+with **both `runtime.add_ports:[]` and
+`permanent.add_ports:[]`**, and
+**both `remove_rich_rules:[]`**.
+This establishes the OWNER DESIRED FIREWALL
+STATE now matches both live/permanent policy.
+**The overall PLAY RECAP for this repeat
+was not supplied**; do not invent its
+`changed` or `failed` counters.
+Previous actual native TCP80 apply
+`ok=28 changed=1 failed=0 skipped=1`
+and its full PostgreSQL/firewall preservation
+were already accepted. No firewall further
+changes requested.
+
+**Next independent LAN path:** Services source
+`ansible/yxorp-kvin-peer-http.yml`
+runs on actual **Peanut** via existing
+`yxorp_test` inventory while dispatched
+from Kvin; no role or Podman mutation.
+`tools/observe-yxorp-kvin-from-peanut.py`
+checks both known potential Kvin addresses
+`192.168.0.192` and `192.168.1.192`
+with the exact production Kuma + Yarn
+HTTP Host headers, plus the Peanut-visible
+resolved address for `kvin.outer.sanctum`.
+It emits statuses and a strict peer
+reachability boolean without raw pages,
+headers or authentication secrets.
+**Why both?** Maintenance's authoritative
+`data/dns.yml` currently maps
+`kvin.outer` / DB aliases to
+`192.168.0.192`, while Peanut's
+`host_vars` health check expects
+Kvin on `192.168.1.192`.
+This conflict predates the YXORP release
+and must be resolved by REAL peer wire
+evidence, not assumptions. The probe
+will NOT change DNS, the firewall, Kvar
+or the production Nginx. **Native acceptance
+not yet run.** Verify Services source CI
+#43113767966 green before invocation.
+
+**One next operator command after CI:**
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp-kvin-peer-http.yml
+```
+Return the peer `PLAY RECAP` plus
+`Report safe Peanut LAN reachability
+and exact Kvin address candidates` msg.
+If neither candidate succeeds, hold DNS
+and repair actual LAN routing/firewall
+based on result. If one works, use
+that as a real observed candidate
+for Maintenance source-owned DNS
+planning; **do not immediately change
+names solely on anonymous GET success**.
+Kvar NPM remains intact, and
+real browser/Socket.IO access is next.
+
+**Already accepted:** Kvin rootful YXORP
+8 configured routes, `ansible/yxorp.yml`
+`ok=31 changed=0 failed=0`,
+Kuma frontend HTTP302, Yarn HTTP200,
+local listener acceptance. Kvin Kuma
+actual Wicket Up, Vault admin,
+and isolated application restore.
+Existing two independent Kuma bears
+Kvin+Peanut design unchanged.
+
 ## CURRENT — November 11: Kvin live TCP80 firewall APPLY accepted; unchanged repeat next; DNS still Kvar
 
 **Native Maintenance owner application accepted.**
