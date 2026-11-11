@@ -35,7 +35,7 @@
           - yxorp_host_port | int == 80
           - yxorp_bind_address == '0.0.0.0'
           - yxorp_routes | length == 8
-          - yxorp_routes | map(attribute='hostname') | list | sort == yxorp_production_expected_names | sort
+          - (yxorp_routes | map(attribute='hostname') | list | sort) == (yxorp_production_expected_names | sort)
         fail_msg: >-
           Production deployment requires exact Kvin, the reviewed eight
           original route entries and explicit authorization; it never
