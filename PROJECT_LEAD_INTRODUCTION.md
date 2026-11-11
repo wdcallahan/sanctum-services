@@ -1,5 +1,62 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Maintenance exact-source Kvin TCP80 check-mode preview ACCEPTED; next LIVE owner apply
+
+**Native Kvin latest operator receipt:** With the exact staged owner source
+`sanctum-maintenance` revision
+`3ba9523befe229af2262194a615c3bc35da5aa01` under
+`artifacts/kvin-firewall-source-3ba9523b`, Nova ran the approved
+`tools/run-ansible-logged` preview of
+`playbooks/configure-kvin-firewall.yml`, production inventory and
+`--limit kvin.outer.sanctum --check --diff`.
+It completed `ok=28 changed=1 unreachable=0 failed=0 skipped=1`,
+`ansible_navigator_exit_status=0`, `Run status: completed`.
+The safe `Show the exact firewall-only preview` proves
+`check_mode:true`, `zone:public`, `interface:eth0`,
+**exactly `80/tcp` added** in both
+`diff.runtime.add_ports` and `diff.permanent.add_ports`,
+and `remove_rich_rules:[]` in both stores.
+All other formerly proposed firewall ports/rich-rule removals
+have already converged. `changed=1` is a check-mode
+prediction; **no live firewall mutation** occurred.
+Private report:
+`/home/wdc2/src/sanctum-maintenance/artifacts/kvin-firewall-source-3ba9523b/artifacts/service-firewall/20261111T215350954580Z`.
+The native play passed its PostgreSQL hash/state preservation checks.
+Kvar NPM and live Nexus DNS remain unchanged.
+
+**Next operator action, separately approved LIVE firewall convergence**
+with the **same exact reviewed packet** (NOT a `git pull` of the
+active Maintenance controller checkout):
+```bash
+cd ~/src/sanctum-maintenance &&
+revision=3ba9523befe229af2262194a615c3bc35da5aa01 &&
+packet=artifacts/kvin-firewall-source-3ba9523b &&
+tools/run-ansible-logged run "$packet/playbooks/configure-kvin-firewall.yml" \
+  -i "$packet/inventories/production/hosts.yml" \
+  --limit kvin.outer.sanctum --diff \
+  -e "sanctum_service_firewall_source_revision=$revision" \
+  -e sanctum_service_firewall_apply=true
+```
+This intentionally changes Kvin's **public/eth0 runtime+permanent
+TCP80** and should change no other firewall policy or PostgreSQL.
+Stop on failure; inspect bounded `Show the exact firewall-only preview`
+(now `check_mode:false`), `Report the saved boundary evidence and
+remaining independent acceptance`, and PLAY RECAP. After success,
+repeat same LIVE playbook unchanged and seek `changed=0`.
+Only then verify TCP80 from a separate LAN vantage and move
+six Maintenance-owned Nexus DNS aliases/wildcard from Kvar to Kvin
+with increased served SOA serial. No DNS source edit or
+publication is currently accepted.
+
+**Already accepted:** source-managed eight-vhost Kvin
+`sanctum-yxorp.service` native second run
+`ok=31 changed=0 failed=0 skipped=1`,
+`local_production_listener_accepted:true`,
+Kuma 302, Yarn 200. Kvar NPM stays current.
+Kvin Kuma Vault admin, real Wicket Up, isolated
+data restore accepted; off-host archive/Vault recovery still open.
+Two independent Kuma peers (Kvin and Peanut) remain preexisting design.
+
 ## CURRENT — November 11: source-owned Kvin production YXORP 8/8 listener ACCEPTED NATIVE, no DNS/firewall publication
 
 **Native operator report, November 11:** After
