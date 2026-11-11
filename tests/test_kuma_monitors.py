@@ -42,6 +42,18 @@ class TestKumaMonitorSource(unittest.TestCase):
         for forbidden in ("sqlite3", "firewall-cmd", "kvar.outer.sanctum"):
             self.assertNotIn(forbidden,P.read_text())
 
+    def test_read_only_actual_heartbeat_on_existing_monitor_repeat(self):
+        observe=next(t for t in self.tasks if t["name"].startswith("Read the retained Kuma heartbeat"))
+        self.assertTrue(observe["no_log"])
+        self.assertIs(observe["changed_when"],False)
+        self.assertEqual(observe["ansible.builtin.command"]["argv"][-1],"observe")
+        self.assertIn('ack("getMonitorBeats",1,1)',self.js)
+        self.assertIn('ack("getMonitor",1)',self.js)
+        self.assertIn('recent&&code===1',self.js)
+        report=self.tasks[-1]["ansible.builtin.debug"]["msg"]
+        self.assertIn("kuma_monitor_heartbeat.stdout",report["actual_up_accepted"])
+        self.assertIn("kuma_monitor_heartbeat.stdout",report["latest_status_in_kuma"])
+
     def test_full_source_ci_runs_monitor_contract(self):
         s=CI.read_text()
         self.assertIn("test_kuma_monitors.py",s)
