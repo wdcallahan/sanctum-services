@@ -116,6 +116,12 @@ class LinkStackBackupPlaybook(unittest.TestCase):
         self.assertEqual(self.play["vars"]["linkstack_expected_image_id"],
                          "53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65")
 
+    def test_timestamp_uses_nested_facts_not_deprecated_injected_var(self):
+        stamp = self.play["vars"]["linkstack_backup_stamp"]
+        self.assertIn("ansible_facts['date_time']['iso8601_basic_short']", stamp)
+        self.assertNotIn("ansible_date_time", stamp)
+        self.assertNotIn("ansible_date_time", PLAY.read_text())
+
     def test_live_source_is_checked_before_stop_and_backup_collision_prevented(self):
         preflight = self.task("Refuse changed image")
         checks = str(preflight["ansible.builtin.assert"]["that"])
