@@ -1,0 +1,83 @@
+---
+# Official LinkStack administrator entry /login is examined anonymously.
+# Tests Apache absolute-form proxy requests so a future dedicated Firefox
+# HTTP-proxy profile could retain dir.nexus.sanctum as the real browser
+# origin via an SSH local forward to Kvin 127.0.0.1:18081.
+# No sessions, credentials or administrative actions are submitted.
+- name: Classify recovered LinkStack login and SSH-forwarded proxy request form
+  hosts: kuma
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require exact Kvin rootless user and separate anonymous login probe approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_anonymous_login_probe_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_restore_approved | default(false) | bool)
+        fail_msg: >-
+          This operation is limited to anonymous GET /login across exact Kvar
+          and Kvin endpoints and an absolute-form HTTP request to Kvin. No
+          passwords, session cookies, browser proxy, SSH tunnel or production
+          application configuration changes are authorized.
+
+    - name: Confirm persistent candidate running from exact recovered image and volume
+      ansible.builtin.command:
+        argv: [podman, container, inspect, sanctum-linkstack-kvin-candidate]
+      register: linkstack_login_container
+      changed_when: false
+      no_log: true
+
+    - name: Require original pinned image and only qualified Kvin volume for login probe
+      ansible.builtin.assert:
+        that:
+          - (linkstack_login_container.stdout | from_json | length) == 1
+          - (linkstack_login_container.stdout | from_json)[0].Image == '53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65'
+          - (linkstack_login_container.stdout | from_json)[0].State.Running | bool
+          - ((linkstack_login_container.stdout | from_json)[0].Mounts | selectattr('Name', 'equalto', 'sanctum-linkstack-qualified-20261112t105926') | selectattr('Destination', 'equalto', '/htdocs') | list | length) == 1
+
+    - name: Confirm actual candidate TCP mapping without revealing additional ports
+      ansible.builtin.command:
+        argv: [podman, port, sanctum-linkstack-kvin-candidate, 80/tcp]
+      register: linkstack_login_port
+      changed_when: false
+      no_log: true
+
+    - name: Require port confined to Kvin loopback only
+      ansible.builtin.assert:
+        that:
+          - (linkstack_login_port.stdout | trim) == '127.0.0.1:18081'
+
+    - name: Privately observe official anonymous login path and absolute-form proxy request
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-linkstack-login-proxy-form.py') }}"
+      register: linkstack_login_wire
+      changed_when: false
+      no_log: true
+
+    - name: Require sanitized public request results without login submission or routing
+      ansible.builtin.assert:
+        that:
+          - (linkstack_login_wire.stdout | from_json).schema == 'sanctum-linkstack-anonymous-login-proxy-form/v1'
+          - (linkstack_login_wire.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (linkstack_login_wire.stdout | from_json).frontend == 'dir.nexus.sanctum'
+          - not ((linkstack_login_wire.stdout | from_json).raw_urls_headers_cookies_or_html_returned | bool)
+          - not ((linkstack_login_wire.stdout | from_json).password_or_form_submitted | bool)
+          - not ((linkstack_login_wire.stdout | from_json).authenticated_admin_accepted | bool)
+          - not ((linkstack_login_wire.stdout | from_json).real_named_firefox_session_accepted | bool)
+          - not ((linkstack_login_wire.stdout | from_json).firefox_proxy_or_ssh_tunnel_created | bool)
+          - not ((linkstack_login_wire.stdout | from_json).production_service_or_dns_modified | bool)
+
+    - name: Report bounded anonymous LinkStack login parity and HTTP proxy compatibility
+      ansible.builtin.debug:
+        msg: "{{ linkstack_login_wire.stdout | from_json }}"
