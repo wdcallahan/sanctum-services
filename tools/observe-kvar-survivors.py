@@ -23,7 +23,7 @@ CHOICES = {
 CONTAINER_FORMAT = ('{"name":{{json .Name}},"image_name":{{json .ImageName}},'
                     '"image_id":{{json .Image}},"running":{{json .State.Running}},'
                     '"ports":{{json .NetworkSettings.Ports}},"mounts":{{json .Mounts}}}')
-IMAGE_FORMAT = ('{"id":{{json .Id}},"digest":{{json .Digest}},'
+IMAGE_FORMAT = ('{"id":{{json .ID}},"digest":{{json .Digest}},'
                 '"repo_digests":{{json .RepoDigests}},'
                 '"os":{{json .Os}},"arch":{{json .Architecture}}}')
 SAFE_REF = re.compile(r"^[A-Za-z0-9_.:/@-]{1,250}$")
