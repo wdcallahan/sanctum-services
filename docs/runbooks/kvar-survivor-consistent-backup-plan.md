@@ -1,5 +1,24 @@
 # Kvar survivors: consistent backup and isolated recovery design
 
+## November 12 — first LinkStack offline boot HTTP test FAILED SAFELY; corrected internal-only network CI GREEN
+
+Nova ran the original `ansible/linkstack-qualify-isolated-application.yml` on Kvin. Actual native recap **`ok=18 changed=3 unreachable=0 failed=1`**. **Passed**: exact rootless Kvin target, previously imported separate volume, restored SQLite integrity, free disposable name, rootless pull of the pinned exact ARM64 LinkStack image, image architecture and exact original Kvar content ID, and offline PHP 8.3 execution. Temporary restored-app container started. All **15** `podman exec ... curl http://127.0.0.1/` probes failed (`rc != 0`); the HTTP status acceptance assertion failed. The Ansible `always` handler **removed the disposable container successfully**. No production route/service or Kvar image/volume was changed; the previously copied tar, original source tar, and separately imported Kvin volume remain. **Do not claim restored LinkStack application boot or HTTP acceptance.**
+
+**Design defect identified:** The original trial used `podman run --network none` then tried TCP 127.0.0.1 inside that unconfigured network namespace. Podman's own [run documentation](https://docs.podman.io/en/latest/markdown/podman-run.1.html) states `none` creates a namespace **without configuring network interfaces**; therefore localhost HTTP cannot be reliably tested through that mode. The native failure does **not** establish whether Apache itself was healthy or exited later; that remains an evidence gap, not proof of an invalid backup. The original run's successful guaranteed container cleanup is independently observed.
+
+**Source correction:** Rebuilt the playbook from a known-good revision after rejecting an intermediate malformed YAML edit in CI. It now checks a unique temporary rootless network name, creates **only** a new `--driver bridge --internal --disable-dns` Podman network, requires its observed `driver=bridge`, `internal=true`, and `dns_enabled=false`, then runs the temporary LinkStack container on *that network* with **no published ports, no external route, and no host networking**. It checks the container is actually running before attempting HTTP from inside the namespace. Its `always` tasks remove both the disposable container and the single temporary network; it refuses declaring success unless both cleanups pass. No new image pull expected because original exact digest is already cached; the image and restored data are reverified without repeating Kvar backup, SCP transfer or import. Test source now explicitly prevents using `--network none` in the application HTTP trial and verifies internal/no-DNS network, cleanup and failure behavior.
+
+**Full Services source+syntax CI [#43275657216 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43275657216)**, including Ansible syntax after rebuilding the YAML and all isolated-app/negative tests. **No native rerun of corrected playbook yet**.
+
+**Next exact Kvin operator action (same permissions as previously granted, but creates a disposable internal bridge):**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/linkstack-qualify-isolated-application.yml \
+  -e sanctum_linkstack_image_qualification_approved=true \
+  -e sanctum_linkstack_offline_application_trial_approved=true
+```
+Full output welcome. This requires explicit operator opt-in for the new short-lived internal network; it **does not** touch Kvar, existing apps, production host ports, DNS, proxy or firewall. If this still fails, classify the next actual failure (network creation, container running state or HTTP) from native evidence; do not infer apache health or launch live LinkStack until proved.
+
 ## November 12 — Kvar-to-Kvin LinkStack archive transfer and isolated volume import ACCEPTED
 
 Nova ran `ansible/linkstack-transfer-isolated-data-restore.yml` with the two independent approvals. **Kvar `ok=4 changed=0 failed=0`; Kvin `ok=22 changed=6 failed=0`; both hosts reachable.** Kvar's original private tar was confirmed to be exactly 93,845,504 bytes with SHA-256 `a1110a717d11ee1723c02f8b66557a1c122ac64137f5fa793488428b7a398eaa`, a regular 0600 file owned by `wdc2`.
