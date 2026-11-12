@@ -1,5 +1,18 @@
 # Kvar survivor recovery inputs — LinkStack and Pi-hole
 
+## CURRENT — November 11: Kvar survivor image probe classified; corrected Services CI GREEN, native rerun required
+
+**Read-only first Kvar observation accepted** (both active Quadlets, persistent volumes, exposed ports, and exact running image IDs), recap `ok=8 changed=0 failed=0`. Both original `status:partial` results were specific to unproven image-platform and registry digests, not container availability.
+
+**Correction tested:** Services `tools/observe-kvar-survivors.py` now reports `image_probe.attempts` with bounded status categories instead of ambiguous missing fields. It first tries the immutable running image ID in the correct Podman user namespace, optionally queries the existing local name/tag **only if the exact image ID matches** (rejects unexpected local `latest` drift), and reports `pullable_digest_known` separately. Missing digest remains `partial`, without guessing an immutable image reference or requesting a pull. The full Services source and recovery workflow [#43128132860 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43128132860) including new negative tests. No app, data, NPM, firewall or DNS changes.
+
+**Single next host gate, on Kvin** after `git pull`:
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kvar-survivors-source.yml
+```
+Ask for the two `Report bounded ... backing discovery` `msg` dictionaries and aggregate Kvar `PLAY RECAP`. Prefer `image_probe`, `repo_digests`, `image_platform`, and `status` to decide the next actual image qualification step. The previous first-run volume and port evidence need not be disputed or repeated in the report. Keep all survivors running; Kvar NPM intact.
+
 ## November 11 native Kvar receipt — both live survivors, image identity metadata incomplete
 
 Nova ran `ansible/kvar-survivors-source.yml` on Kvin against Kvar, **`ok=8 changed=0 failed=0 unreachable=0`**. Each named service was confirmed **running**, Quadlet `loaded/active/generated`, with source files on Kvar. No application state, passwords or volume contents were read and no host/app configuration was changed.
