@@ -1,0 +1,313 @@
+---
+# Kvin-only LinkStack candidate: verify the original immutable Kvin archive,
+# import into a NEW rootless named volume, let Podman apply :U,Z ONLY to
+# that new copy, and accept actual restored HTTP in an isolated container.
+# The accepted original restored volume, Kvar, and production stay unchanged.
+- name: Qualify owned copy of recovered LinkStack data on Kvin without production exposure
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars_files:
+    - ../data/container-image-candidates.yml
+  vars:
+    linkstack_source_archive: /home/wdc2/.local/share/sanctum-services/backups/linkstack/linkstack-20261112t105926.tar
+    linkstack_source_archive_sha: a1110a717d11ee1723c02f8b66557a1c122ac64137f5fa793488428b7a398eaa
+    linkstack_source_archive_bytes: 93845504
+    linkstack_original_restore_volume: sanctum-linkstack-restore-test-20261112t105926
+    linkstack_candidate_volume: sanctum-linkstack-qualified-20261112t105926
+    linkstack_candidate_container: sanctum-linkstack-owned-trial-20261112t105926
+    linkstack_candidate_network: sanctum-linkstack-owned-internal-20261112t105926
+    linkstack_volume_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Kvin rootless operator and separately approved candidate data ownership conversion
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_owned_candidate_restore_approved | default(false) | bool
+          - sanctum_linkstack_candidate_private_relabel_chown_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_offhost_transfer_approved | default(false) | bool)
+          - linkstack_original_restore_volume != linkstack_candidate_volume
+          - linkstack_candidate_volume is match('^sanctum-linkstack-qualified-[0-9]{8}t[0-9]{6}$')
+          - linkstack_candidate_container is match('^sanctum-linkstack-owned-trial-[0-9]{8}t[0-9]{6}$')
+          - linkstack_candidate_network is match('^sanctum-linkstack-owned-internal-[0-9]{8}t[0-9]{6}$')
+          - linkstack_candidate.image == 'docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1'
+          - linkstack_candidate.source_running_image_id == '53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65'
+        fail_msg: >-
+          No production or original restore change is authorized. This test
+          creates exactly one new candidate volume, may recursively chown and
+          relabel ONLY that volume, then removes its temporary container and
+          internal network. Candidate volume remains for further review.
+
+    - name: Verify exact original private Kvin backup with checksum
+      ansible.builtin.stat:
+        path: "{{ linkstack_source_archive }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      register: linkstack_qualified_archive
+
+    - name: Require byte-identical private original snapshot before cloning
+      ansible.builtin.assert:
+        that:
+          - linkstack_qualified_archive.stat.isreg | default(false)
+          - not (linkstack_qualified_archive.stat.islnk | default(false))
+          - linkstack_qualified_archive.stat.pw_name == 'wdc2'
+          - linkstack_qualified_archive.stat.mode == '0600'
+          - linkstack_qualified_archive.stat.size | int == linkstack_source_archive_bytes | int
+          - linkstack_qualified_archive.stat.checksum == linkstack_source_archive_sha
+        fail_msg: Wrong archive identity or permissions; refuse any volume creation.
+
+    - name: Verify original accepted Kvin restore volume still exists
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ linkstack_original_restore_volume }}"]
+      register: linkstack_original_restore_exists
+      changed_when: false
+      failed_when: linkstack_original_restore_exists.rc not in [0, 1]
+
+    - name: Require original restore identity intact and three temporary names unused
+      ansible.builtin.command:
+        argv: "{{ item }}"
+      loop:
+        - [podman, volume, exists, "{{ linkstack_candidate_volume }}"]
+        - [podman, container, exists, "{{ linkstack_candidate_container }}"]
+        - [podman, network, exists, "{{ linkstack_candidate_network }}"]
+      register: linkstack_owned_unused
+      changed_when: false
+      failed_when: linkstack_owned_unused.rc not in [0, 1]
+
+    - name: Refuse reuse of any existing candidate identity or absent original restore
+      ansible.builtin.assert:
+        that:
+          - linkstack_original_restore_exists.rc == 0
+          - (linkstack_owned_unused.results | map(attribute='rc') | list) == [1, 1, 1]
+        fail_msg: Candidate names must be unused and the original accepted restore must remain.
+
+    - name: Verify exact pinned ARM64 LinkStack image already cached
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ linkstack_candidate.image }}"]
+      register: linkstack_owned_image
+      changed_when: false
+      no_log: true
+
+    - name: Require exact original Kvar image content and Linux ARM64
+      ansible.builtin.assert:
+        that:
+          - (linkstack_owned_image.stdout | from_json | length) == 1
+          - (linkstack_owned_image.stdout | from_json)[0].Id == linkstack_candidate.source_running_image_id
+          - (linkstack_owned_image.stdout | from_json)[0].Architecture == 'arm64'
+          - (linkstack_owned_image.stdout | from_json)[0].Os == 'linux'
+
+    - name: Create only new rootless candidate volume for owned restored state
+      ansible.builtin.command:
+        argv: [podman, volume, create, "{{ linkstack_candidate_volume }}"]
+      register: linkstack_owned_created
+      changed_when: linkstack_owned_created.rc == 0
+
+    - name: Import exact verified backup into only the new candidate volume
+      ansible.builtin.command:
+        argv: [podman, volume, import, "{{ linkstack_candidate_volume }}", "{{ linkstack_source_archive }}"]
+      register: linkstack_owned_imported
+      changed_when: linkstack_owned_imported.rc == 0
+      no_log: true
+
+    - name: Inspect new candidate volume mountpoint privately before permission adjustment
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - inspect
+          - --format
+          - "{{ '{{.Mountpoint}}' }}"
+          - "{{ linkstack_candidate_volume }}"
+      register: linkstack_owned_mountpoint
+      changed_when: false
+      no_log: true
+
+    - name: Privately confirm candidate SQLite integrity and config before container startup
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_volume_validator }}"
+          - restored
+          - "{{ linkstack_owned_mountpoint.stdout | trim }}"
+      register: linkstack_owned_data_check
+      changed_when: false
+      no_log: true
+
+    - name: Require newly imported candidate data integrity before any chown
+      ansible.builtin.assert:
+        that:
+          - (linkstack_owned_data_check.stdout | from_json).isolated_imported_volume_integrity_verified | bool
+          - (linkstack_owned_data_check.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_owned_data_check.stdout | from_json).configuration_file_present | bool
+
+    - name: Boot restored LinkStack with private ownership adjustment on new candidate only
+      block:
+        - name: Create one temporary no-external-route internal bridge
+          ansible.builtin.command:
+            argv:
+              - podman
+              - network
+              - create
+              - --driver
+              - bridge
+              - --internal
+              - --disable-dns
+              - "{{ linkstack_candidate_network }}"
+          register: linkstack_owned_network_created
+          changed_when: linkstack_owned_network_created.rc == 0
+          no_log: true
+
+        - name: Privately inspect temporary bridge isolation before application startup
+          ansible.builtin.command:
+            argv: [podman, network, inspect, "{{ linkstack_candidate_network }}"]
+          register: linkstack_owned_network_inspect
+          changed_when: false
+          no_log: true
+
+        - name: Require exact isolated internal bridge and disabled network DNS
+          ansible.builtin.assert:
+            that:
+              - (linkstack_owned_network_inspect.stdout | from_json | length) == 1
+              - (linkstack_owned_network_inspect.stdout | from_json)[0].name == linkstack_candidate_network
+              - (linkstack_owned_network_inspect.stdout | from_json)[0].driver == 'bridge'
+              - (linkstack_owned_network_inspect.stdout | from_json)[0].internal | bool
+              - not ((linkstack_owned_network_inspect.stdout | from_json)[0].dns_enabled | bool)
+
+        - name: Start disposable candidate with only its own volume relabeled and chowned
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --detach
+              - --name
+              - "{{ linkstack_candidate_container }}"
+              - --network
+              - "{{ linkstack_candidate_network }}"
+              - --sysctl
+              - net.ipv4.ip_unprivileged_port_start=80
+              - --security-opt
+              - no-new-privileges
+              - --pull
+              - never
+              - --volume
+              - "{{ linkstack_candidate_volume }}:/htdocs:U,Z"
+              - --env
+              - HTTP_SERVER_NAME=localhost
+              - "{{ linkstack_candidate.image }}"
+          register: linkstack_owned_trial_started
+          changed_when: linkstack_owned_trial_started.rc == 0
+          no_log: true
+
+        - name: Inspect whether the candidate process remains alive
+          ansible.builtin.command:
+            argv:
+              - podman
+              - container
+              - inspect
+              - --format
+              - "{{ '{{.State.Running}}' }}"
+              - "{{ linkstack_candidate_container }}"
+          register: linkstack_owned_running
+          changed_when: false
+          no_log: true
+
+        - name: Require candidate is actually running before HTTP
+          ansible.builtin.assert:
+            that:
+              - (linkstack_owned_running.stdout | trim) == 'true'
+            fail_msg: >-
+              Candidate container exited. Keep newly created candidate volume
+              as evidence; do not claim recovery or modify accepted restore.
+
+        - name: Check restored LinkStack HTTP only from inside its isolated namespace
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ linkstack_candidate_container }}"
+              - curl
+              - --silent
+              - --show-error
+              - --output
+              - /dev/null
+              - --max-time
+              - '5'
+              - --write-out
+              - '%{http_code}'
+              - --header
+              - 'Host: dir.nexus.sanctum'
+              - http://127.0.0.1/
+          register: linkstack_owned_http
+          changed_when: false
+          failed_when: false
+          retries: 12
+          delay: 2
+          until: >-
+            linkstack_owned_http.rc == 0 and
+            (linkstack_owned_http.stdout | trim) == '200'
+          no_log: true
+
+        - name: Require HTTP 200 from the restored owned candidate
+          ansible.builtin.assert:
+            that:
+              - linkstack_owned_http.rc == 0
+              - (linkstack_owned_http.stdout | trim) == '200'
+            fail_msg: Refuse recovered app acceptance without an actual HTTP 200.
+      always:
+        - name: Remove only this newly started disposable LinkStack container
+          ansible.builtin.command:
+            argv: [podman, rm, --force, "{{ linkstack_candidate_container }}"]
+          when: >-
+            linkstack_owned_trial_started is defined and
+            (linkstack_owned_trial_started.rc | default(1)) == 0
+          register: linkstack_owned_cleanup_container
+          changed_when: linkstack_owned_cleanup_container.rc | default(1) == 0
+          no_log: true
+
+        - name: Remove only the uniquely created no-external-route temporary network
+          ansible.builtin.command:
+            argv: [podman, network, rm, "{{ linkstack_candidate_network }}"]
+          when: >-
+            linkstack_owned_network_created is defined and
+            (linkstack_owned_network_created.rc | default(1)) == 0
+          register: linkstack_owned_cleanup_network
+          changed_when: linkstack_owned_cleanup_network.rc | default(1) == 0
+          no_log: true
+
+    - name: Require both disposable resources removed before accepting candidate
+      ansible.builtin.assert:
+        that:
+          - linkstack_owned_cleanup_container is defined
+          - (linkstack_owned_cleanup_container.rc | default(1)) == 0
+          - linkstack_owned_cleanup_network is defined
+          - (linkstack_owned_cleanup_network.rc | default(1)) == 0
+
+    - name: Report bounded owned LinkStack candidate recovered HTTP acceptance
+      ansible.builtin.debug:
+        msg:
+          observer: kvin.outer.sanctum
+          original_verified_backup_unchanged: true
+          original_restore_volume_unchanged: true
+          new_candidate_volume: "{{ linkstack_candidate_volume }}"
+          new_candidate_data_import_accepted: true
+          new_candidate_volume_retained: true
+          private_selinux_relabel_and_uid_gid_conversion_on_candidate_only: true
+          per_container_port_80_override: true
+          host_sysctl_unchanged: true
+          candidate_offline_http_status: "{{ linkstack_owned_http.stdout | trim }}"
+          candidate_offline_application_http_accepted: true
+          disposable_trial_container_removed: true
+          disposable_network_removed: true
+          production_ports_or_dns_or_proxy_changed: false
+          real_client_directory_content_or_admin_accepted: false
+          independent_disaster_recovery_backup_accepted: false
+          next_gate: source-manage separate Kvin app candidate using proven retained volume for browser/admin acceptance
