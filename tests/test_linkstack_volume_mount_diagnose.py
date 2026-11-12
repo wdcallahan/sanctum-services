@@ -18,7 +18,7 @@ SECRET = "PRIVATE_CONFIG_VALUE_MUST_NEVER_APPEAR"
 
 
 def fake_runtime(occupied=None):
-    created = set(occupied or ())
+    created = {("volume", mod.ACCEPTED_VOLUME)} | set(occupied or ())
     commands = []
     def runner(args, timeout=25):
         commands.append(tuple(args))
@@ -159,7 +159,7 @@ class LinkStackMountedVolumeDiagnosis(unittest.TestCase):
         self.assertEqual(result["status"], "observed")
         self.assertEqual(result["comparison"], "private_selinux_relabel_restores_http")
         self.assertEqual(stages, list(mod.CASES))
-        self.assertEqual(active, set())
+        self.assertEqual(active, {("volume", mod.ACCEPTED_VOLUME)})
         self.assertTrue(all(result["cleanup"].values()))
         self.assertTrue(result["source_archive_unchanged"])
         self.assertTrue(result["accepted_restore_volume_unchanged"])
@@ -178,7 +178,7 @@ class LinkStackMountedVolumeDiagnosis(unittest.TestCase):
         self.assertEqual(result["status"], "partial")
         self.assertEqual(result["failure_phase"],
                          "temporary_name_already_used_or_unavailable")
-        self.assertEqual(active, occupied)
+        self.assertEqual(active, occupied | {("volume", mod.ACCEPTED_VOLUME)})
         self.assertFalse(any(a[:3] == ("podman", "rm", "--force") for a in commands))
         self.assertTrue(all(result["cleanup"].values()))
 
