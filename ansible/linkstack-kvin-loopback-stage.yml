@@ -230,7 +230,7 @@
       ansible.builtin.assert:
         that:
           - (linkstack_stage_port.stdout | trim) == '127.0.0.1:18081'
-        fail_msg: Candidate binding is not confined to loopback: do not accept stage.
+        fail_msg: Candidate binding is not confined to loopback; do not accept stage.
 
     - name: Probe recovered candidate HTTP only from Kvin local loopback
       ansible.builtin.uri:
