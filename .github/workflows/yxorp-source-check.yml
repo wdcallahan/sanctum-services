@@ -38,6 +38,9 @@ on:
       - "tests/test_yxorp_production_promotion.py"
       - "tests/test_yxorp_production_yarn_diagnose.py"
       - "ansible/yxorp-kvin-peer-http.yml"
+      - "ansible/kvar-survivors-source.yml"
+      - "tools/observe-kvar-survivors.py"
+      - "tests/test_kvar_survivors_source.py"
       - "tools/observe-yxorp-kvin-from-peanut.py"
       - "tests/test_yxorp_kvin_peer_http.py"
       - "tools/observe-yxorp-production-yarn.py"
@@ -129,6 +132,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_promotion.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_peer_http.py'
+          python3 -m unittest discover -s tests -p 'test_kvar_survivors_source.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_yarn_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_status.py'
@@ -174,6 +178,7 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-peer-http.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/kvar-survivors-source.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-yarn-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-remove.yml --syntax-check
           python3 tests/fixtures/verify-yxorp-production-routes.py
