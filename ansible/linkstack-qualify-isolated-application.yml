@@ -1,7 +1,8 @@
 ---
 # One-time native Kvin ARM64 image qualification and isolated restored-app trial.
 # Never touches Kvar, existing services, production routes or the restored volume's
-# archived source. The offline test container is removed even on trial failure.
+# archived source. The disposable internal bridge and test container are
+# removed even on trial failure. The bridge has no default external route.
 - name: Qualify pinned LinkStack ARM64 image and boot restored data in isolation
   hosts: kuma
   gather_facts: true
@@ -11,6 +12,7 @@
   vars:
     linkstack_trial_volume: sanctum-linkstack-restore-test-20261112t105926
     linkstack_trial_container: sanctum-linkstack-offline-trial-20261112t105926
+    linkstack_trial_network: sanctum-linkstack-internal-trial-20261112t105926
     linkstack_trial_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
   tasks:
     - name: Require exact Kvin rootless host image and isolated app permissions
@@ -33,7 +35,529 @@
           - linkstack_candidate.image == 'docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1'
           - linkstack_trial_volume != 'linkstack'
           - linkstack_trial_volume is match('^sanctum-linkstack-restore-test-[0-9]{8}t[0-9]{6}$')
-          - linkstack_trial_container is match('^sanctum-linkstack-offline-trial-[0-9]{8}t[0-9]{6}$')
+          - linkstack_trial_container is match('^sanctum-linkstack-offline-trial-[0-9]{8}t[0-9]{6}
+        fail_msg: >-
+          This allows only a pinned LinkStack image pull and disposable internal
+          bridge trial against the exact already-restored Kvin volume; not production.
+
+    - name: Require only the exact isolated imported test volume already exists
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ linkstack_trial_volume }}"]
+      register: linkstack_trial_volume_present
+      changed_when: false
+      failed_when: linkstack_trial_volume_present.rc not in [0, 1]
+
+    - name: Refuse any missing or nonisolated LinkStack state volume
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_volume_present.rc == 0
+
+    - name: Obtain exact restored rootless volume mountpoint privately
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - inspect
+          - --format
+          - "{{ '{{.Mountpoint}}' }}"
+          - "{{ linkstack_trial_volume }}"
+      register: linkstack_trial_mountpoint
+      changed_when: false
+      no_log: true
+
+    - name: Confirm restored SQLite integrity again before allowing the trial to write data
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_trial_validator }}"
+          - restored
+          - "{{ linkstack_trial_mountpoint.stdout | trim }}"
+      register: linkstack_trial_data_preflight
+      changed_when: false
+      no_log: true
+
+    - name: Require isolated saved state actually contains valid LinkStack data
+      ansible.builtin.assert:
+        that:
+          - (linkstack_trial_data_preflight.stdout | from_json).isolated_imported_volume_integrity_verified | bool
+          - (linkstack_trial_data_preflight.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_trial_data_preflight.stdout | from_json).configuration_file_present | bool
+
+    - name: Refuse existing container with the disposable trial identity
+      ansible.builtin.command:
+        argv: [podman, container, exists, "{{ linkstack_trial_container }}"]
+      register: linkstack_trial_container_present
+      changed_when: false
+      failed_when: linkstack_trial_container_present.rc not in [0, 1]
+
+    - name: Require trial container name unused
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_container_present.rc == 1
+
+    - name: Refuse any pre-existing network using the reserved internal trial name
+      ansible.builtin.command:
+        argv: [podman, network, exists, "{{ linkstack_trial_network }}"]
+      register: linkstack_trial_network_present
+      changed_when: false
+      failed_when: linkstack_trial_network_present.rc not in [0, 1]
+
+    - name: Require unoccupied unique temporary internal network identity
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_network_present.rc == 1
+
+    - name: Observe whether pinned Linux ARM64 image is already in Kvin rootless cache
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ linkstack_candidate.image }}"]
+      register: linkstack_image_present
+      changed_when: false
+      failed_when: linkstack_image_present.rc not in [0, 1]
+
+    - name: Pull only the exact immutable image digest into Kvin rootless cache if missing
+      ansible.builtin.command:
+        argv:
+          - podman
+          - pull
+          - "{{ linkstack_candidate.image }}"
+      when: linkstack_image_present.rc == 1
+      register: linkstack_image_pulled
+      changed_when: linkstack_image_pulled.rc == 0
+      no_log: true
+
+    - name: Inspect exactly the pinned cached image without printing container settings
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ linkstack_candidate.image }}"]
+      register: linkstack_candidate_image_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require actual linux arm64 image and identical Kvar content identity
+      ansible.builtin.assert:
+        that:
+          - (linkstack_candidate_image_inspect.stdout | from_json | length) == 1
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Architecture == 'arm64'
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Os == 'linux'
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Id == linkstack_candidate.source_running_image_id
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
+        fail_msg: >-
+          Digest did not resolve to the accepted original Kvar arm64 image ID.
+          Do not run a different release against restored personal data.
+
+    - name: Verify actual PHP 8.3 executes in a disposable offline image-only container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - none
+          - --read-only
+          - --security-opt
+          - no-new-privileges
+          - --pull
+          - never
+          - --entrypoint
+          - /usr/bin/php83
+          - "{{ linkstack_candidate.image }}"
+          - --version
+      register: linkstack_php_runtime
+      changed_when: false
+      no_log: true
+
+    - name: Require PHP runtime launched without staging or touching app volumes
+      ansible.builtin.assert:
+        that:
+          - linkstack_php_runtime.rc == 0
+          - linkstack_php_runtime.stdout is search('PHP 8[.]3[.]')
+        fail_msg: The exact image exists but its PHP runtime was not accepted.
+
+    - name: Boot disposable LinkStack on isolated internal-only network with no host ports
+      block:
+        - name: Create only a disposable internal bridge with no external route or DNS
+          ansible.builtin.command:
+            argv:
+              - podman
+              - network
+              - create
+              - --driver
+              - bridge
+              - --internal
+              - --disable-dns
+              - "{{ linkstack_trial_network }}"
+          register: linkstack_trial_network_created
+          changed_when: linkstack_trial_network_created.rc == 0
+          no_log: true
+
+        - name: Privately inspect created temporary internal network
+          ansible.builtin.command:
+            argv: [podman, network, inspect, "{{ linkstack_trial_network }}"]
+          register: linkstack_trial_network_info
+          changed_when: false
+          no_log: true
+
+        - name: Require network is exactly the isolated internal no-DNS bridge
+          ansible.builtin.assert:
+            that:
+              - (linkstack_trial_network_info.stdout | from_json | length) == 1
+              - (linkstack_trial_network_info.stdout | from_json)[0].name == linkstack_trial_network
+              - (linkstack_trial_network_info.stdout | from_json)[0].driver == 'bridge'
+              - (linkstack_trial_network_info.stdout | from_json)[0].internal | bool
+              - not ((linkstack_trial_network_info.stdout | from_json)[0].dns_enabled | bool)
+            fail_msg: >-
+              Temporary network is not a confirmed internal-only bridge.
+              Remove the temporary network and refuse to boot with private data.
+
+        - name: Start an isolated restored-app trial container without publishing a port
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --detach
+              - --name
+              - "{{ linkstack_trial_container }}"
+              - --network
+              - "{{ linkstack_trial_network }}"
+              - --security-opt
+              - no-new-privileges
+              - --pull
+              - never
+              - --volume
+              - "{{ linkstack_trial_volume }}:/htdocs"
+              - --env
+              - HTTP_SERVER_NAME=localhost
+              - "{{ linkstack_candidate.image }}"
+          register: linkstack_trial_started
+          changed_when: linkstack_trial_started.rc == 0
+          no_log: true
+
+        - name: Inspect only whether restored trial container is running
+          ansible.builtin.command:
+            argv:
+              - podman
+              - container
+              - inspect
+              - --format
+              - "{{ '{{.State.Running}}' }}"
+              - "{{ linkstack_trial_container }}"
+          register: linkstack_trial_running
+          changed_when: false
+          no_log: true
+
+        - name: Refuse HTTP acceptance if restored app has already exited
+          ansible.builtin.assert:
+            that:
+              - (linkstack_trial_running.stdout | trim) == 'true'
+            fail_msg: >-
+              Restored app container exited before HTTP could be tested.
+              Do not misclassify an exited process as a network error.
+
+        - name: Observe application HTTP response using configured internal loopback
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ linkstack_trial_container }}"
+              - curl
+              - --silent
+              - --show-error
+              - --output
+              - /dev/null
+              - --max-time
+              - '5'
+              - --write-out
+              - '%{http_code}'
+              - --header
+              - 'Host: dir.nexus.sanctum'
+              - http://127.0.0.1/
+          register: linkstack_trial_http
+          changed_when: false
+          failed_when: false
+          retries: 15
+          delay: 3
+          until: >-
+            linkstack_trial_http.rc == 0 and
+            (linkstack_trial_http.stdout | trim) in ['200', '301', '302', '303', '307', '308']
+          no_log: true
+
+        - name: Require real HTTP from restored isolated application
+          ansible.builtin.assert:
+            that:
+              - linkstack_trial_http.rc == 0
+              - (linkstack_trial_http.stdout | trim) in ['200', '301', '302', '303', '307', '308']
+            fail_msg: Offline restored LinkStack did not serve an accepted HTTP status.
+      always:
+        - name: Remove only the newly created disposable trial container
+          ansible.builtin.command:
+            argv: [podman, rm, --force, "{{ linkstack_trial_container }}"]
+          when: >-
+            linkstack_trial_started is defined and
+            (linkstack_trial_started.rc | default(1)) == 0
+          register: linkstack_trial_cleanup
+          changed_when: linkstack_trial_cleanup.rc | default(1) == 0
+          no_log: true
+
+        - name: Remove only the uniquely named internal trial network
+          ansible.builtin.command:
+            argv: [podman, network, rm, "{{ linkstack_trial_network }}"]
+          when: >-
+            linkstack_trial_network_created is defined and
+            (linkstack_trial_network_created.rc | default(1)) == 0
+          register: linkstack_trial_network_cleanup
+          changed_when: linkstack_trial_network_cleanup.rc | default(1) == 0
+          no_log: true
+
+    - name: Require both trial container and network removed after application check
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_cleanup is defined
+          - (linkstack_trial_cleanup.rc | default(1)) == 0
+          - linkstack_trial_network_cleanup is defined
+          - (linkstack_trial_network_cleanup.rc | default(1)) == 0
+
+    - name: Report bounded LinkStack ARM64 image and offline restored-application acceptance
+      ansible.builtin.debug:
+        msg:
+          receiver: kvin.outer.sanctum
+          candidate_image: "{{ linkstack_candidate.image }}"
+          source_image_id_matched: true
+          native_architecture: linux/arm64
+          php_runtime_executed: true
+          offline_restored_linkstack_started: true
+          offline_restored_http_status: "{{ linkstack_trial_http.stdout | trim }}"
+          temporary_container_removed: true
+          temporary_internal_network_removed: true
+          isolated_only_internal_network_used: true
+          isolated_restored_volume_retained: true
+          existing_kvin_service_or_volume_changed: false
+          kvar_source_or_services_changed: false
+          production_proxy_dns_or_firewall_changed: false
+          live_client_directory_or_admin_accepted: false
+          independent_disaster_recovery_backup_accepted: false
+          next_gate: source-manage Kvin rootless production candidate and test named directory client before retargeting YXORP
+)
+          - linkstack_trial_network is match('^sanctum-linkstack-internal-trial-[0-9]{8}t[0-9]{6}
+        fail_msg: >-
+          This allows only a pinned LinkStack image pull and disposable network-none
+          trial against the exact already-restored Kvin volume; not production.
+
+    - name: Require only the exact isolated imported test volume already exists
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ linkstack_trial_volume }}"]
+      register: linkstack_trial_volume_present
+      changed_when: false
+      failed_when: linkstack_trial_volume_present.rc not in [0, 1]
+
+    - name: Refuse any missing or nonisolated LinkStack state volume
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_volume_present.rc == 0
+
+    - name: Obtain exact restored rootless volume mountpoint privately
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - inspect
+          - --format
+          - "{{ '{{.Mountpoint}}' }}"
+          - "{{ linkstack_trial_volume }}"
+      register: linkstack_trial_mountpoint
+      changed_when: false
+      no_log: true
+
+    - name: Confirm restored SQLite integrity again before allowing the trial to write data
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_trial_validator }}"
+          - restored
+          - "{{ linkstack_trial_mountpoint.stdout | trim }}"
+      register: linkstack_trial_data_preflight
+      changed_when: false
+      no_log: true
+
+    - name: Require isolated saved state actually contains valid LinkStack data
+      ansible.builtin.assert:
+        that:
+          - (linkstack_trial_data_preflight.stdout | from_json).isolated_imported_volume_integrity_verified | bool
+          - (linkstack_trial_data_preflight.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_trial_data_preflight.stdout | from_json).configuration_file_present | bool
+
+    - name: Refuse existing container with the disposable trial identity
+      ansible.builtin.command:
+        argv: [podman, container, exists, "{{ linkstack_trial_container }}"]
+      register: linkstack_trial_container_present
+      changed_when: false
+      failed_when: linkstack_trial_container_present.rc not in [0, 1]
+
+    - name: Require trial container name unused
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_container_present.rc == 1
+
+    - name: Observe whether pinned Linux ARM64 image is already in Kvin rootless cache
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ linkstack_candidate.image }}"]
+      register: linkstack_image_present
+      changed_when: false
+      failed_when: linkstack_image_present.rc not in [0, 1]
+
+    - name: Pull only the exact immutable image digest into Kvin rootless cache if missing
+      ansible.builtin.command:
+        argv:
+          - podman
+          - pull
+          - "{{ linkstack_candidate.image }}"
+      when: linkstack_image_present.rc == 1
+      register: linkstack_image_pulled
+      changed_when: linkstack_image_pulled.rc == 0
+      no_log: true
+
+    - name: Inspect exactly the pinned cached image without printing container settings
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ linkstack_candidate.image }}"]
+      register: linkstack_candidate_image_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require actual linux arm64 image and identical Kvar content identity
+      ansible.builtin.assert:
+        that:
+          - (linkstack_candidate_image_inspect.stdout | from_json | length) == 1
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Architecture == 'arm64'
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Os == 'linux'
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Id == linkstack_candidate.source_running_image_id
+          - (linkstack_candidate_image_inspect.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
+        fail_msg: >-
+          Digest did not resolve to the accepted original Kvar arm64 image ID.
+          Do not run a different release against restored personal data.
+
+    - name: Verify actual PHP 8.3 executes in a disposable offline image-only container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --network
+          - none
+          - --read-only
+          - --security-opt
+          - no-new-privileges
+          - --pull
+          - never
+          - --entrypoint
+          - /usr/bin/php83
+          - "{{ linkstack_candidate.image }}"
+          - --version
+      register: linkstack_php_runtime
+      changed_when: false
+      no_log: true
+
+    - name: Require PHP runtime launched without staging or touching app volumes
+      ansible.builtin.assert:
+        that:
+          - linkstack_php_runtime.rc == 0
+          - linkstack_php_runtime.stdout is search('PHP 8[.]3[.]')
+        fail_msg: The exact image exists but its PHP runtime was not accepted.
+
+    - name: Boot only disposable LinkStack with network disabled and no host ports
+      block:
+        - name: Start an isolated restored-app trial container without publishing a port
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --detach
+              - --name
+              - "{{ linkstack_trial_container }}"
+              - --network
+              - none
+              - --security-opt
+              - no-new-privileges
+              - --pull
+              - never
+              - --volume
+              - "{{ linkstack_trial_volume }}:/htdocs"
+              - --env
+              - HTTP_SERVER_NAME=localhost
+              - "{{ linkstack_candidate.image }}"
+          register: linkstack_trial_started
+          changed_when: linkstack_trial_started.rc == 0
+          no_log: true
+
+        - name: Observe application HTTP response inside the network-none namespace
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ linkstack_trial_container }}"
+              - curl
+              - --silent
+              - --show-error
+              - --output
+              - /dev/null
+              - --max-time
+              - '5'
+              - --write-out
+              - '%{http_code}'
+              - --header
+              - 'Host: dir.nexus.sanctum'
+              - http://127.0.0.1/
+          register: linkstack_trial_http
+          changed_when: false
+          failed_when: false
+          retries: 15
+          delay: 3
+          until: >-
+            linkstack_trial_http.rc == 0 and
+            (linkstack_trial_http.stdout | trim) in ['200', '301', '302', '303', '307', '308']
+          no_log: true
+
+        - name: Require real HTTP from restored isolated application
+          ansible.builtin.assert:
+            that:
+              - linkstack_trial_http.rc == 0
+              - (linkstack_trial_http.stdout | trim) in ['200', '301', '302', '303', '307', '308']
+            fail_msg: Offline restored LinkStack did not serve an accepted HTTP status.
+      always:
+        - name: Remove only the newly created disposable trial container
+          ansible.builtin.command:
+            argv: [podman, rm, --force, "{{ linkstack_trial_container }}"]
+          when: >-
+            linkstack_trial_started is defined and
+            (linkstack_trial_started.rc | default(1)) == 0
+          register: linkstack_trial_cleanup
+          changed_when: linkstack_trial_cleanup.rc | default(1) == 0
+          no_log: true
+
+    - name: Require successful cleanup of the single offline trial container
+      ansible.builtin.assert:
+        that:
+          - linkstack_trial_cleanup is defined
+          - (linkstack_trial_cleanup.rc | default(1)) == 0
+
+    - name: Report bounded LinkStack ARM64 image and offline restored-application acceptance
+      ansible.builtin.debug:
+        msg:
+          receiver: kvin.outer.sanctum
+          candidate_image: "{{ linkstack_candidate.image }}"
+          source_image_id_matched: true
+          native_architecture: linux/arm64
+          php_runtime_executed: true
+          offline_restored_linkstack_started: true
+          offline_restored_http_status: "{{ linkstack_trial_http.stdout | trim }}"
+          temporary_container_removed: true
+          isolated_restored_volume_retained: true
+          existing_kvin_service_or_volume_changed: false
+          kvar_source_or_services_changed: false
+          production_proxy_dns_or_firewall_changed: false
+          live_client_directory_or_admin_accepted: false
+          independent_disaster_recovery_backup_accepted: false
+          next_gate: source-manage Kvin rootless production candidate and test named directory client before retargeting YXORP
+)
         fail_msg: >-
           This allows only a pinned LinkStack image pull and disposable network-none
           trial against the exact already-restored Kvin volume; not production.
