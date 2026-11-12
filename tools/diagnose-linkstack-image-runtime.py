@@ -226,6 +226,8 @@ def collect(host, account):
                     "default_container_removed": False,
                     "internal_network_removed": False}}
     flags = {"network": False, "restricted": False, "podman_default": False}
+    # A pre-existing resource must NEVER be removed by diagnostic cleanup.
+    names_qualified = False
     try:
         result["image"] = verify_image()
         if result["image"] is None:
@@ -236,11 +238,12 @@ def collect(host, account):
             raise StopProbe("reserved_container_identity_occupied")
         if not available("network", NETWORK):
             raise StopProbe("reserved_network_identity_occupied")
+        names_qualified = True
+        flags["network"] = True  # create might partly succeed then report failure
         rc, _, _ = run(["podman", "network", "create", "--driver", "bridge",
                          "--internal", "--disable-dns", NETWORK])
         if rc:
             raise StopProbe("internal_network_create")
-        flags["network"] = True
         rc, raw, _ = run(["podman", "network", "inspect", NETWORK])
         nets = from_json(raw)
         if (rc or not isinstance(nets, list) or len(nets) != 1
@@ -251,10 +254,9 @@ def collect(host, account):
                 or nets[0].get("dns_enabled") is not False):
             raise StopProbe("isolated_network_contract")
         for case, container in NAMES.items():
+            flags[case] = True  # remove even if run creates container then returns error
             result["cases"][case] = one_case(
                 container, NETWORK, restrict=(case == "restricted"))
-            rc, _, _ = run(["podman", "container", "exists", container])
-            flags[case] = rc == 0
         result["status"] = "observed"
     except StopProbe as ex:
         result["failure_phase"] = ex.phase
@@ -262,23 +264,31 @@ def collect(host, account):
         result["failure_phase"] = "unexpected_internal_error"
     finally:
         for case in ("podman_default", "restricted"):
-            container = NAMES[case]
-            code, _, _ = run(["podman", "container", "exists", container])
-            if flags[case] or code == 0:
-                rc, _, _ = run(["podman", "rm", "--force", container])
-                result["cleanup"][case + "_container_removed"
-                                  if case == "restricted"
-                                  else "default_container_removed"] = rc == 0
+            key = ("restricted_container_removed" if case == "restricted"
+                   else "default_container_removed")
+            if not names_qualified or not flags[case]:
+                result["cleanup"][key] = True
+                continue
+            name = NAMES[case]
+            code, _, _ = run(["podman", "container", "exists", name])
+            if code == 0:
+                rc, _, _ = run(["podman", "rm", "--force", name])
+                result["cleanup"][key] = rc == 0
+            elif code == 1:
+                result["cleanup"][key] = True
             else:
-                result["cleanup"]["restricted_container_removed"
-                                  if case == "restricted"
-                                  else "default_container_removed"] = True
-        rc, _, _ = run(["podman", "network", "exists", NETWORK])
-        if flags["network"] or rc == 0:
-            rc, _, _ = run(["podman", "network", "rm", NETWORK])
-            result["cleanup"]["internal_network_removed"] = rc == 0
-        else:
+                result["cleanup"][key] = False
+        if not names_qualified or not flags["network"]:
             result["cleanup"]["internal_network_removed"] = True
+        else:
+            code, _, _ = run(["podman", "network", "exists", NETWORK])
+            if code == 0:
+                rc, _, _ = run(["podman", "network", "rm", NETWORK])
+                result["cleanup"]["internal_network_removed"] = rc == 0
+            elif code == 1:
+                result["cleanup"]["internal_network_removed"] = True
+            else:
+                result["cleanup"]["internal_network_removed"] = False
     if not all(result["cleanup"].values()):
         result["status"] = "cleanup_incomplete"
     result["comparison"] = compare(result["cases"])
