@@ -1,5 +1,20 @@
 # Sanctum Services — Session Continuation
 
+## November 12 — Pi-hole real Kvin service STARTED; one production YXORP backend switch NEXT
+
+**Operator-native receipt:** Nova executed `ansible/pihole-kvin-deploy.yml` on Kvin. Recap **`ok=13 changed=3 failed=0 unreachable=0 skipped=0`**. Exact original Pi-hole ARM64 image ID and both previously imported rootful volumes accepted; pinned image pulled, rootful `sanctum-pihole-kvin.container` installed and `sanctum-pihole-kvin.service` started. Real Kvin LAN `192.168.0.192:82/admin/` replied **HTTP 302**. Kvin TCP/UDP53 is published by the service but actual DNS filtering by a client has not yet been tested. Kvar Pi-hole remains running and unchanged. No host firewall, Peanut authoritative DNS, existing production YXORP or clients were modified.
+
+**NEXT one production route switch:** `ansible/yxorp.yml` now selects `yxorp_production_pihole_backend=kvin` by default for only `pihole.nexus.sanctum`, changing the upstream from **Kvar `:82` to Kvin LAN `192.168.0.192:82`**, while preserving seven other existing vhosts including Kuma and LinkStack. Single flag `-e yxorp_production_pihole_backend=kvar` is an immediate fallback to the existing Kvar Pi-hole web service; it does not change DNS clients. The original `data/yxorp-routes.yml` staging reference remains on Kvar. The same existing Nginx role reconciles the source-owned production config, with brief shared-proxy restart if needed, checks Kvin UI before routing and `/admin/` via real proxy afterwards. The known Yarn HTTP timeout is nonfatal (committed correction). NO SSH tunnel, isolated browser, alternate ports or disposable setup.
+
+**After CI success, single native operation on Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp.yml \
+  -e yxorp_production_cutover_approved=true
+```
+Then Nova opens normal Firefox to `http://pihole.nexus.sanctum/admin/` for actual restored UI/login check, while DNS/ad-block filtering is checked separately using the normal Pi-hole IP `192.168.0.192` as a client DNS target. Do not retire/stop Kvar Pi-hole before DNS clients are migrated and actual filtering accepted. Do not rerun successful Pi-hole backup/import/deploy plays.
+
+
 ## November 12 — actual Kvar Pi-hole snapshot imported into permanent Kvin volumes; deploy real Kvin service NEXT
 
 **Native Kvin receipt accepted:** Nova ran the source-managed `ansible/pihole-kvin-restore.yml` from commit `31894ad7ef3a6ab677b8eb4c825b5d167a4c8d71`: **`ok=10 changed=3 failed=0 unreachable=0 skipped=0`**. Both exact 20261112t161524 archives were privately streamed to Kvin, source SHA-256/size verified, and original rootful `sanctum-pihole-etc-20261112t161524` plus `sanctum-pihole-dnsmasq-20261112t161524` volumes created and imported. Kvar Pi-hole unchanged/running. Backup and Kvin volume recovery **ACCEPTED**; Pi-hole has **not yet been started** on Kvin.
