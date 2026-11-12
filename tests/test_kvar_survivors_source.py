@@ -83,6 +83,63 @@ class KvarSurvivors(unittest.TestCase):
         self.assertNotIn("--user", commands[-1])
         self.assertFalse(result["data_or_credential_contents_read"])
 
+    def test_image_id_failure_retries_local_tag_only_when_id_matches(self):
+        run, calls = observation_runner("linkstack")
+        def fallback(argv):
+            if argv[:3] == ["podman", "image", "inspect"] and argv[-1] == IMAGE_ID:
+                return None
+            return run(argv)
+        r = module.collect("linkstack", "kvar.outer.sanctum", "wdc2", runner=fallback)
+        self.assertEqual(r["status"], "observed")
+        self.assertEqual(r["image_probe"]["attempts"], [
+            {"selector": "container_image_id", "status": "command_unavailable"},
+            {"selector": "local_image_reference", "status": "matched_container_image"}])
+        self.assertEqual(calls[-2][0], "podman")
+        self.assertTrue(calls[-2][-1].endswith("linkstack:1.2.3"))
+
+    def test_newer_local_latest_tag_must_not_pin_running_image(self):
+        run, calls = observation_runner("linkstack")
+        def changed_image(argv):
+            if argv[:3] == ["podman", "image", "inspect"] and argv[-1] == IMAGE_ID:
+                return None
+            if argv[:3] == ["podman", "image", "inspect"]:
+                d = json.loads(run(argv))
+                d["id"] = "c" * 64
+                return json.dumps(d)
+            return run(argv)
+        r = module.collect("linkstack", "kvar.outer.sanctum", "wdc2", runner=changed_image)
+        self.assertEqual(r["status"], "partial")
+        self.assertEqual(r["image_probe"]["attempts"][-1]["status"], "different_local_image")
+        self.assertFalse(r["image_probe"]["pullable_digest_known"])
+        self.assertNotIn("repo_digests", r)
+
+    def test_missing_repo_digest_preserves_partial_without_inventing_pull_ref(self):
+        run, _ = observation_runner("pihole")
+        def no_remote_digest(argv):
+            raw = run(argv)
+            if argv[:3] == ["podman", "image", "inspect"]:
+                d = json.loads(raw)
+                d["repo_digests"] = []
+                return json.dumps(d)
+            return raw
+        r = module.collect("pihole", "kvar.outer.sanctum", "root", runner=no_remote_digest)
+        self.assertEqual(r["status"], "partial")
+        self.assertEqual(r["image_probe"]["attempts"][0]["status"], "matched_container_image")
+        self.assertFalse(r["image_probe"]["pullable_digest_known"])
+        self.assertEqual(r["repo_digests"], [])
+        self.assertEqual(r["image_platform"], "linux/arm64")
+
+    def test_image_inspection_output_invalid_does_not_leak_raw_data(self):
+        run, _ = observation_runner("linkstack")
+        def invalid(argv):
+            if argv[:3] == ["podman", "image", "inspect"]:
+                return SENTINEL
+            return run(argv)
+        r = module.collect("linkstack", "kvar.outer.sanctum", "wdc2", runner=invalid)
+        self.assertEqual(r["status"], "partial")
+        self.assertNotIn(SENTINEL, json.dumps(r))
+        self.assertEqual(r["image_probe"]["attempts"][0]["status"], "invalid_output")
+
     def test_wrong_host_or_account_refuses_before_query(self):
         def forbidden(argv):
             self.fail("Refused selection must not run host commands")
