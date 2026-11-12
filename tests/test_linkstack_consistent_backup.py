@@ -165,6 +165,18 @@ class LinkStackBackupPlaybook(unittest.TestCase):
         self.assertLess(names.index("Refuse claiming clean backup if restart changed original image or mount"),
                         names.index("Privately validate exported SQLite and complete safe archive"))
 
+    def test_exported_private_archive_must_remain_mode_0600_and_owned(self):
+        stat = self.task("Inspect retained private partial archive")
+        self.assertFalse(stat["ansible.builtin.stat"]["follow"])
+        checks = self.task("Require an ordinary private mode 0600 archive")
+        predicates = str(checks["ansible.builtin.assert"]["that"])
+        for expected in ("stat.isreg", "stat.islnk", "stat.pw_name",
+                         "stat.mode == '0600'", "stat.size"):
+            self.assertIn(expected, predicates)
+        names = [t["name"] for t in self.tasks]
+        self.assertLess(names.index("Require an ordinary private mode 0600 archive before inspection"),
+                        names.index("Privately validate exported SQLite and complete safe archive"))
+
     def test_no_post_snapshot_restore_or_other_hosts_and_no_secret_output(self):
         text = PLAY.read_text()
         self.assertNotIn("podman volume import", text)
