@@ -1,5 +1,26 @@
 # Kvar survivors: consistent backup and isolated recovery design
 
+## November 12 — Kvar-to-Kvin LinkStack archive transfer and isolated volume import ACCEPTED
+
+Nova ran `ansible/linkstack-transfer-isolated-data-restore.yml` with the two independent approvals. **Kvar `ok=4 changed=0 failed=0`; Kvin `ok=22 changed=6 failed=0`; both hosts reachable.** Kvar's original private tar was confirmed to be exactly 93,845,504 bytes with SHA-256 `a1110a717d11ee1723c02f8b66557a1c122ac64137f5fa793488428b7a398eaa`, a regular 0600 file owned by `wdc2`.
+
+The archive was successfully copied over authenticated strict-host-key SSH (Kvar management port 10022) to Kvin, with matching byte size, SHA-256, restrictive ownership/mode, safe tar validation and SQLite integrity `ok`. A new, separate **rootless** Kvin volume `sanctum-linkstack-restore-test-20261112t105926` was created and imported with the saved data. The restored `.env` marker and SQLite database were positively verified. Kvar's running LinkStack, its volume, Pi-hole, DNS and production YXORP were **unchanged**. These are genuine **off-Kvar archive transfer and isolated data restoration** acceptances, not a proven restored application launch. `browser_directory_and_admin_accepted:false`, `restored_linkstack_app_boot_accepted:false`, and `independent_disaster_recovery_backup_accepted:false`.
+
+**Next image/application qualification:** The Kvar image listing previously tied the **running** LinkStack image ID `53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65` to ARM64 repository digest `docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1`. Docker Hub's contemporaneous `latest` tag ARM64 platform listing independently matched this **digest**, rather than choosing a new arbitrary mutable `latest`. LinkStack upstream declares Linux ARM64 support, Alpine/Apache/PHP 8.3 and `/htdocs` as its full persistent data. This digest is now `linkstack_candidate` in `data/container-image-candidates.yml`, status `registry_only`; **do not claim Kvin native image qualification yet**. References: https://hub.docker.com/r/linkstackorg/linkstack/tags and https://github.com/LinkStackOrg/linkstack-docker.
+
+The default-off `ansible/linkstack-qualify-isolated-application.yml` independently requires **both** `sanctum_linkstack_image_qualification_approved=true` and `sanctum_linkstack_offline_application_trial_approved=true`. It checks exact Kvin rootless ARM64 host, prior isolated volume and its SQLite integrity, refuses an occupied trial name, pulls only the immutable digest if absent, verifies actual image architecture **and the original Kvar image ID**, tests the PHP 8.3 runtime offline, and starts a temporary **network-none, no-published-port** container with the already isolated restored volume. Its `curl` request is made **inside** the disconnected namespace and checks an HTTP result for `dir.nexus.sanctum`. Its `always` handler removes only the just-created disposable container. It preserves the isolated volume and source archive; original Kvar LinkStack and Kvin production services are not selected. This tests startup, **not** real directory content/admin from a named LAN browser or disaster recovery across simultaneous host losses.
+
+After full source CI passes, on **Kvin** and with approval for only an immutable image pull and offline restored-app test:
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/linkstack-qualify-isolated-application.yml \
+  -e sanctum_linkstack_image_qualification_approved=true \
+  -e sanctum_linkstack_offline_application_trial_approved=true
+```
+
+Full output is welcome. Expected one final task: `Report bounded LinkStack ARM64 image and offline restored-application acceptance`; `PLAY RECAP` only Kvin. No original service interruption, live app staging, new LAN port, DNS/proxy change, or clean-up of accepted backup artifacts.
+
 ## November 12 — Kvar LinkStack consistent archive ACCEPTED; Kvin transfer is next
 
 Nova approved and ran `ansible/linkstack-consistent-backup.yml` from Kvin against the **original rootless LinkStack on Kvar**. Native recap: **`ok=30 changed=6 unreachable=0 failed=0`**. The original service was stopped briefly, volume `linkstack:/htdocs` exported while quiesced, and the `always` restart succeeded. Post-restart immutable image ID, mount, ports and application HTTP were accepted; original returned **HTTP 200**. The private owner-controlled source archive was promoted on Kvar only:
