@@ -21,6 +21,8 @@
       - yarn.inner.sanctum
     yxorp_production_routes: []
     yxorp_production_kuma_http: http://127.0.0.1:13001/
+    # Desired production LinkStack; override to 'kvar' only for rollback.
+    yxorp_production_linkstack_backend: kvin
   pre_tasks:
     - name: Require explicitly approved exact production YXORP handoff
       ansible.builtin.assert:
@@ -35,6 +37,7 @@
           - yxorp_host_port | int == 80
           - yxorp_bind_address == '0.0.0.0'
           - yxorp_routes | length == 8
+          - yxorp_production_linkstack_backend in ['kvin', 'kvar']
           - (yxorp_routes | map(attribute='hostname') | list | sort) == (yxorp_production_expected_names | sort)
         fail_msg: >-
           Production deployment requires exact Kvin, the reviewed eight
@@ -49,6 +52,15 @@
           - item.websocket | bool
         fail_msg: Refuse silent Kuma backend changes in staging manifest.
       loop: "{{ yxorp_routes | selectattr('hostname', 'equalto', 'kuma.nexus.sanctum') | list }}"
+
+    - name: Verify the legacy LinkStack source entry is still Kvar for rollback
+      ansible.builtin.assert:
+        that:
+          - item.upstream_host == 'kvar.outer.sanctum'
+          - item.upstream_port | int == 8081
+          - not (item.websocket | bool)
+        fail_msg: Refuse changed Kvar LinkStack fallback origin.
+      loop: "{{ yxorp_routes | selectattr('hostname', 'equalto', 'dir.nexus.sanctum') | list }}"
 
     - name: Observe stage Quadlet without following links
       ansible.builtin.stat:
@@ -83,25 +95,43 @@
       register: yxorp_production_kuma_http_response
       changed_when: false
 
-    - name: Render exactly eight production routes with only Kuma retargeted
+    - name: Require current Kvin LinkStack responds before selecting it for production
+      ansible.builtin.uri:
+        url: http://127.0.0.1:18081/
+        headers:
+          Host: dir.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        status_code: [200]
+        timeout: 8
+      changed_when: false
+      when: yxorp_production_linkstack_backend == 'kvin'
+
+    - name: Render exactly eight production routes with Kuma and selected LinkStack backends
       ansible.builtin.set_fact:
         yxorp_production_routes: >-
           {{ yxorp_production_routes +
              [item | combine({'enabled': true}) |
               combine({'upstream_host': '127.0.0.1', 'upstream_port': 13001}
                       if item.hostname == 'kuma.nexus.sanctum'
+                      else {}) |
+              combine({'upstream_host': ('127.0.0.1' if yxorp_production_linkstack_backend == 'kvin' else 'kvar.outer.sanctum'),
+                       'upstream_port': (18081 if yxorp_production_linkstack_backend == 'kvin' else 8081)}
+                      if item.hostname == 'dir.nexus.sanctum'
                       else {})] }}
       loop: "{{ yxorp_routes }}"
       loop_control:
         label: "{{ item.hostname }}"
 
-    - name: Assert all eight production vhosts and no other backend retargets
+    - name: Assert eight production vhosts and exact Kuma and LinkStack destinations
       ansible.builtin.assert:
         that:
           - yxorp_production_routes | length == 8
           - yxorp_production_routes | selectattr('enabled', 'equalto', true) | list | length == 8
           - yxorp_production_routes | selectattr('hostname', 'equalto', 'kuma.nexus.sanctum') | map(attribute='upstream_host') | list == ['127.0.0.1']
           - yxorp_production_routes | selectattr('hostname', 'equalto', 'kuma.nexus.sanctum') | map(attribute='upstream_port') | list == [13001]
+          - yxorp_production_routes | selectattr('hostname', 'equalto', 'dir.nexus.sanctum') | map(attribute='upstream_host') | list == [('127.0.0.1' if yxorp_production_linkstack_backend == 'kvin' else 'kvar.outer.sanctum')]
+          - yxorp_production_routes | selectattr('hostname', 'equalto', 'dir.nexus.sanctum') | map(attribute='upstream_port') | list == [(18081 if yxorp_production_linkstack_backend == 'kvin' else 8081)]
         fail_msg: Refuse a partial route publication or unreviewed Kuma origin.
 
     - name: Promote verified full production manifest for the existing YXORP role
@@ -138,6 +168,19 @@
       changed_when: false
       no_log: true
 
+    - name: Verify normal production LinkStack route responds through YXORP
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        headers:
+          Host: dir.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        status_code: [200]
+        timeout: 8
+      register: yxorp_production_linkstack_frontend
+      changed_when: false
+      no_log: true
+
     - name: Report bounded Kvin YXORP production listener readiness
       ansible.builtin.debug:
         msg:
@@ -145,6 +188,8 @@
           production_service: sanctum-yxorp.service
           produced_route_count: "{{ yxorp_routes | length }}"
           kuma_target: 127.0.0.1:13001
+          linkstack_target: "{{ '127.0.0.1:18081' if yxorp_production_linkstack_backend == 'kvin' else 'kvar.outer.sanctum:8081' }}"
+          linkstack_frontend_http_response: "{{ yxorp_production_linkstack_frontend.status | int }}"
           kuma_frontend_http_response: "{{ yxorp_production_kuma_frontend.status | int }}"
           yarn_frontend_http_response: "{{ yxorp_production_yarn_frontend.status | int }}"
           local_production_listener_accepted: true
@@ -153,4 +198,4 @@
           firewall_changed: false
           real_named_lan_client_accepted: false
           websocket_sessions_accepted: false
-          next_gate: Maintenance TCP80 and DNS publication, real named-client browsing/WebSockets, rollback
+          next_gate: Real Firefox dir.nexus.sanctum login and public directory; revert only LinkStack backend if needed

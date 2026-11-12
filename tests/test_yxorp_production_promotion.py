@@ -1,4 +1,4 @@
-"""Production YXORP promotion: exact eight names, Kuma-only backend change."""
+"""Production YXORP projection: eight names, Kuma and reversible LinkStack targets."""
 from pathlib import Path
 import unittest
 import yaml
@@ -41,7 +41,7 @@ class ProductionPromotionTest(unittest.TestCase):
                      "Require old Kvin port-80 stage already removed with its own runbook",
                      "Require new retained Kuma actually responds on its private Kvin listener"):
             self.assertIn(name,stages)
-        assert stages.index("Require old Kvin port-80 stage already removed with its own runbook") < stages.index("Render exactly eight production routes with only Kuma retargeted")
+        assert stages.index("Require old Kvin port-80 stage already removed with its own runbook") < stages.index("Render exactly eight production routes with Kuma and selected LinkStack backends")
 
     def test_only_known_source_manifest_promoted(self):
         self.assertEqual([r["hostname"] for r in self.manifest if r["enabled"]],
@@ -49,12 +49,18 @@ class ProductionPromotionTest(unittest.TestCase):
         prod=self.play["vars"]
         self.assertEqual(prod["yxorp_production_kuma_http"],"http://127.0.0.1:13001/")
         self.assertEqual(prod["yxorp_production_routes"],[])
+        self.assertEqual(prod["yxorp_production_linkstack_backend"],"kvin")
         project=next(t for t in self.tasks if t["name"].startswith("Render exactly eight"))
         self.assertEqual(project["loop"],"{{ yxorp_routes }}")
         expression=project["ansible.builtin.set_fact"]["yxorp_production_routes"]
         self.assertIn("combine({'enabled': true})",expression)
         self.assertIn("'upstream_host': '127.0.0.1'",expression)
         self.assertIn("'upstream_port': 13001",expression)
+        self.assertIn("'upstream_port': (18081 if yxorp_production_linkstack_backend == 'kvin' else 8081)",expression)
+        self.assertIn("item.hostname == 'dir.nexus.sanctum'",expression)
+        self.assertIn("kvar.outer.sanctum",expression)
+        self.assertIn("http://127.0.0.1:18081/",PROD.read_text())
+        self.assertIn("status_code: [200]",PROD.read_text())
         self.assertIn("if item.hostname == 'kuma.nexus.sanctum'",expression)
         self.assertIn("else {}",expression)
         promote=next(t for t in self.tasks if t["name"].startswith("Promote verified"))
