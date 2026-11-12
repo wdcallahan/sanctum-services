@@ -1,0 +1,256 @@
+---
+# One explicit, audited, rootless LinkStack data snapshot on incumbent Kvar.
+# No Kvin import, network changes, image pull, Pi-hole/NPM mutation or
+# removal is permitted. The application stops briefly and is always restarted.
+- name: Create consistent retained LinkStack snapshot on Kvar only
+  hosts: npm_proxy_legacy
+  become: false
+  gather_facts: true
+  vars:
+    linkstack_backup_dir: /home/wdc2/.local/share/sanctum-services/backups/linkstack
+    linkstack_backup_stamp: "{{ ansible_date_time.iso8601_basic_short | lower }}"
+    linkstack_backup_partial: "{{ linkstack_backup_dir }}/linkstack-{{ linkstack_backup_stamp }}.tar.partial"
+    linkstack_backup_archive: "{{ linkstack_backup_dir }}/linkstack-{{ linkstack_backup_stamp }}.tar"
+    linkstack_expected_image_id: 53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65
+    linkstack_expected_image_ref: docker.io/linkstackorg/linkstack:latest
+    linkstack_archive_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Kvar rootless source and explicit LinkStack downtime approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_consistent_backup_approved | default(false) | bool
+          - not (sanctum_linkstack_restore_approved | default(false) | bool)
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - linkstack_backup_stamp is match('^[0-9]{8}t[0-9]{6}$')
+        fail_msg: >-
+          Only an explicitly approved short LinkStack interruption on
+          rootless incumbent Kvar is permitted; no other service is selected.
+
+    - name: Privately observe exact incumbent container and persistence identity
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivors.py') }}"
+          - --service
+          - linkstack
+      register: linkstack_backup_incumbent
+      changed_when: false
+      no_log: true
+
+    - name: Refuse changed image, container, volume, or port before interruption
+      ansible.builtin.assert:
+        that:
+          - (linkstack_backup_incumbent.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (linkstack_backup_incumbent.stdout | from_json).scope == 'rootless'
+          - (linkstack_backup_incumbent.stdout | from_json).container == 'linkstack'
+          - (linkstack_backup_incumbent.stdout | from_json).container_running | bool
+          - (linkstack_backup_incumbent.stdout | from_json).image_id == linkstack_expected_image_id
+          - (linkstack_backup_incumbent.stdout | from_json).image_reference == linkstack_expected_image_ref
+          - (linkstack_backup_incumbent.stdout | from_json).mounts == [{'destination':'/htdocs','read_write':true,'type':'volume','volume_name':'linkstack'}]
+          - (linkstack_backup_incumbent.stdout | from_json).port_mappings == [{'container_port':'80/tcp','host_ip':'0.0.0.0','host_port':8081}]
+          - (linkstack_backup_incumbent.stdout | from_json).service_unit.active == 'active'
+          - (linkstack_backup_incumbent.stdout | from_json).service_unit.quadlet_source == '/home/wdc2/.config/containers/systemd/linkstack.container'
+          - not ((linkstack_backup_incumbent.stdout | from_json).host_or_app_mutation_performed | bool)
+        fail_msg: >-
+          LinkStack incumbent differs from the accepted Kvar observation;
+          no stop or archive will be attempted.
+
+    - name: Confirm the exact source rootless volume is still present
+      ansible.builtin.command:
+        argv: [podman, volume, exists, linkstack]
+      register: linkstack_backup_volume_exists
+      changed_when: false
+      failed_when: linkstack_backup_volume_exists.rc not in [0, 1]
+
+    - name: Require exact volume exists before writing a private archive
+      ansible.builtin.assert:
+        that:
+          - linkstack_backup_volume_exists.rc == 0
+
+    - name: Observe original LinkStack user service state
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, linkstack.service]
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      register: linkstack_initial_service
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse interruption if the incumbent service is not active
+      ansible.builtin.assert:
+        that:
+          - linkstack_initial_service.rc == 0
+          - linkstack_initial_service.stdout | trim == 'active'
+
+    - name: Check private backup directory existing type without following symlinks
+      ansible.builtin.stat:
+        path: "{{ linkstack_backup_dir }}"
+        follow: false
+      register: linkstack_backup_dir_info
+
+    - name: Refuse links or non-directory backup destination
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_backup_dir_info.stat.islnk | default(false))
+          - not (linkstack_backup_dir_info.stat.exists | default(false))
+            or (linkstack_backup_dir_info.stat.isdir | default(false))
+
+    - name: Establish private rootless backup destination
+      ansible.builtin.file:
+        path: "{{ linkstack_backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Refuse collisions with previously retained archives or partial attempts
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ linkstack_backup_partial }}"
+        - "{{ linkstack_backup_archive }}"
+      register: linkstack_backup_outputs
+
+    - name: Require fresh names before touching the incumbent
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_backup_outputs.results[0].stat.exists | default(false))
+          - not (linkstack_backup_outputs.results[1].stat.exists | default(false))
+
+    - name: Atomically reserve a new private partial archive without clobber
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; f=os.open(sys.argv[1],os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600); os.close(f)"
+          - "{{ linkstack_backup_partial }}"
+      changed_when: true
+
+    - name: Stop only incumbent LinkStack for a complete consistent volume export
+      block:
+        - name: Quiesce original rootless LinkStack user service
+          ansible.builtin.systemd_service:
+            name: linkstack.service
+            scope: user
+            state: stopped
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+        - name: Confirm original LinkStack is inactive before snapshot
+          ansible.builtin.command:
+            argv: [systemctl, --user, is-active, linkstack.service]
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+          register: linkstack_backup_stopped
+          changed_when: false
+          failed_when: false
+
+        - name: Require absence of an active LinkStack service
+          ansible.builtin.assert:
+            that:
+              - linkstack_backup_stopped.rc != 0
+              - linkstack_backup_stopped.stdout | trim != 'active'
+
+        - name: Export only the stopped rootless LinkStack named volume
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - export
+              - linkstack
+              - --output
+              - "{{ linkstack_backup_partial }}"
+          register: linkstack_backup_export
+          changed_when: linkstack_backup_export.rc == 0
+          no_log: true
+      always:
+        - name: Start the original LinkStack service even after an export failure
+          ansible.builtin.systemd_service:
+            name: linkstack.service
+            scope: user
+            state: started
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+        - name: Observe original LinkStack active state after interruption
+          ansible.builtin.command:
+            argv: [systemctl, --user, is-active, linkstack.service]
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+          register: linkstack_backup_restarted
+          changed_when: false
+          failed_when: false
+
+        - name: Require original LinkStack has returned active
+          ansible.builtin.assert:
+            that:
+              - linkstack_backup_restarted.rc == 0
+              - linkstack_backup_restarted.stdout | trim == 'active'
+            fail_msg: Original LinkStack did not restart successfully; stop here.
+
+    - name: Verify incumbent LinkStack HTTP service returned
+      ansible.builtin.uri:
+        url: http://127.0.0.1:8081/
+        status_code: [200, 301, 302, 307, 308]
+        follow_redirects: none
+        timeout: 5
+      register: linkstack_backup_http
+      retries: 15
+      delay: 2
+      until: linkstack_backup_http.status | default(0) in [200, 301, 302, 307, 308]
+      changed_when: false
+
+    - name: Privately validate exported SQLite and complete safe archive
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_archive_validator }}"
+          - archive
+          - "{{ linkstack_backup_partial }}"
+      register: linkstack_archive_validation
+      changed_when: false
+      no_log: true
+
+    - name: Require a valid original-state archive with no recovery overclaim
+      ansible.builtin.assert:
+        that:
+          - (linkstack_archive_validation.stdout | from_json).archive_verified | bool
+          - (linkstack_archive_validation.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_archive_validation.stdout | from_json).configuration_file_present | bool
+          - (linkstack_archive_validation.stdout | from_json).archive_bytes | int > 0
+          - not ((linkstack_archive_validation.stdout | from_json).recovery_proven | bool)
+          - not ((linkstack_archive_validation.stdout | from_json).off_host_copy_verified | bool)
+
+    - name: Publish validated backup using no-clobber hardlink promotion
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; os.link(sys.argv[1],sys.argv[2]); os.unlink(sys.argv[1])"
+          - "{{ linkstack_backup_partial }}"
+          - "{{ linkstack_backup_archive }}"
+      changed_when: true
+
+    - name: Report bounded consistent LinkStack source-backup acceptance
+      ansible.builtin.debug:
+        msg:
+          source: kvar.outer.sanctum
+          service: linkstack
+          backup_archive: "{{ linkstack_backup_archive }}"
+          backup_bytes: "{{ (linkstack_archive_validation.stdout | from_json).archive_bytes | int }}"
+          backup_sha256: "{{ (linkstack_archive_validation.stdout | from_json).archive_sha256 }}"
+          sqlite_integrity: "{{ (linkstack_archive_validation.stdout | from_json).sqlite_integrity }}"
+          original_service_restarted: true
+          original_http_status: "{{ linkstack_backup_http.status | int }}"
+          linkstack_consistent_snapshot_accepted: true
+          archive_published_private_on_kvar: true
+          archive_copied_off_kvar: false
+          isolated_kvin_restore_accepted: false
+          pihole_or_npm_or_dns_or_proxy_changed: false
+          next_gate: securely transfer and verify the private snapshot on Kvin and restore into a distinct offline volume
