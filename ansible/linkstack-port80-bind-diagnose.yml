@@ -1,0 +1,63 @@
+---
+# One Kvin-only rootless, image-only diagnostic of Apache's port 80 binding.
+# --sysctl changes only the disposable container's own network namespace.
+# Does not modify the host sysctl, data volumes, production routes or services.
+- name: Compare isolated LinkStack Apache privileged-port startup permissions
+  hosts: kuma
+  become: false
+  gather_facts: true
+  tasks:
+    - name: Require exact rootless Kvin and explicit low-port diagnostic approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_namespaced_port80_diagnostic_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_restore_approved | default(false) | bool)
+        fail_msg: >-
+          Only a separately authorized image-only rootless Kvin test of
+          a container-network-namespace port-80 policy is permitted.
+          No host sysctl, app volumes, Kvar, service or proxy may be changed.
+
+    - name: Run bounded port-80 image startup comparison and exact-name cleanup
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/diagnose-linkstack-port80-bind.py') }}"
+      register: linkstack_port80_diagnostic
+      changed_when: true
+      no_log: true
+
+    - name: Require sanitized test report and no overclaimed restored application
+      ansible.builtin.assert:
+        that:
+          - (linkstack_port80_diagnostic.stdout | from_json).schema == 'sanctum-linkstack-namespaced-bind-diagnostic/v1'
+          - (linkstack_port80_diagnostic.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (linkstack_port80_diagnostic.stdout | from_json).status in ['observed', 'partial', 'cleanup_incomplete']
+          - (linkstack_port80_diagnostic.stdout | from_json).host_sysctl_unchanged | bool
+          - (linkstack_port80_diagnostic.stdout | from_json).application_volumes_unchanged | bool
+          - (linkstack_port80_diagnostic.stdout | from_json).kvar_and_production_untouched | bool
+          - not ((linkstack_port80_diagnostic.stdout | from_json).private_logs_or_data_returned | bool)
+          - not ((linkstack_port80_diagnostic.stdout | from_json).restored_application_accepted | bool)
+
+    - name: Report sanitized LinkStack namespaced port-80 bind comparison
+      ansible.builtin.debug:
+        msg: "{{ linkstack_port80_diagnostic.stdout | from_json }}"
+
+    - name: Require only disposable containers and network were successfully removed
+      ansible.builtin.assert:
+        that:
+          - (linkstack_port80_diagnostic.stdout | from_json).status != 'cleanup_incomplete'
+          - (linkstack_port80_diagnostic.stdout | from_json).cleanup.baseline_container_removed | bool
+          - (linkstack_port80_diagnostic.stdout | from_json).cleanup.namespaced_port80_container_removed | bool
+          - (linkstack_port80_diagnostic.stdout | from_json).cleanup.temporary_network_removed | bool
+        fail_msg: >-
+          Temporary diagnostic cleanup incomplete: inspect only the three
+          uniquely named resources; do not touch live or restored volumes.
