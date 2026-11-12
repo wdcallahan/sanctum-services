@@ -1,0 +1,64 @@
+---
+# Kvin-only second-stage image STARTUP diagnosis after two previous exit-code-1
+# results. Does not mount any restored or production volume and cannot retarget
+# a live service. Two disposable image-only instances; no published ports.
+- name: Diagnose pinned LinkStack image runtime without any application data
+  hosts: kuma
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require exact Kvin rootless operator and separate startup diagnostic authorization
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_image_runtime_diagnostic_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_offhost_transfer_approved | default(false) | bool)
+        fail_msg: >-
+          This diagnostic only checks pinned image startup in temporary rootless
+          internal-only containers. It never mounts saved LinkStack volumes,
+          stops Kvar, opens production ports, or changes proxy/DNS/firewall.
+
+    - name: Compare image entrypoint prerequisites and default rootless Podman startup
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/diagnose-linkstack-image-runtime.py') }}"
+      register: linkstack_image_runtime_diagnostic
+      changed_when: true
+      no_log: true
+
+    - name: Require sanitized image runtime diagnostic contract
+      ansible.builtin.assert:
+        that:
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).schema == 'sanctum-linkstack-image-runtime-diagnostic/v1'
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).status in ['observed', 'partial', 'cleanup_incomplete']
+          - not ((linkstack_image_runtime_diagnostic.stdout | from_json).raw_logs_or_credentials_returned | bool)
+          - not ((linkstack_image_runtime_diagnostic.stdout | from_json).application_recovery_accepted | bool)
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).original_saved_volumes_unchanged | bool
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).kvar_and_production_untouched | bool
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).image_source_unchanged | bool
+
+    - name: Report sanitized LinkStack image runtime and startup variant comparison
+      ansible.builtin.debug:
+        msg: "{{ linkstack_image_runtime_diagnostic.stdout | from_json }}"
+
+    - name: Require cleanup of both exact-name trial containers and temporary internal network
+      ansible.builtin.assert:
+        that:
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).status != 'cleanup_incomplete'
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).cleanup.restricted_container_removed | bool
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).cleanup.default_container_removed | bool
+          - (linkstack_image_runtime_diagnostic.stdout | from_json).cleanup.internal_network_removed | bool
+        fail_msg: >-
+          Diagnostic cleanup was not fully accepted. Do not run another trial
+          or remove any production container; inspect only the fixed
+          temporary names listed in the source script.
