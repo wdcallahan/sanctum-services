@@ -1,5 +1,22 @@
 # Sanctum Services — Roadmap
 
+## CURRENT — November 12: native three-volume preflight accepted; source-qualified backup readiness next
+
+**Native Kvar result:** Nova supplied the full four-report execution of `ansible/kvar-survivors-source.yml`: `kvar.outer.sanctum ok=14 changed=0 unreachable=0 failed=0 skipped=0`. LinkStack rootless volume `linkstack:/htdocs`: 10,523 regular files / 1,827 dirs / **84,805,553 bytes**, known `.env` and `database/database.sqlite` markers. Pi-hole rootful volume `systemd-pihole_etc-pihole:/etc/pihole`: 56 files / six dirs / **1,310,387,005 bytes**, `pihole.toml`, `gravity.db`, `pihole-FTL.db` markers. Pi-hole second `systemd-pihole_etc-dnsmasq:/etc/dnsmasq.d` volume empty but still mounted. No symlinks or special files found; no contents read. Total regular bytes **1,395,192,558** (~1.30 GiB), not backup size or tested consistency. All volume scans **observed**, **no backup/restore accepted**.
+
+**Image result:** Local image-list fallback matched the exact running image ID in both privilege namespaces and returned two repository digest strings per service; `pullable_digest_known:true` means the source lists digests, *not* validated registry access/ARM64. Both image reports `status:partial` because platform was unverified. Original `podman image inspect` attempts returned `command_unavailable` by ID and tag. Root cause likely source Go template typo: `IMAGE_FORMAT` used `.Id`, but Podman's documented field is `.ID`; repaired and CI regression added. New native proof is pending, no speculative image pin.
+
+**Potential drift:** Pi-hole image changed from old `edb7f703649f4b6ab8b14f28d12f15e8cbe1c50a2092458e9b640bd6bc6fe59e` to currently observed `64c81b3c8132f3e7ae56925a1668d2cfa5a53c509c43b4c1cc71591e0f42c3d8`. Cause of container image change **not established**; do not claim Podman auto-update or other cause until read-only update-owner evidence. LinkStack ID remained `53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65`.
+
+**Autonomous work completed:** Services `tools/observe-survivor-backup-readiness.py` and `ansible/kvar-survivor-backup-readiness.yml` are a new distinct **read-only** probe of Kvar's two Quadlet `AutoUpdate`/`Pull` policies and `podman-auto-update.timer` states, exact named-volume filesystem headroom, and Kvin home/archive plus rootful-store free-space. The installed Quadlet may contain secrets, so raw content is read privately but **never emitted**. Statuses may be `partial`/unknown. No duplicate volume tree scan, stop, app data export, image pull, DNS/firewall/route changes. Full [Services source CI #43248203417 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43248203417), including proper documented image-inspect `.ID` regression, source/negative tests, and Ansible syntax. Detailed staged plan: [docs/runbooks/kvar-survivor-consistent-backup-plan.md](docs/runbooks/kvar-survivor-consistent-backup-plan.md). Previous three-volume inventory remains accepted and must not be re-run.
+
+**NEXT ONE NATIVE OPERATOR ACTION on Kvin:**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kvar-survivor-backup-readiness.yml
+```
+Return the **three bounded report `msg` dictionaries** titled `Report Kvar rootless LinkStack backup readiness`, `Report Kvar rootful Pi-hole backup readiness`, and `Report Kvin backup receiver and restore space`, plus the Kvar and Kvin PLAY RECAP rows (or failed task). Then Services qualifies actual source-controlled quiesced volume exports and Kvin isolated restores behind a *new separate explicit approval*. Kvar NPM and both live applications stay operating. This command is the current host-access blocker; no operation should be invented on the host by chat.
+
 ## November 11 — second native image probe receipt, and bounded volume preflight prepared
 
 Nova reran `ansible/kvar-survivors-source.yml` from Kvin on Kvar: **`ok=8 changed=0 unreachable=0 failed=0`**. Both original services remain running; their image IDs, port maps, Quadlet sources and named persistent volumes match the first observation. Image inspection by **running image ID AND local `latest` name** failed for **both rootless LinkStack and rootful Pi-hole**, returning `image_probe.attempts[0/1].status: command_unavailable`. `pullable_digest_known:false` for both. This categorization means the subprocess returned nonzero or an unavailable result; it **does not prove either image is absent from the local store**. Do not select an image by the mutable `latest` name or guess a digest.
