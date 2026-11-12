@@ -8,7 +8,7 @@
   gather_facts: true
   vars:
     linkstack_backup_dir: /home/wdc2/.local/share/sanctum-services/backups/linkstack
-    linkstack_backup_stamp: "{{ ansible_date_time.iso8601_basic_short | lower }}"
+    linkstack_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
     linkstack_backup_partial: "{{ linkstack_backup_dir }}/linkstack-{{ linkstack_backup_stamp }}.tar.partial"
     linkstack_backup_archive: "{{ linkstack_backup_dir }}/linkstack-{{ linkstack_backup_stamp }}.tar"
     linkstack_expected_image_id: 53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65
