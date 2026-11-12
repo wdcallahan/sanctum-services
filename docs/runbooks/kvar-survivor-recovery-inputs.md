@@ -73,10 +73,12 @@ cd ~/src/sanctum-services && git pull &&
 ~/.local/bin/ansible-navigator run ansible/kvar-survivors-source.yml
 ```
 
-Expected: both plays finish `failed=0 changed=0` and report exactly
-`Report bounded LinkStack image and backing discovery` and
-`Report bounded Pi-hole image and backing discovery`.
-Share these two **`msg`** dictionaries and the single aggregate `PLAY RECAP` row for Kvar.
+Expected: both plays finish `failed=0 changed=0`, with one aggregate Kvar recap. Four reports are produced:
+`Report bounded LinkStack image and backing discovery`,
+`Report bounded LinkStack volume backup preflight`,
+`Report bounded Pi-hole image and backing discovery`, and
+`Report bounded Pi-hole volume backup preflight`.
+Share the four bounded **`msg`** dictionaries and the single aggregate `PLAY RECAP` row for Kvar.
 Do not share full Podman inspect output or application secrets.
 
 The bounded report includes the observed container state, image
