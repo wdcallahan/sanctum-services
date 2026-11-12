@@ -1,0 +1,84 @@
+---
+# Zero host mutations. Native anonymous GET surface parity between recovered
+# Kvin loopback LinkStack and unchanged Kvar source/NPM. Bodies, cookies,
+# paths, redirect locations and credentials remain private in the task.
+- name: Observe recovered LinkStack public directory and assets before any routing
+  hosts: kuma
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require exact rootless Kvin and intentionally read-only public page comparison
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_anonymous_surface_observe_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_restore_approved | default(false) | bool)
+        fail_msg: >-
+          No recovered LinkStack browser acceptance may be inferred from
+          isolated startup alone. This play only performs bounded anonymous
+          GETs to the exact original Kvar source/NPM and recovered Kvin
+          localhost candidate. It cannot change source or production routing.
+
+    - name: Confirm expected recovered loopback container currently running
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - inspect
+          - sanctum-linkstack-kvin-candidate
+      register: linkstack_browser_candidate_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require rootless candidate image and preserved owned source volume
+      ansible.builtin.assert:
+        that:
+          - (linkstack_browser_candidate_inspect.stdout | from_json | length) == 1
+          - (linkstack_browser_candidate_inspect.stdout | from_json)[0].State.Running | bool
+          - (linkstack_browser_candidate_inspect.stdout | from_json)[0].Image == '53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65'
+          - ((linkstack_browser_candidate_inspect.stdout | from_json)[0].Mounts | selectattr('Name', 'equalto', 'sanctum-linkstack-qualified-20261112t105926') | selectattr('Destination', 'equalto', '/htdocs') | list | length) == 1
+
+    - name: Confirm the candidate remains bound only on Kvin loopback
+      ansible.builtin.command:
+        argv: [podman, port, sanctum-linkstack-kvin-candidate, 80/tcp]
+      register: linkstack_browser_port
+      changed_when: false
+      no_log: true
+
+    - name: Require exact private candidate port rather than a LAN exposed service
+      ansible.builtin.assert:
+        that:
+          - (linkstack_browser_port.stdout | trim) == '127.0.0.1:18081'
+
+    - name: Privately compare anonymous root plus selected common CSS JS and discovered login link
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-linkstack-recovered-browser-surface.py') }}"
+      register: linkstack_browser_surface
+      changed_when: false
+      no_log: true
+
+    - name: Require bounded observer with no disclosed application page or authentication
+      ansible.builtin.assert:
+        that:
+          - (linkstack_browser_surface.stdout | from_json).schema == 'sanctum-linkstack-anonymous-browser-surface/v1'
+          - (linkstack_browser_surface.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (linkstack_browser_surface.stdout | from_json).frontend == 'dir.nexus.sanctum'
+          - not ((linkstack_browser_surface.stdout | from_json).application_data_or_credentials_exposed | bool)
+          - not ((linkstack_browser_surface.stdout | from_json).authenticated_admin_accepted | bool)
+          - not ((linkstack_browser_surface.stdout | from_json).real_named_browser_session_accepted | bool)
+          - not ((linkstack_browser_surface.stdout | from_json).production_route_switched | bool)
+          - not ((linkstack_browser_surface.stdout | from_json).configuration_changed | bool)
+
+    - name: Report sanitized recovered LinkStack directory assets and anonymous login parity
+      ansible.builtin.debug:
+        msg: "{{ linkstack_browser_surface.stdout | from_json }}"
