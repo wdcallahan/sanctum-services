@@ -59,6 +59,9 @@ on:
       - "ansible/linkstack-image-runtime-diagnose.yml"
       - "tools/diagnose-linkstack-image-runtime.py"
       - "tests/test_linkstack_image_runtime_diagnose.py"
+      - "ansible/pihole-consistent-backup.yml"
+      - "tools/pihole-archive-verify.py"
+      - "tests/test_pihole_consistent_backup.py"
       - "data/container-image-candidates.yml"
       - "tools/observe-yxorp-kvin-from-peanut.py"
       - "tests/test_yxorp_kvin_peer_http.py"
@@ -159,6 +162,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_linkstack_qualify_isolated_application.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_offline_startup_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_image_runtime_diagnose.py'
+          python3 -m unittest discover -s tests -p 'test_pihole_consistent_backup.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_yarn_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_status.py'
@@ -211,6 +215,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-qualify-isolated-application.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-offline-startup-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-image-runtime-diagnose.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-consistent-backup.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-yarn-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-remove.yml --syntax-check
           python3 tests/fixtures/verify-yxorp-production-routes.py
