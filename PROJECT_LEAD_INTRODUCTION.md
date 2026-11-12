@@ -1,5 +1,13 @@
 # Sanctum Services — Session Continuation
 
+**Qualification result / current operator gate:** Full Services source and Ansible syntax CI **[#43277394735 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43277394735)**, including host/account refusals, raw-log redaction, two-case process comparisons, archive identity guards, no host ports/external network, and mandatory four-resource cleanup. This is **source only**; no differential diagnostic has yet run natively on Kvin. Next operator action **on Kvin**, with explicit consent to create two temporary rootless containers, one internal/no-DNS network and one disposable cloned volume (original accepted restored volume untouched):
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/linkstack-offline-startup-diagnose.yml \
+  -e sanctum_linkstack_startup_diagnostic_approved=true
+```
+**Entire output welcome**; the single task `Report sanitized image-only versus restored-copy startup comparison` and Kvin recap (or a failed task) are sufficient. Its output distinguishes image-only startup from failure caused by data/mount/permissions without exposing logs. It **does not** start production, retarget the proxy, interrupt Kvar, or qualify the application as working. Never rerun the old full LinkStack HTTP trial as the diagnostic.
+
 ## November 12 — corrected LinkStack internal-network trial confirms application EXIT before HTTP; differential diagnostic source pending native
 
 Nova reran `ansible/linkstack-qualify-isolated-application.yml` with the disposable internal/no-DNS bridge. **Kvin `ok=23 changed=4 unreachable=0 failed=1 skipped=1`**. The actual task `Refuse HTTP acceptance if restored app has already exited` failed because `(linkstack_trial_running.stdout | trim) == 'true'` evaluated **false**. The disposable container **exited before an HTTP request could be made**. Both the *specifically named disposable container* and *its internal bridge* were successfully removed in the `always` block. Image identity/ARM64 and PHP 8.3 from prior native run were accepted; restored volume SQLite integrity was rechecked earlier in this run. Original Kvar LinkStack and Pi-hole, Kvar NPM, live Kvin apps, published DNS and YXORP unchanged. Original Kvar tar, verified Kvin tar, and original separately imported Kvin rootless LinkStack test volume remain intact. **Do NOT claim HTTP app boot, nor infer exact cause from exited state alone.**
