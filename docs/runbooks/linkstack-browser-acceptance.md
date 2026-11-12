@@ -1,5 +1,12 @@
 # LinkStack production route transition (Kvar to Kvin)
 
+## CURRENT — November 12: production LinkStack browser and admin login ACCEPTED
+
+Nova ran the source-managed production YXORP update: Kvin recap **`ok=31 changed=3 failed=1 skipped=1`**. The existing role applied changed Nginx configuration before the post-task **old Yarn HTTP timed out**; the later new LinkStack post-task was not reached. This failure **does not mean** the already-applied `dir` route was reverted. Nova then confirmed from ordinary Firefox that **`http://dir.nexus.sanctum/` displayed the directory and administrator sign-in worked**. The production LinkStack public directory and admin-authentication acceptance gates are therefore **closed** based on the real browser, despite the unrelated Yarn smoke-test failure. No extra LinkStack test or rerun of the failing playbook is requested.
+
+Desired route: normal client DNS → existing Kvin production YXORP port 80 → Kvin LinkStack `127.0.0.1:18081`. Kvar rootless LinkStack and its original volume remain **running, unchanged**, solely as a usable fallback. Do not invoke the rollback command unless a **real** problem with LinkStack occurs. The historical rollout and fallback instructions below are retained for maintenance; they are **not pending operator actions**.
+
+
 ## Accepted native state
 
 - Kvin's restored LinkStack is already running on `127.0.0.1:18081` with recovered application data. Public directory, sampled assets and anonymous `/login` HTTP have passed.

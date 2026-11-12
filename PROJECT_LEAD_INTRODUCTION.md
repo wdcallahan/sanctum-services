@@ -1,5 +1,14 @@
 # Sanctum Services — Session Continuation
 
+## November 12 — LinkStack real production browser and administrator login ACCEPTED
+
+**Native operator report:** Nova ran the approved production `ansible/yxorp.yml` route change from the CI-qualified [source commit](https://github.com/wdcallahan/sanctum-services/commit/7e7ab7992244a3df957c44b946bca374352c37de). Kvin play recap **`ok=31 changed=3 failed=1 unreachable=0 skipped=1`**: the existing YXORP role applied the production configuration and service reconciliation, then the **unrelated pre-existing Yarn HTTP post-task timed out** (`Verify production proxy still reaches original Yarn service`). Because that Yarn failure occurred before the new LinkStack post-task, the Ansible play itself did not reach LinkStack final check. **Do not interpret nonzero play exit as a rolled-back route.**
+
+**Decisive actual production acceptance from Nova:** In normal Firefox, `http://dir.nexus.sanctum/` loaded the recovered directory and the **administrator sign-in worked**. This accepts the **actual named production route's public directory and authentication**, not speculative localhost or tunnel browser access. No request for further anonymous probes, isolated Firefox profiles, or SSH tunneling. Do **not** run rollback or rerun this play merely to make its unrelated Yarn check green. Keep Kvar's LinkStack running and its old data intact for easy fallback; later retirement is separate ordinary housekeeping, not a prerequisite for accepting the migrated service. New Kvin edits will not synchronize back to the original Kvar copy.
+
+**Source + disposition:** Existing production YXORP source selects Kvin `127.0.0.1:18081` for `dir` and preserves Kvar `:8081` as an explicitly selectable fallback. The CI [run #43314459926](https://github.com/wdcallahan/sanctum-services/actions/runs/43314459926) passed. The old Yarn postcheck is a **separately known defect in reporting/reconciliation**, not an unresolved LinkStack migration gate; treat it as routine source maintenance when YXORP playbook reliability is next worked on, not as a demand for further migration testing. **No immediate operator action required.**
+
+
 ## November 12 — Nova authorizes direct production LinkStack route switch; source ready for CI and operator apply
 
 **Decision replaces the isolated Firefox/SSH-tunnel plan.** Existing Peanut authoritative DNS already sends `dir.nexus.sanctum` to Kvin's LIVE, host-networked production YXORP; only YXORP's `dir` backend still targets Kvar `:8081`. Kvin's recovered original-image LinkStack is **already running** on `127.0.0.1:18081`, and anonymous directory/assets and login path HTTP passed natively. No further tunnels, isolated browser profiles, additional cloned volumes, or nonproduction login simulation are required. The final acceptance is Nova's normal Firefox visit to `http://dir.nexus.sanctum/` and private `/login` authentication through production YXORP.
