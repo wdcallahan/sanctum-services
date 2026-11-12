@@ -34,6 +34,12 @@ ERROR_PATTERNS = {
     "apache_bind": (r"ah00072", r"could not bind", r"address already in use"),
     "apache_module": (r"cannot load", r"failed to load", r"module .* not found"),
     "apache_pid": (r"httpd\.pid", r"pid file"),
+    "apache_log_open": (r"ah00015", r"unable to open logs", r"could not open log"),
+    "apache_startup_config_failed": (r"ah00016", r"configuration failed"),
+    "apache_runtime_directory": (r"no space left on device", r"could not create mutex",
+                                 r"couldn't create accept lock", r"ah00023"),
+    "apache_listen_socket": (r"ah00072", r"ah00026", r"make_sock",
+                             r"could not bind to address"),
     "php_error": (r"php fatal", r"uncaught exception", r"parse error"),
     "readonly": (r"read.only file system", r"readonly database"),
     "segmentation_fault": (r"segmentation fault", r"core dumped"),
@@ -186,8 +192,22 @@ def one_case(name, network, restrict):
         status = val.decode("ascii", "ignore").strip()
         if not code and re.fullmatch(r"[1-5][0-9]{2}", status):
             http = int(status)
-    logs_rc, logs, _ = run(["podman", "logs", "--tail", "100", name])
-    log = classification(logs) if logs_rc == 0 else classification(None)
+    # podman logs emits the container's stdout and stderr to separate CLI
+    # streams. The old probe discarded stderr, although Apache's ErrorLog
+    # goes to /dev/stderr in this image. Never include either raw stream in
+    # a report: classify both independently and a bounded union only.
+    logs_rc, logs_stdout, logs_stderr = run(["podman", "logs", "--tail", "100", name])
+    if logs_rc == 0 and len(logs_stdout) + len(logs_stderr) <= MAX_CAPTURE:
+        log = classification(logs_stdout + b"\n" + logs_stderr)
+        stderr_info = classification(logs_stderr)
+        log["stderr_available"] = bool(logs_stderr)
+        log["stderr_error_categories"] = stderr_info["error_categories"]
+        log["stdout_available"] = bool(logs_stdout)
+    else:
+        log = classification(None)
+        log["stderr_available"] = False
+        log["stderr_error_categories"] = ["unavailable"]
+        log["stdout_available"] = False
     return {"status": "observed", "running": running,
             "exit_code": exitcode, "oom_killed": oom,
             "http_status": http, "log": log}
