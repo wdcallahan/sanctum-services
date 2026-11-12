@@ -210,11 +210,8 @@ def run_case(label, network):
 def comparison(cases):
     if "image_only" not in cases or cases["image_only"].get("http_status") != 200:
         return "image_only_control_not_accepted"
-    for name in ("plain", "relabel", "ownership"):
-        if name not in cases:
-            return "incomplete"
     def works(case):
-        result = cases[case]
+        result = cases.get(case, {})
         return result.get("status") == "observed" and result.get("running") is True \
             and result.get("http_status") == 200
     if works("plain"):
@@ -299,6 +296,17 @@ def collect(host, user):
                 raise Refused("trial_container_state_unknown")
             if label == "image_only" and result["cases"][label].get("http_status") != 200:
                 raise Refused("image_only_control_no_longer_responds")
+            # Avoid a costly recursive relabel/chown once the clone itself
+            # already serves HTTP. The winning stage is enough evidence.
+            if label in ("plain", "relabel"):
+                trial = result["cases"][label]
+                if (trial.get("status") == "observed" and trial.get("running") is True
+                        and trial.get("http_status") == 200):
+                    for remaining in CASES:
+                        if remaining not in result["cases"]:
+                            result["cases"][remaining] = {
+                                "status": "skipped_prior_case_served_http"}
+                    break
         result["status"] = "observed"
     except Refused as error:
         result["failure_phase"] = error.phase
