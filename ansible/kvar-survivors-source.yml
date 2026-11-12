@@ -1,0 +1,82 @@
+---
+# Two live Kvar survivors, two exact privilege namespaces. Read-only source
+# discovery before any image selection, backup or Kvin application restore.
+- name: Inspect wanted rootless Kvar LinkStack recovery prerequisites
+  hosts: npm_proxy_legacy
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Require exact incumbent Kvar target and normal observation mode
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+
+    - name: Observe rootless LinkStack metadata without application contents
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivors.py') }}"
+          - --service
+          - linkstack
+      register: kvar_linkstack_source
+      changed_when: false
+      no_log: true
+
+    - name: Require bounded LinkStack observation contract
+      ansible.builtin.assert:
+        that:
+          - (kvar_linkstack_source.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (kvar_linkstack_source.stdout | from_json).service == 'linkstack'
+          - (kvar_linkstack_source.stdout | from_json).scope == 'rootless'
+          - (kvar_linkstack_source.stdout | from_json).status in ['observed', 'partial']
+          - not ((kvar_linkstack_source.stdout | from_json).configuration_changed | bool)
+          - not ((kvar_linkstack_source.stdout | from_json).data_or_credential_contents_read | bool)
+          - not ((kvar_linkstack_source.stdout | from_json).host_or_app_mutation_performed | bool)
+        fail_msg: Refusing unexpected or unsafe rootless LinkStack metadata.
+
+    - name: Report bounded LinkStack image and backing discovery
+      ansible.builtin.debug:
+        msg: "{{ kvar_linkstack_source.stdout | from_json }}"
+
+- name: Inspect wanted rootful Kvar Pi-hole recovery prerequisites
+  hosts: npm_proxy_legacy
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Require exact incumbent Kvar target and normal observation mode
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+
+    - name: Observe rootful Pi-hole metadata without application contents
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivors.py') }}"
+          - --service
+          - pihole
+      register: kvar_pihole_source
+      changed_when: false
+      no_log: true
+
+    - name: Require bounded Pi-hole observation contract
+      ansible.builtin.assert:
+        that:
+          - (kvar_pihole_source.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (kvar_pihole_source.stdout | from_json).service == 'pihole'
+          - (kvar_pihole_source.stdout | from_json).scope == 'rootful'
+          - (kvar_pihole_source.stdout | from_json).status in ['observed', 'partial']
+          - not ((kvar_pihole_source.stdout | from_json).configuration_changed | bool)
+          - not ((kvar_pihole_source.stdout | from_json).data_or_credential_contents_read | bool)
+          - not ((kvar_pihole_source.stdout | from_json).host_or_app_mutation_performed | bool)
+        fail_msg: Refusing unexpected or unsafe rootful Pi-hole metadata.
+
+    - name: Report bounded Pi-hole image and backing discovery
+      ansible.builtin.debug:
+        msg: "{{ kvar_pihole_source.stdout | from_json }}"
