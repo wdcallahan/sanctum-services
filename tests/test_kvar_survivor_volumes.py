@@ -96,7 +96,7 @@ class VolumeReadiness(unittest.TestCase):
         self.assertEqual(unknown["status"], "partial")
         self.assertEqual(unknown["volumes"][0]["reason"],
                          "volume_mountpoint_unavailable")
-        self.assertNotIn("mountpoint", json.dumps(unknown))
+        self.assertNotIn("mountpoint", unknown["volumes"][0])
         original = module.MAX_ENTRIES
         module.MAX_ENTRIES = 1
         try:
