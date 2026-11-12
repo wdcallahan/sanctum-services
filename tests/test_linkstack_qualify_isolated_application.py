@@ -127,6 +127,39 @@ class LinkStackRestoredAppTrial(unittest.TestCase):
         self.assertIn("linkstack_trial_network", str(net_cleanup))
         self.assertTrue(net_cleanup["no_log"])
 
+    def test_native_proven_low_port_override_is_only_inside_restored_trial_container(self):
+        # Kvin native paired image-only experiment accepted:
+        # baseline exited 1, namespaced threshold=80 served HTTP 200.
+        trial = self.task("Boot disposable LinkStack")
+        app = next(t for t in trial["block"]
+                   if t["name"].startswith("Start an isolated"))
+        argv = app["ansible.builtin.command"]["argv"]
+        self.assertEqual(argv.count("--sysctl"), 1)
+        index = argv.index("--sysctl")
+        self.assertEqual(argv[index + 1],
+                         "net.ipv4.ip_unprivileged_port_start=80")
+        self.assertEqual(argv[index - 1], "no-new-privileges")
+        self.assertEqual(argv[0:2], ["podman", "run"])
+        self.assertIn("--network", argv)
+        self.assertIn("{{ linkstack_trial_network }}", argv)
+        self.assertNotIn("--publish", argv)
+        self.assertNotIn("--network=host", argv)
+        self.assertNotIn("--privileged", argv)
+        other_commands = [
+            t.get("ansible.builtin.command", {}).get("argv", [])
+            for t in self.tasks if t is not trial
+        ] + [
+            t.get("ansible.builtin.command", {}).get("argv", [])
+            for t in trial["block"] if t is not app
+        ]
+        self.assertTrue(all("--sysctl" not in items for items in other_commands))
+        self.assertNotIn("ansible.posix.sysctl", PLAY.read_text())
+        self.assertNotIn("sysctl -w", PLAY.read_text())
+        result = self.tasks[-1]["ansible.builtin.debug"]["msg"]
+        self.assertIs(result["container_network_namespace_low_port_override_used"],
+                      True)
+        self.assertIs(result["host_low_port_sysctl_unchanged"], True)
+
     def test_internal_bridge_created_only_for_trial_without_dns_or_external_route(self):
         block = self.task("Boot disposable LinkStack")
         tasks = block["block"]
