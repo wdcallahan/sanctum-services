@@ -1,0 +1,275 @@
+---
+# First-ever source-managed Kvin LinkStack candidate. Explicit approval required.
+# Rootless wdc2, pre-validated owned recovery candidate volume, loopback port
+# 18081 ONLY. Never retarget current YXORP or modify Kvar/NPM/DNS/firewall.
+- name: Stage only recovered LinkStack rootless Quadlet on Kvin loopback
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars:
+    linkstack_candidate_volume: sanctum-linkstack-qualified-20261112t105926
+    linkstack_original_restore_volume: sanctum-linkstack-restore-test-20261112t105926
+    linkstack_candidate_image: docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1
+    linkstack_original_image_id: 53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65
+    linkstack_candidate_quadlet_dir: /home/wdc2/.config/containers/systemd
+    linkstack_candidate_quadlet: /home/wdc2/.config/containers/systemd/sanctum-linkstack-kvin-candidate.container
+    linkstack_candidate_service: sanctum-linkstack-kvin-candidate.service
+    linkstack_candidate_container: sanctum-linkstack-kvin-candidate
+    linkstack_candidate_port: 18081
+    linkstack_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Kvin rootless host and explicit local-only LinkStack candidate authorization
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_loopback_candidate_stage_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_offhost_transfer_approved | default(false) | bool)
+          - not (sanctum_linkstack_candidate_private_relabel_chown_approved | default(false) | bool)
+          - linkstack_candidate_volume == 'sanctum-linkstack-qualified-20261112t105926'
+          - linkstack_original_restore_volume == 'sanctum-linkstack-restore-test-20261112t105926'
+          - linkstack_candidate_image == 'docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1'
+          - linkstack_candidate_port | int == 18081
+          - linkstack_candidate_quadlet == '/home/wdc2/.config/containers/systemd/sanctum-linkstack-kvin-candidate.container'
+          - linkstack_candidate_container == 'sanctum-linkstack-kvin-candidate'
+        fail_msg: >-
+          This authorization covers only the first loopback-only Kvin
+          application candidate. It cannot change existing YXORP, Kvar,
+          firewalld, DNS, or saved recovery volumes.
+
+    - name: Confirm retained owned LinkStack candidate and original recovery volume exist
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ item }}"]
+      loop:
+        - "{{ linkstack_candidate_volume }}"
+        - "{{ linkstack_original_restore_volume }}"
+      register: linkstack_stage_volumes
+      changed_when: false
+      failed_when: linkstack_stage_volumes.rc not in [0, 1]
+
+    - name: Refuse missing or substituted recovered persistence
+      ansible.builtin.assert:
+        that:
+          - (linkstack_stage_volumes.results | map(attribute='rc') | list) == [0, 0]
+
+    - name: Privately inspect candidate volume root for SQLite integrity
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - inspect
+          - --format
+          - "{{ '{{.Mountpoint}}' }}"
+          - "{{ linkstack_candidate_volume }}"
+      register: linkstack_stage_mount
+      changed_when: false
+      no_log: true
+
+    - name: Privately validate retained candidate SQLite and configuration markers
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_validator }}"
+          - restored
+          - "{{ linkstack_stage_mount.stdout | trim }}"
+      register: linkstack_stage_data
+      changed_when: false
+      no_log: true
+
+    - name: Require recovered owned candidate data integrity before any service installation
+      ansible.builtin.assert:
+        that:
+          - (linkstack_stage_data.stdout | from_json).isolated_imported_volume_integrity_verified | bool
+          - (linkstack_stage_data.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_stage_data.stdout | from_json).configuration_file_present | bool
+
+    - name: Verify exact immutable original Kvar ARM64 image still exists in Kvin cache
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ linkstack_candidate_image }}"]
+      register: linkstack_stage_image
+      changed_when: false
+      no_log: true
+
+    - name: Require no image drift before staging a persistent Quadlet
+      ansible.builtin.assert:
+        that:
+          - (linkstack_stage_image.stdout | from_json | length) == 1
+          - (linkstack_stage_image.stdout | from_json)[0].Id == linkstack_original_image_id
+          - (linkstack_stage_image.stdout | from_json)[0].Architecture == 'arm64'
+          - (linkstack_stage_image.stdout | from_json)[0].Os == 'linux'
+
+    - name: Refuse pre-existing candidate Quadlet file or symlink
+      ansible.builtin.stat:
+        path: "{{ linkstack_candidate_quadlet }}"
+        follow: false
+      register: linkstack_stage_quadlet_stat
+
+    - name: Refuse adopting an existing unmanaged candidate Quadlet
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_stage_quadlet_stat.stat.exists | default(false))
+        fail_msg: Candidate Quadlet file already exists; this first-stage playbook will not overwrite or restart it.
+
+    - name: Refuse occupied rootless candidate container identity
+      ansible.builtin.command:
+        argv: [podman, container, exists, "{{ linkstack_candidate_container }}"]
+      register: linkstack_stage_container_exists
+      changed_when: false
+      failed_when: linkstack_stage_container_exists.rc not in [0, 1]
+
+    - name: Confirm no existing candidate container will be replaced
+      ansible.builtin.assert:
+        that:
+          - linkstack_stage_container_exists.rc == 1
+
+    - name: Observe whether exact candidate user systemd unit is already active
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, "{{ linkstack_candidate_service }}"]
+      register: linkstack_stage_existing_service
+      changed_when: false
+      failed_when: false
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+    - name: Refuse touching an already running candidate or similarly named unit
+      ansible.builtin.assert:
+        that:
+          - linkstack_stage_existing_service.rc != 0
+
+    - name: Observe any existing listener on only the selected Kvin loopback candidate port
+      ansible.builtin.command:
+        argv: [ss, -H, -ltn, "sport = :{{ linkstack_candidate_port }}"]
+      register: linkstack_stage_existing_listener
+      changed_when: false
+
+    - name: Require entire candidate port unoccupied before binding loopback
+      ansible.builtin.assert:
+        that:
+          - linkstack_stage_existing_listener.stdout_lines | length == 0
+        fail_msg: Candidate port 18081 occupied; do not disturb another listener.
+
+    - name: Observe rootless Quadlet parent directory without following symlinks
+      ansible.builtin.stat:
+        path: "{{ linkstack_candidate_quadlet_dir }}"
+        follow: false
+      register: linkstack_stage_quadlet_dir
+
+    - name: Refuse unsafe existing user Quadlet directory
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_stage_quadlet_dir.stat.exists | default(false)) or (linkstack_stage_quadlet_dir.stat.isdir | default(false))
+          - not (linkstack_stage_quadlet_dir.stat.islnk | default(false))
+          - not (linkstack_stage_quadlet_dir.stat.exists | default(false)) or (linkstack_stage_quadlet_dir.stat.pw_name == 'wdc2')
+
+    - name: Ensure ordinary rootless Quadlet directory exists
+      ansible.builtin.file:
+        path: "{{ linkstack_candidate_quadlet_dir }}"
+        state: directory
+        owner: wdc2
+        mode: '0755'
+
+    - name: Install only the source-managed loopback candidate Quadlet
+      ansible.builtin.copy:
+        src: files/sanctum-linkstack-kvin-candidate.container
+        dest: "{{ linkstack_candidate_quadlet }}"
+        owner: wdc2
+        mode: '0644'
+        force: false
+      register: linkstack_stage_installed
+
+    - name: Require a newly installed candidate source before touching user systemd
+      ansible.builtin.assert:
+        that:
+          - linkstack_stage_installed.changed | bool
+        fail_msg: Refuse a stale or concurrently created candidate Quadlet.
+
+    - name: Start only the newly installed rootless candidate user service
+      ansible.builtin.systemd_service:
+        name: "{{ linkstack_candidate_service }}"
+        scope: user
+        daemon_reload: true
+        state: started
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      register: linkstack_stage_started
+
+    - name: Privately inspect candidate container runtime identity
+      ansible.builtin.command:
+        argv: [podman, container, inspect, "{{ linkstack_candidate_container }}"]
+      register: linkstack_stage_container_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require actual running candidate with exact immutable image and intended named volume
+      ansible.builtin.assert:
+        that:
+          - (linkstack_stage_container_inspect.stdout | from_json | length) == 1
+          - (linkstack_stage_container_inspect.stdout | from_json)[0].Image == linkstack_original_image_id
+          - (linkstack_stage_container_inspect.stdout | from_json)[0].State.Running | bool
+          - ((linkstack_stage_container_inspect.stdout | from_json)[0].Mounts | selectattr('Name', 'equalto', linkstack_candidate_volume) | selectattr('Destination', 'equalto', '/htdocs') | list | length) == 1
+
+    - name: Observe actual published port for only this candidate container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - port
+          - "{{ linkstack_candidate_container }}"
+          - 80/tcp
+      register: linkstack_stage_port
+      changed_when: false
+      no_log: true
+
+    - name: Require published candidate is loopback-only
+      ansible.builtin.assert:
+        that:
+          - (linkstack_stage_port.stdout | trim) == '127.0.0.1:18081'
+        fail_msg: Candidate binding is not confined to loopback: do not accept stage.
+
+    - name: Probe recovered candidate HTTP only from Kvin local loopback
+      ansible.builtin.uri:
+        url: http://127.0.0.1:18081/
+        method: GET
+        headers:
+          Host: dir.nexus.sanctum
+        use_proxy: false
+        follow_redirects: none
+        return_content: false
+        status_code: [200]
+        timeout: 5
+      register: linkstack_stage_http
+      retries: 15
+      delay: 2
+      until: linkstack_stage_http.status | default(0) | int == 200
+      changed_when: false
+      no_log: true
+
+    - name: Report bounded Kvin loopback restored LinkStack candidate acceptance
+      ansible.builtin.debug:
+        msg:
+          observer: kvin.outer.sanctum
+          candidate_service: "{{ linkstack_candidate_service }}"
+          candidate_container: "{{ linkstack_candidate_container }}"
+          candidate_volume: "{{ linkstack_candidate_volume }}"
+          candidate_loopback_address: 127.0.0.1
+          candidate_loopback_port: "{{ linkstack_candidate_port | int }}"
+          original_kvar_image_id_matched: true
+          candidate_restored_sqlite_integrity: ok
+          candidate_http_200: true
+          source_managed_user_quadlet_installed: true
+          user_service_started: true
+          original_restored_volume_preserved: true
+          original_snapshot_preserved: true
+          kvar_linkstack_pihole_or_npm_changed: false
+          yxorp_proxy_or_dns_or_firewall_changed: false
+          host_sysctl_unchanged: true
+          candidate_not_available_on_lan: true
+          real_named_browser_directory_and_admin_accepted: false
+          independent_disaster_recovery_backup_accepted: false
+          next_gate: verify recovered directory pages and admin through a separately authorized Kvin candidate browser path before changing the live YXORP upstream
