@@ -1,5 +1,21 @@
 # Sanctum Services — Session Continuation
 
+## November 12 — Source CI green for Yarn postcheck correction; next Kvar migration dependency is Pi-hole
+
+**Services CI [#43316639235 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43316639235)** for commit `eba1dfcb5d80d8b1b8bedc94c14ef40bced810d7`. The old Yarn frontend smoke test in `ansible/yxorp.yml` is now intentionally **nonfatal** to independent application route reconciliation; a timeout is still exposed as `status=-1` and `yarn_frontend_accepted=false` rather than incorrectly aborting LinkStack's postcheck. This has **not** been run on Kvin and does not need a host rerun to accept already working LinkStack.
+
+**Next required Kvar survivor is Pi-hole**, retained for ad blocking, not DHCP/general DNS. Its existing `ansible/pihole-consistent-backup.yml` already passed full source CI previously and can export both original rootful Kvar volumes in one briefly stopped interval, always restarting Pi-hole. No extra observer/test framework needed. **Actual Kvar snapshot has not run** and requires Nova's explicit willingness for a short interruption to Pi-hole DNS/ad filtering (direct Pi-hole clients may temporarily lose resolution). First native operator action on **Kvin**:
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/pihole-consistent-backup.yml \
+  -e sanctum_pihole_consistent_backup_approved=true \
+  -e sanctum_pihole_dns_interruption_approved=true
+```
+
+After the private archive paths and results exist, transfer/import the two volumes on Kvin using ordinary source-managed actions, then bring up and use the real Pi-hole service. Do not retire Kvar before remaining wanted services are accepted. There is no further LinkStack work until an actual production issue appears.
+
+
 ## November 12 — Correct unrelated Yarn smoke-test failure that masked accepted LinkStack deployment
 
 After Nova's ordinary Firefox production directory and administrator-login acceptance, the existing `ansible/yxorp.yml` Yarn postcheck was corrected in source: keep its existing bounded 8-second request for signal, but **report an unsuccessful status without failing** unrelated production updates. The LinkStack production postcheck will now execute even if Yarn is unresponsive, and the final summary exposes `yarn_frontend_http_response=-1` / `yarn_frontend_accepted=false` when the earlier timeout recurs. Existing source tests cover this behavior. This is a *source-only correction*; do not ask Nova to rerun the working LinkStack deployment solely to exercise it. The full project remains **open**: Pi-hole remains on Kvar and Kvar host retirement/recovery automation has not been completed.
