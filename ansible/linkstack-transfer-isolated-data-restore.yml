@@ -1,0 +1,282 @@
+---
+# Read-only source archive verification on Kvar, then explicit private
+# pull to Kvin and isolated rootless volume import. Never touches live
+# application volumes, systemd units, network names, or production proxies.
+- name: Qualify the exact completed private LinkStack snapshot on source Kvar
+  hosts: npm_proxy_legacy
+  become: false
+  gather_facts: false
+  vars:
+    linkstack_archive_source: /home/wdc2/.local/share/sanctum-services/backups/linkstack/linkstack-20261112t105926.tar
+    linkstack_snapshot_sha256: a1110a717d11ee1723c02f8b66557a1c122ac64137f5fa793488428b7a398eaa
+    linkstack_snapshot_size: 93845504
+  tasks:
+    - name: Require exact source host and explicit off-host data transfer authorization
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_offhost_transfer_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+
+    - name: Stat the original private snapshot with SHA256
+      ansible.builtin.stat:
+        path: "{{ linkstack_archive_source }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      register: linkstack_source_tar_stat
+
+    - name: Refuse wrong LinkStack source snapshot or unsafe owner and permissions
+      ansible.builtin.assert:
+        that:
+          - linkstack_source_tar_stat.stat.isreg | default(false)
+          - not (linkstack_source_tar_stat.stat.islnk | default(false))
+          - linkstack_source_tar_stat.stat.pw_name == 'wdc2'
+          - linkstack_source_tar_stat.stat.mode == '0600'
+          - linkstack_source_tar_stat.stat.size | int == linkstack_snapshot_size | int
+          - linkstack_source_tar_stat.stat.checksum == linkstack_snapshot_sha256
+        fail_msg: Refusing a modified or unsafe original Kvar archive; no transfer performed.
+
+    - name: Mark source archive identity accepted for this exact playbook invocation
+      ansible.builtin.set_fact:
+        linkstack_snapshot_source_validated: true
+
+- name: Transfer exact LinkStack snapshot to Kvin and verify isolated data recovery
+  hosts: kuma
+  become: false
+  gather_facts: true
+  vars:
+    linkstack_archive_source: /home/wdc2/.local/share/sanctum-services/backups/linkstack/linkstack-20261112t105926.tar
+    linkstack_snapshot_sha256: a1110a717d11ee1723c02f8b66557a1c122ac64137f5fa793488428b7a398eaa
+    linkstack_snapshot_size: 93845504
+    linkstack_receiver_dir: /home/wdc2/.local/share/sanctum-services/backups/linkstack
+    linkstack_receiver_archive: "{{ linkstack_receiver_dir }}/linkstack-20261112t105926.tar"
+    linkstack_receiver_partial: "{{ linkstack_receiver_archive }}.partial"
+    linkstack_restore_volume: sanctum-linkstack-restore-test-20261112t105926
+    linkstack_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Kvin destination and separately approved isolated volume recovery
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_offhost_transfer_approved | default(false) | bool
+          - sanctum_linkstack_isolated_volume_restore_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - hostvars['kvar.outer.sanctum'].linkstack_snapshot_source_validated | default(false) | bool
+          - linkstack_restore_volume != 'linkstack'
+          - linkstack_restore_volume is match('^sanctum-linkstack-restore-test-[0-9]{8}t[0-9]{6}$')
+        fail_msg: >-
+          Exact original archive authentication, private transfer approval and
+          distinct isolated Kvin volume approval are required. No live service,
+          existing data volume or network will be touched.
+
+    - name: Refuse an unsafe pre-existing destination directory
+      ansible.builtin.stat:
+        path: "{{ linkstack_receiver_dir }}"
+        follow: false
+      register: linkstack_receiver_dir_stat
+
+    - name: Require private existing directory or absence
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_receiver_dir_stat.stat.islnk | default(false))
+          - not (linkstack_receiver_dir_stat.stat.exists | default(false))
+            or (linkstack_receiver_dir_stat.stat.isdir | default(false))
+          - not (linkstack_receiver_dir_stat.stat.exists | default(false))
+            or (linkstack_receiver_dir_stat.stat.pw_name == 'wdc2')
+
+    - name: Ensure destination backup directory is private on Kvin
+      ansible.builtin.file:
+        path: "{{ linkstack_receiver_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Refuse overwriting a previous copy or partial copy
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ linkstack_receiver_archive }}"
+        - "{{ linkstack_receiver_partial }}"
+      register: linkstack_receiver_existing
+
+    - name: Refuse archive filename collision
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_receiver_existing.results[0].stat.exists | default(false))
+          - not (linkstack_receiver_existing.results[1].stat.exists | default(false))
+
+    - name: Check that unique isolated rootless volume is not already present
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ linkstack_restore_volume }}"]
+      register: linkstack_receiver_volume_exists
+      changed_when: false
+      failed_when: linkstack_receiver_volume_exists.rc not in [0, 1]
+
+    - name: Refuse replacing any existing Kvin volume
+      ansible.builtin.assert:
+        that:
+          - linkstack_receiver_volume_exists.rc == 1
+
+    - name: Atomically reserve private no-clobber destination partial
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; f=os.open(sys.argv[1],os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600); os.close(f)"
+          - "{{ linkstack_receiver_partial }}"
+      changed_when: true
+
+    - name: Copy only the named snapshot Kvar to Kvin over strict verified SSH
+      ansible.builtin.command:
+        argv:
+          - scp
+          - -q
+          - -B
+          - -P
+          - '10022'
+          - -o
+          - BatchMode=yes
+          - -o
+          - StrictHostKeyChecking=yes
+          - -o
+          - ConnectTimeout=10
+          - "wdc2@kvar.outer.sanctum:{{ linkstack_archive_source }}"
+          - "{{ linkstack_receiver_partial }}"
+      register: linkstack_transfer
+      changed_when: linkstack_transfer.rc == 0
+      no_log: true
+
+    - name: Verify copied private snapshot file SHA256, type and permissions
+      ansible.builtin.stat:
+        path: "{{ linkstack_receiver_partial }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      register: linkstack_receiver_stat
+
+    - name: Reject incomplete, altered or publicly readable snapshot copy
+      ansible.builtin.assert:
+        that:
+          - linkstack_receiver_stat.stat.isreg | default(false)
+          - not (linkstack_receiver_stat.stat.islnk | default(false))
+          - linkstack_receiver_stat.stat.pw_name == 'wdc2'
+          - linkstack_receiver_stat.stat.mode == '0600'
+          - linkstack_receiver_stat.stat.size | int == linkstack_snapshot_size | int
+          - linkstack_receiver_stat.stat.checksum == linkstack_snapshot_sha256
+        fail_msg: >-
+          Kvin copy is not byte-identical and private; retain partial, do not
+          accept or import an unverified archive.
+
+    - name: Privately validate copied archive and SQLite before importing
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_validator }}"
+          - archive
+          - "{{ linkstack_receiver_partial }}"
+      register: linkstack_receiver_validation
+      changed_when: false
+      no_log: true
+
+    - name: Require checksum-matching valid LinkStack SQLite archive on Kvin
+      ansible.builtin.assert:
+        that:
+          - (linkstack_receiver_validation.stdout | from_json).archive_verified | bool
+          - (linkstack_receiver_validation.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_receiver_validation.stdout | from_json).configuration_file_present | bool
+          - (linkstack_receiver_validation.stdout | from_json).archive_sha256 == linkstack_snapshot_sha256
+          - (linkstack_receiver_validation.stdout | from_json).archive_bytes | int == linkstack_snapshot_size | int
+          - not ((linkstack_receiver_validation.stdout | from_json).off_host_copy_verified | bool)
+
+    - name: Promote verified Kvin archive without clobbering existing data
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; os.link(sys.argv[1],sys.argv[2]); os.unlink(sys.argv[1])"
+          - "{{ linkstack_receiver_partial }}"
+          - "{{ linkstack_receiver_archive }}"
+      changed_when: true
+
+    - name: Create only an isolated empty Kvin rootless restore-test volume
+      ansible.builtin.command:
+        argv: [podman, volume, create, "{{ linkstack_restore_volume }}"]
+      register: linkstack_new_restore_volume
+      changed_when: linkstack_new_restore_volume.rc == 0
+
+    - name: Import verified archive solely into the newly created isolated volume
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - import
+          - "{{ linkstack_restore_volume }}"
+          - "{{ linkstack_receiver_archive }}"
+      register: linkstack_isolated_import
+      changed_when: linkstack_isolated_import.rc == 0
+      no_log: true
+
+    - name: Privately observe exact isolated volume storage path
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - inspect
+          - --format
+          - "{{ '{{.Mountpoint}}' }}"
+          - "{{ linkstack_restore_volume }}"
+      register: linkstack_imported_mount
+      changed_when: false
+      no_log: true
+
+    - name: Privately verify restored SQLite and configuration markers in isolated volume
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_validator }}"
+          - restored
+          - "{{ linkstack_imported_mount.stdout | trim }}"
+      register: linkstack_imported_volume_validation
+      changed_when: false
+      no_log: true
+
+    - name: Require isolated restored data integrity without claiming app startup
+      ansible.builtin.assert:
+        that:
+          - (linkstack_imported_volume_validation.stdout | from_json).isolated_imported_volume_integrity_verified | bool
+          - (linkstack_imported_volume_validation.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_imported_volume_validation.stdout | from_json).configuration_file_present | bool
+          - not ((linkstack_imported_volume_validation.stdout | from_json).restored_application_boot_verified | bool)
+          - not ((linkstack_imported_volume_validation.stdout | from_json).browser_content_and_admin_accepted | bool)
+
+    - name: Report bounded Kvar-to-Kvin LinkStack archive transfer and isolated data restoration
+      ansible.builtin.debug:
+        msg:
+          source_archive_verified: true
+          receiver: kvin.outer.sanctum
+          archive_sha256: "{{ linkstack_snapshot_sha256 }}"
+          archive_size_bytes: "{{ linkstack_snapshot_size | int }}"
+          archive_copied_over_authenticated_ssh: true
+          receiver_archive_byte_identical: true
+          receiver_archive_private: true
+          isolated_restore_volume: "{{ linkstack_restore_volume }}"
+          isolated_volume_import_accepted: true
+          restored_sqlite_integrity: ok
+          restored_config_file_present: true
+          restored_linkstack_app_boot_accepted: false
+          browser_directory_and_admin_accepted: false
+          independent_disaster_recovery_backup_accepted: false
+          kvar_original_application_or_volume_changed: false
+          production_proxy_dns_or_pihole_changed: false
+          next_gate: qualify pinned ARM64 LinkStack image and prove the application works using this isolated volume
