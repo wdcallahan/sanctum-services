@@ -23,7 +23,7 @@ One command **on Kvin**, using the current Services inventory and logged-in Navi
 cd ~/src/sanctum-services && git pull &&
 ~/.local/bin/ansible-navigator run ansible/kvar-survivors-source.yml
 ```
-Return the **two PLAY RECAP** rows and bounded `Report bounded LinkStack image and backing discovery` and `Report bounded Pi-hole image and backing discovery` `msg` dictionaries (or failed task). `partial` means input unknown, not failure to report. Read [docs/runbooks/kvar-survivor-recovery-inputs.md](docs/runbooks/kvar-survivor-recovery-inputs.md). This is a **real host evidence boundary**; do not choose images or design a live restore from speculation. Kvar NPM and all apps remain running. After native evidence, prepare owned consistent backups, isolated Kvin restores and actual client acceptance separately.
+Return the single aggregate Kvar **PLAY RECAP** row and bounded `Report bounded LinkStack image and backing discovery` and `Report bounded Pi-hole image and backing discovery` `msg` dictionaries (or failed task). `partial` means input unknown, not failure to report. Read [docs/runbooks/kvar-survivor-recovery-inputs.md](docs/runbooks/kvar-survivor-recovery-inputs.md). This is a **real host evidence boundary**; do not choose images or design a live restore from speculation. Kvar NPM and all apps remain running. After native evidence, prepare owned consistent backups, isolated Kvin restores and actual client acceptance separately.
 
 ## CURRENT — November 11: Mace named Kuma authentication accepted; browser monitor/Socket.IO next
 
