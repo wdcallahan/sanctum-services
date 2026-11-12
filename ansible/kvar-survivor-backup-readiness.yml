@@ -1,0 +1,123 @@
+---
+# Focused follow-up after Nov 12 accepted three-volume metadata scan.
+# No repeat inventory, data transfer, service stop, image pull, or DNS edit.
+- name: Classify rootless Kvar LinkStack Quadlet update and source backup space
+  hosts: npm_proxy_legacy
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Require exact rootless incumbent and normal observation mode
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+
+    - name: Read bounded LinkStack update and storage evidence
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-survivor-backup-readiness.py') }}"
+          - --service
+          - linkstack
+      register: linkstack_backup_readiness
+      changed_when: false
+      no_log: true
+
+    - name: Require sanitized LinkStack preflight contract
+      ansible.builtin.assert:
+        that:
+          - (linkstack_backup_readiness.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (linkstack_backup_readiness.stdout | from_json).service == 'linkstack'
+          - (linkstack_backup_readiness.stdout | from_json).status in ['observed', 'partial']
+          - not ((linkstack_backup_readiness.stdout | from_json).configuration_changed | bool)
+          - not ((linkstack_backup_readiness.stdout | from_json).application_interrupted | bool)
+          - not ((linkstack_backup_readiness.stdout | from_json).app_content_or_password_returned | bool)
+          - not ((linkstack_backup_readiness.stdout | from_json).data_exported | bool)
+          - not ((linkstack_backup_readiness.stdout | from_json).backup_or_restore_accepted | bool)
+
+    - name: Report Kvar rootless LinkStack backup readiness
+      ansible.builtin.debug:
+        msg: "{{ linkstack_backup_readiness.stdout | from_json }}"
+
+- name: Classify rootful Kvar Pi-hole Quadlet update and source backup space
+  hosts: npm_proxy_legacy
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Require exact rootful incumbent and normal observation mode
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+
+    - name: Read bounded Pi-hole update and storage evidence
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-survivor-backup-readiness.py') }}"
+          - --service
+          - pihole
+      register: pihole_backup_readiness
+      changed_when: false
+      no_log: true
+
+    - name: Require sanitized Pi-hole preflight contract
+      ansible.builtin.assert:
+        that:
+          - (pihole_backup_readiness.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (pihole_backup_readiness.stdout | from_json).service == 'pihole'
+          - (pihole_backup_readiness.stdout | from_json).status in ['observed', 'partial']
+          - not ((pihole_backup_readiness.stdout | from_json).configuration_changed | bool)
+          - not ((pihole_backup_readiness.stdout | from_json).application_interrupted | bool)
+          - not ((pihole_backup_readiness.stdout | from_json).app_content_or_password_returned | bool)
+          - not ((pihole_backup_readiness.stdout | from_json).data_exported | bool)
+          - not ((pihole_backup_readiness.stdout | from_json).backup_or_restore_accepted | bool)
+
+    - name: Report Kvar rootful Pi-hole backup readiness
+      ansible.builtin.debug:
+        msg: "{{ pihole_backup_readiness.stdout | from_json }}"
+
+- name: Observe Kvin receiver and isolated-restore capacity without creating anything
+  hosts: kuma
+  become: false
+  gather_facts: false
+  tasks:
+    - name: Require exact Kvin destination and ordinary observation mode
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+
+    - name: Read bounded Kvin home and container-store free-space evidence
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-survivor-backup-readiness.py') }}"
+          - --service
+          - kvin-storage
+      register: kvin_backup_readiness
+      changed_when: false
+      no_log: true
+
+    - name: Require sanitized Kvin capacity preflight contract
+      ansible.builtin.assert:
+        that:
+          - (kvin_backup_readiness.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (kvin_backup_readiness.stdout | from_json).service == 'kvin-storage'
+          - (kvin_backup_readiness.stdout | from_json).status in ['observed', 'partial']
+          - not ((kvin_backup_readiness.stdout | from_json).configuration_changed | bool)
+          - not ((kvin_backup_readiness.stdout | from_json).application_interrupted | bool)
+          - not ((kvin_backup_readiness.stdout | from_json).app_content_or_password_returned | bool)
+          - not ((kvin_backup_readiness.stdout | from_json).data_exported | bool)
+          - not ((kvin_backup_readiness.stdout | from_json).backup_or_restore_accepted | bool)
+          - not ((kvin_backup_readiness.stdout | from_json).recovery_destination_independence_accepted | bool)
+
+    - name: Report Kvin backup receiver and restore space
+      ansible.builtin.debug:
+        msg: "{{ kvin_backup_readiness.stdout | from_json }}"
