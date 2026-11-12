@@ -153,6 +153,18 @@ class LinkStackBackupPlaybook(unittest.TestCase):
         self.assertEqual(argv[:4], ["podman", "volume", "export", "linkstack"])
         self.assertTrue(export["no_log"])
 
+    def test_restart_must_preserve_exact_image_and_volume_identity(self):
+        observer = self.task("Privately observe original image")
+        self.assertTrue(observer["no_log"])
+        self.assertIs(observer["changed_when"], False)
+        checks = str(self.task("Refuse claiming clean backup")["ansible.builtin.assert"]["that"])
+        for field in ("linkstack_expected_image_id", "image_reference",
+                      "mounts", "port_mappings", "container_running"):
+            self.assertIn(field, checks)
+        names = [task["name"] for task in self.tasks]
+        self.assertLess(names.index("Refuse claiming clean backup if restart changed original image or mount"),
+                        names.index("Privately validate exported SQLite and complete safe archive"))
+
     def test_no_post_snapshot_restore_or_other_hosts_and_no_secret_output(self):
         text = PLAY.read_text()
         self.assertNotIn("podman volume import", text)
