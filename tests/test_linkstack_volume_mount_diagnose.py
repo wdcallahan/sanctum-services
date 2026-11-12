@@ -158,7 +158,10 @@ class LinkStackMountedVolumeDiagnosis(unittest.TestCase):
             result = mod.collect(mod.HOST, mod.ACCOUNT)
         self.assertEqual(result["status"], "observed")
         self.assertEqual(result["comparison"], "private_selinux_relabel_restores_http")
-        self.assertEqual(stages, list(mod.CASES))
+        self.assertEqual(stages, ["image_only", "plain", "relabel"])
+        self.assertEqual(result["cases"]["ownership"]["status"],
+                         "skipped_prior_case_served_http")
+        # No :U recursive chown when :Z alone is sufficient.
         self.assertEqual(active, {("volume", mod.ACCEPTED_VOLUME)})
         self.assertTrue(all(result["cleanup"].values()))
         self.assertTrue(result["source_archive_unchanged"])
@@ -167,6 +170,29 @@ class LinkStackMountedVolumeDiagnosis(unittest.TestCase):
         self.assertNotIn(mod.ACCEPTED_VOLUME,
                          repr([x for x in commands if x[2] in ("rm", "import", "create")
                                if len(x) >= 3]))
+
+    def test_all_stages_run_only_when_cloned_data_needs_ownership_repair(self):
+        fake, commands, active = fake_runtime()
+        stages = []
+        def trial(label, network):
+            stages.append(label)
+            active.add(("container", mod.CASES[label]))
+            working = label in ("image_only", "ownership")
+            return {"status": "observed", "running": working,
+                    "http_status": 200 if working else None}
+        with patch.object(mod, "invoke", side_effect=fake), \
+             patch.object(mod, "exact_archive", return_value=True), \
+             patch.object(mod, "exact_image", return_value=True), \
+             patch.object(mod, "volume_markers",
+                          return_value={"status": "observed", "markers": {}}), \
+             patch.object(mod, "run_case", side_effect=trial):
+            report = mod.collect(mod.HOST, mod.ACCOUNT)
+        self.assertEqual(report["status"], "observed")
+        self.assertEqual(stages, list(mod.CASES))
+        self.assertEqual(report["comparison"],
+                         "ownership_repair_after_relabel_restores_http")
+        self.assertTrue(all(report["cleanup"].values()))
+        self.assertEqual(active, {("volume", mod.ACCEPTED_VOLUME)})
 
     def test_reserved_names_collision_does_not_delete_others(self):
         occupied = {("container", mod.CASES["plain"])}
