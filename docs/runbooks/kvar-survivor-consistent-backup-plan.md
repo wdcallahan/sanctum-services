@@ -16,6 +16,32 @@ The total source regular-file bytes are **1,395,192,558 (~1.30 GiB)**. The empty
 
 The running LinkStack image ID was unchanged across the reports. Pi-hole's running image ID **changed**, from `edb7f703649f4b6ab8b14f28d12f15e8cbe1c50a2092458e9b640bd6bc6fe59e` to `64c81b3c8132f3e7ae56925a1668d2cfa5a53c509c43b4c1cc71591e0f42c3d8`. Its cause is unknown; no update or credential-affecting mutation was authorized by these observations. Both containers use mutable `:latest` tags. Each has multiple local repository-digest records. Platform and a Kvin-pullable ARM64 manifest **have not been qualified**.
 
+## Qualified rootless LinkStack consistent snapshot source — operator gate
+
+The source-owned one-shot `ansible/linkstack-consistent-backup.yml` stages **only a Kvar-local, private consistent snapshot of the live rootless LinkStack data volume**. It does not move a copy to Kvin, restore an application, retarget a route, or touch Pi-hole/NPM. It must **not** run without an affirmative operator choice to interrupt LinkStack temporarily.
+
+Source constraints:
+
+- Require exact inventory Kvar as `wdc2`, explicit `sanctum_linkstack_consistent_backup_approved=true`, no check mode, and neither restore nor cutover approvals.
+- Before interruption re-observe running `linkstack` in the rootless Podman namespace and require the original observed image ID, image name, single `linkstack:/htdocs` writable mount, port 8081→80 and existing user Quadlet. An automatic image change refuses the snapshot before downtime.
+- Keep any prior archive and partial filename intact; prepare a 0700 directory and exclusively reserve one new 0600 partial file.
+- Stop **only `linkstack.service`**, verify inactive, export **only `linkstack`** while stopped; the Ansible `always` handler starts the original service again even when export fails. Require the service to be active and its exact image/mount/ports unchanged, and the HTTP endpoint on Kvar to respond.
+- Verify the new archive is an ordinary `wdc2`-owned 0600 file. Its separate privacy-bounded validator rejects traversal, symlinks, duplicate members, unsafe types, missing `.env`/SQLite and SQLite integrity failures. Return only an archive digest, archive size, positive SQLite integrity and boolean acceptance.
+- Promote the validated private partial to a retained `.tar` only without clobbering another name; retain failed private partials for investigation and never silently overwrite existing history.
+- The reported `linkstack_consistent_snapshot_accepted:true` means a **validated consistent backup on Kvar only**. `archive_copied_off_kvar:false` and `isolated_kvin_restore_accepted:false` remain explicit. Do not treat Kvar-local archives as independent disaster recovery.
+
+The command below is a **live LinkStack service interruption**. Run only when the operator accepts that interruption and source CI is green:
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/linkstack-consistent-backup.yml \
+  -e sanctum_linkstack_consistent_backup_approved=true
+```
+
+Return only the **`Report bounded consistent LinkStack source-backup acceptance`** task's `msg` and the single Kvar **`PLAY RECAP`**, or the failed task. There are no other report names to hunt down. No secrets, SQLite content, `.env` file or archive should be pasted into chat.
+
+**After successful native backup:** implement and qualify a copy of this exact retained archive to Kvin (different host) with hash verification, then an isolated volume import and application-level restore using a separately qualified immutable image. The existing live Kvar instance remains the reference and fallback. No claim of independent disaster recovery until a copy survives Kvar/Kvin failure separately.
+
 ## One combined read-only prerequisite
 
 `ansible/kvar-survivor-backup-readiness.yml` reports only:
