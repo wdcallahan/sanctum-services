@@ -58,6 +58,15 @@ def observation_runner(service, account="wdc2", bad_mount=False):
 
 
 class KvarSurvivors(unittest.TestCase):
+    def test_real_podman_image_inspect_template_uses_documented_uppercase_ID(self):
+        # Podman's image inspect Go template documents .ID, not .Id.
+        # A wrong case makes both ID and tag attempts look unavailable.
+        self.assertIn("{{json .ID}}", module.IMAGE_FORMAT)
+        self.assertNotIn("{{json .Id}}", module.IMAGE_FORMAT)
+        for token in ("{{json .Digest}}", "{{json .RepoDigests}}",
+                      "{{json .Os}}", "{{json .Architecture}}"):
+            self.assertIn(token, module.IMAGE_FORMAT)
+
     def test_scoped_rootless_identity_and_no_private_material(self):
         run, commands = observation_runner("linkstack")
         r = module.collect("linkstack", "kvar.outer.sanctum", "wdc2", runner=run)
