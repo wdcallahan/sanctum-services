@@ -1,5 +1,12 @@
 # Sanctum Services — Roadmap
 
+## November 12 — Pi-hole production YXORP UI switch NATIVE ACCEPTED; next real Firefox/DNS client checks
+
+**Operator result:** Nova applied the existing source-managed `ansible/yxorp.yml` on Kvin with production approval. **`ok=37 changed=3 failed=0 skipped=1 unreachable=0`**. Existing Nginx generated config published and live YXORP reconciled; new `pihole.nexus.sanctum` origin is **Kvin `192.168.0.192:82`** instead of original Kvar `:82`. A real production YXORP `GET /admin/` returned **HTTP 302**; other accepted origins remain Kuma `127.0.0.1:13001` with HTTP 302 and LinkStack `127.0.0.1:18081` with HTTP 200. All eight intended routes retained. The previously problematic Yarn check still reports **`status=-1`, `yarn_frontend_accepted=false`**, but the already-merged change correctly makes it nonfatal. No DNS, firewall or Kvar service changed.
+
+**Disposition:** Source-managed Pi-hole restored-data deployment and live production YXORP web-route switch **complete**. Kvar Pi-hole remains running; no need for extra Ansible deployment or simulated probe. **The remaining Pi-hole acceptance** is Nova opening **`http://pihole.nexus.sanctum/admin/`** in ordinary Firefox and privately confirming the restored Pi-hole admin dashboard, plus making a **real desktop DNS query** to Kvin `192.168.0.192` (e.g., `dig @192.168.0.192 example.org +time=2 +tries=1`; use an ad domain and dashboard Query Log to verify blocking). A normal resolver reply proves DNS connectivity, not alone blocklist effectiveness. If that desktop DNS query times out, inspect actual Kvin host firewall/client route before touching Pi-hole source. Do not reconfigure global DHCP/general DNS: Pi-hole is only the retained ad blocker. Finish the Kvar migration only after verified client use.
+
+
 ## November 12 — Pi-hole real Kvin service STARTED; one production YXORP backend switch NEXT
 
 **Operator-native receipt:** Nova executed `ansible/pihole-kvin-deploy.yml` on Kvin. Recap **`ok=13 changed=3 failed=0 unreachable=0 skipped=0`**. Exact original Pi-hole ARM64 image ID and both previously imported rootful volumes accepted; pinned image pulled, rootful `sanctum-pihole-kvin.container` installed and `sanctum-pihole-kvin.service` started. Real Kvin LAN `192.168.0.192:82/admin/` replied **HTTP 302**. Kvin TCP/UDP53 is published by the service but actual DNS filtering by a client has not yet been tested. Kvar Pi-hole remains running and unchanged. No host firewall, Peanut authoritative DNS, existing production YXORP or clients were modified.
