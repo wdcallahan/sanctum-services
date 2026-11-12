@@ -124,10 +124,41 @@ def inspect(archive):
     }
 
 
+def inspect_restored_volume(root):
+    """Check isolated imported state only, never touch or print private data."""
+    parent = Path(root)
+    if parent.is_symlink() or not parent.is_dir():
+        raise ValueError("missing_restored_volume")
+    env = parent / ".env"
+    db = parent / "database" / "database.sqlite"
+    for path in (env, db):
+        if path.is_symlink() or not path.is_file():
+            raise ValueError("missing_restored_marker")
+    if db.stat().st_size < 100 or env.stat().st_size == 0:
+        raise ValueError("invalid_restored_marker")
+    conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True, timeout=8)
+    try:
+        integrity = conn.execute("PRAGMA integrity_check").fetchall()
+        if integrity != [("ok",)]:
+            raise ValueError("restored_database_integrity_failed")
+    finally:
+        conn.close()
+    return {
+        "schema": "sanctum-linkstack-volume-restore/v1",
+        "isolated_imported_volume_integrity_verified": True,
+        "sqlite_integrity": "ok",
+        "configuration_file_present": True,
+        "application_contents_returned": False,
+        "restored_application_boot_verified": False,
+        "browser_content_and_admin_accepted": False,
+    }
+
+
 def main():
-    if len(sys.argv) != 3 or sys.argv[1] != "archive":
+    if len(sys.argv) != 3 or sys.argv[1] not in ("archive", "restored"):
         raise ValueError("unsupported_operation")
-    result = inspect(sys.argv[2])
+    result = (inspect(sys.argv[2]) if sys.argv[1] == "archive"
+              else inspect_restored_volume(sys.argv[2]))
     print(json.dumps(result, sort_keys=True))
 
 
