@@ -38,7 +38,7 @@ cd ~/src/sanctum-services && git pull &&
 Expected: both plays finish `failed=0 changed=0` and report exactly
 `Report bounded LinkStack image and backing discovery` and
 `Report bounded Pi-hole image and backing discovery`.
-Share these two **`msg`** dictionaries and both `PLAY RECAP` rows.
+Share these two **`msg`** dictionaries and the single aggregate `PLAY RECAP` row for Kvar.
 Do not share full Podman inspect output or application secrets.
 
 The bounded report includes the observed container state, image
