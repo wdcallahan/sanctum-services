@@ -1,0 +1,65 @@
+---
+# Diagnose why the already imported offline LinkStack container exited.
+# Kvin rootless only; no live services, no Kvar, no existing data volumes,
+# no externally reachable ports and no raw application logs in output.
+- name: Compare LinkStack image-only and copied-restored startup on Kvin
+  hosts: kuma
+  become: false
+  gather_facts: true
+  tasks:
+    - name: Require exact rootless Kvin operator authorization for disposable diagnostic
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_user == 'wdc2'
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - not ansible_check_mode
+          - sanctum_linkstack_startup_diagnostic_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_offhost_transfer_approved | default(false) | bool)
+        fail_msg: >-
+          This explicitly approved operation is limited to a disposable
+          two-case rootless diagnosis using one private archive copy on Kvin.
+          It does not touch incumbent LinkStack, existing restored volumes,
+          Kvar, proxy, DNS, firewalld, or any production service.
+
+    - name: Run bounded two-case diagnosis with guaranteed named resource cleanup
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/diagnose-linkstack-offline-startup.py') }}"
+      register: linkstack_startup_diagnosis
+      changed_when: true
+      no_log: true
+
+    - name: Require bounded diagnostic and absence of disclosed application content
+      ansible.builtin.assert:
+        that:
+          - (linkstack_startup_diagnosis.stdout | from_json).schema == 'sanctum-linkstack-startup-diagnosis/v1'
+          - (linkstack_startup_diagnosis.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (linkstack_startup_diagnosis.stdout | from_json).status in ['observed', 'partial', 'cleanup_incomplete']
+          - not ((linkstack_startup_diagnosis.stdout | from_json).private_logs_or_app_contents_returned | bool)
+          - not ((linkstack_startup_diagnosis.stdout | from_json).application_boot_accepted | bool)
+          - not ((linkstack_startup_diagnosis.stdout | from_json).production_services_or_network_changed | bool)
+          - (linkstack_startup_diagnosis.stdout | from_json).kvar_untouched | bool
+          - (linkstack_startup_diagnosis.stdout | from_json).accepted_restore_volume_unchanged | bool
+
+    - name: Report sanitized image-only versus restored-copy startup comparison
+      ansible.builtin.debug:
+        msg: "{{ linkstack_startup_diagnosis.stdout | from_json }}"
+
+    - name: Require all disposable diagnostic resources were removed
+      ansible.builtin.assert:
+        that:
+          - (linkstack_startup_diagnosis.stdout | from_json).status != 'cleanup_incomplete'
+          - (linkstack_startup_diagnosis.stdout | from_json).cleanup.image_container_removed | bool
+          - (linkstack_startup_diagnosis.stdout | from_json).cleanup.data_container_removed | bool
+          - (linkstack_startup_diagnosis.stdout | from_json).cleanup.temporary_volume_removed | bool
+          - (linkstack_startup_diagnosis.stdout | from_json).cleanup.temporary_network_removed | bool
+        fail_msg: >-
+          Temporary diagnostic cleanup was incomplete. Preserve all
+          production state and inspect only the named temporary resources.
