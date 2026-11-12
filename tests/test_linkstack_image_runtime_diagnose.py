@@ -60,9 +60,10 @@ def fake_runner(existing_at_start=None, exit_default=False):
         if argv[:2] == ["podman", "exec"]:
             return 0, b"200", b""
         if argv[:2] == ["podman", "logs"]:
-            log = ("+ ----- +\n| Running Apache |\n"
-                   "can't create configuration " + SECRET).encode()
-            return 0, log, b""
+            stdout = ("+ ----- +\n| Running Apache |\n"
+                      "Version and stage seen " + SECRET).encode()
+            stderr = ("AH00015: Unable to open logs " + SECRET).encode()
+            return 0, stdout, stderr
         if argv[:3] == ["podman", "rm", "--force"]:
             existing.discard(("container", argv[-1]))
             return 0, b"", b""
@@ -91,6 +92,15 @@ class ImageStartupRuntimeDiagnostics(unittest.TestCase):
         self.assertTrue(summary["apache_launch_banner_seen"])
         self.assertNotIn(SECRET, json.dumps(summary))
 
+    def test_apache_error_taxonomy_classifies_stderr_only_and_returns_no_private_text(self):
+        error = ("AH00015: Unable to open logs; " + SECRET).encode()
+        data = runtime.classification(error)
+        self.assertEqual(data["error_categories"], ["apache_log_open"])
+        self.assertNotIn(SECRET, json.dumps(data))
+        self.assertEqual(runtime.classification(
+            b"AH00016: Configuration Failed")["error_categories"],
+            ["apache_startup_config_failed"])
+
     def test_static_files_and_apache_syntax_are_observed_without_private_bytes(self):
         runner, _, _ = fake_runner()
         with patch.object(runtime, "run", side_effect=runner):
@@ -115,7 +125,12 @@ class ImageStartupRuntimeDiagnostics(unittest.TestCase):
         self.assertTrue(report["cases"]["podman_default"]["running"])
         self.assertEqual(report["cases"]["podman_default"]["http_status"], 200)
         self.assertEqual(report["cases"]["restricted"]["log"]["error_categories"],
-                         ["cannot_create_file"])
+                         ["apache_log_open"])
+        self.assertTrue(report["cases"]["restricted"]["log"]["stderr_available"])
+        self.assertTrue(report["cases"]["restricted"]["log"]["stdout_available"])
+        self.assertEqual(
+            report["cases"]["restricted"]["log"]["stderr_error_categories"],
+            ["apache_log_open"])
         self.assertEqual(report["static_prerequisites"]["php_ini_writable"], False)
         self.assertTrue(all(report["cleanup"].values()))
         self.assertEqual(existing, set())
