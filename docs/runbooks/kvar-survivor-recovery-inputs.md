@@ -1,5 +1,18 @@
 # Kvar survivor recovery inputs — LinkStack and Pi-hole
 
+## November 11 native Kvar receipt — both live survivors, image identity metadata incomplete
+
+Nova ran `ansible/kvar-survivors-source.yml` on Kvin against Kvar, **`ok=8 changed=0 failed=0 unreachable=0`**. Each named service was confirmed **running**, Quadlet `loaded/active/generated`, with source files on Kvar. No application state, passwords or volume contents were read and no host/app configuration was changed.
+
+| Service / account | Running container image reference and observed image ID | Writable volumes | Kvar published ports |
+|---|---|---|---|
+| Rootless `linkstack`, `wdc2` | `docker.io/linkstackorg/linkstack:latest`; `53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65` | `linkstack` → `/htdocs` | TCP 8081 → 80 |
+| Rootful `pihole`, `root` | `docker.io/pihole/pihole:latest`; `edb7f703649f4b6ab8b14f28d12f15e8cbe1c50a2092458e9b640bd6bc6fe59e` | `systemd-pihole_etc-pihole` → `/etc/pihole`, `systemd-pihole_etc-dnsmasq` → `/etc/dnsmasq.d` | TCP/UDP 53 → 53 and TCP 82 → 80 |
+
+Both bounded results had `status: partial`, although `service_unit.status: observed`. The reason is the **additional local image inspection did not yield accepted `image_platform` and `repo_digests`**, not that either container is unavailable. `latest` is mutable and the displayed container image ID is **not** proof of a Kvin-pullable immutable reference. No image pull, service restart, backup, data movement, DNS or proxy change is authorized by this observation.
+
+**Follow-up source correction:** `tools/observe-kvar-survivors.py` now explicitly reports only sanitized image-inspection outcome categories. It first queries the exact observed container image ID; if unavailable, it tries the existing local image tag, **accepting that result only if its image ID equals the running container's ID**. A newer local `latest` tag must not be used to reconstruct the wrong image. A missing repository digest remains `partial`. The updated source tests cover all of these failure modes. Once CI is green, the next read-only native rerun can report a specific image-probe result rather than an unexplained `partial`. Do not re-run any broad retirement inventory.
+
 ## Why this one read-only observation exists
 
 Sanctum Services [issue #2](https://github.com/wdcallahan/sanctum-services/issues/2)
