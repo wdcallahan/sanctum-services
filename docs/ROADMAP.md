@@ -6,7 +6,9 @@
 
 **Services source correction:** In `ansible/linkstack-qualify-isolated-application.yml`, add **`--sysctl net.ipv4.ip_unprivileged_port_start=80` to only the disposable restored-app `podman run`**; retain the same extra `no-new-privileges`, isolated internal/no-DNS bridge, no published ports, exact immutable ARM64 image gate, prior imported and SQLite-verified dedicated Kvin rootless volume `sanctum-linkstack-restore-test-20261112t105926`, bounded internal HTTP and guaranteed container/network cleanup. No host `sysctl -w` or host port 80 exemption. Add regression asserting exactly one isolated `--sysctl` and no host-level configuration write, and honest report flags `container_network_namespace_low_port_override_used:true`, `host_low_port_sysctl_unchanged:true`. Source edits are on main with CI needed before operator run. Previous accepted source tar on Kvar, SHA-verbatim Kvin private tar and Kvin imported distinct rootless volume remain; **do not** rerun backups/SCP/import.
 
-**Next host action after full Services CI green** (on Kvin, previously granted trial scope; this is a new execution requiring Nova opt-in):
+**Source qualification:** Full Services source/negative tests and Ansible syntax **[CI #43290872566 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43290872566)** at corrected restored-app source commit `10ef129fd5898be193670b053346d71bc167f7e3`. The native restored-volume app test with container-only port-80 sysctl has **not yet run**. This is the current operator action; no separate Kvar backup/SCP/import is needed.
+
+**Next host action, source CI green** (on Kvin, new operator execution approval):
 ```bash
 cd ~/src/sanctum-services && git pull &&
 ~/.local/bin/ansible-navigator run ansible/linkstack-qualify-isolated-application.yml \
