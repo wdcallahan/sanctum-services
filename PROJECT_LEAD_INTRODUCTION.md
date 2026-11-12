@@ -1,5 +1,17 @@
 # Sanctum Services — Session Continuation
 
+## November 11 — second native image probe receipt, and bounded volume preflight prepared
+
+Nova reran `ansible/kvar-survivors-source.yml` from Kvin on Kvar: **`ok=8 changed=0 unreachable=0 failed=0`**. Both original services remain running; their image IDs, port maps, Quadlet sources and named persistent volumes match the first observation. Image inspection by **running image ID AND local `latest` name** failed for **both rootless LinkStack and rootful Pi-hole**, returning `image_probe.attempts[0/1].status: command_unavailable`. `pullable_digest_known:false` for both. This categorization means the subprocess returned nonzero or an unavailable result; it **does not prove either image is absent from the local store**. Do not select an image by the mutable `latest` name or guess a digest.
+
+**Follow-up source (no host mutation yet):** The Services tool first retains the safe exact-ID image-inspect attempts. When those cannot establish the image, it separately queries only the local `podman images --no-trunc --format json` listing, selecting **solely the exact immutable image ID of the running container**. It never emits other images or repository labels; a manifest digest from a listing is only a *candidate*, not proof of a Kvin-pullable registry reference. The observer remains `partial` unless sufficient platform + pullable repo digest metadata exists.
+
+The same single Kvar read-only play now includes `tools/observe-kvar-survivor-volumes.py`: it inspects the three named volumes in their correct Podman privilege namespaces, **without reading any volume file contents**. It reports bounded file counts, regular file bytes, symlink counts and mere existence of known file markers: LinkStack `.env` and `database/database.sqlite`, Pi-hole `pihole.toml`, `gravity.db`, `pihole-FTL.db`. Paths and secret contents are not returned. Both observations remain metadata-only; neither exports files, interrupts the apps nor creates a backup.
+
+**Why those markers:** LinkStack's [official container persistence documentation](https://github.com/LinkStackOrg/linkstack-docker#persistent-storage) identifies `/htdocs` as its critical persistent state, including SQLite database and settings. Pi-hole's [container documentation](https://docs.pi-hole.net/docker/) preserves `/etc/pihole`; `/etc/dnsmasq.d` remains a separately mounted legacy volume on this exact Kvar instance. Pi-hole version and configuration semantics must be qualified, not inferred from `latest`.
+
+**Next after CI accepts the new tests:** Run **the same single** `ansible/kvar-survivors-source.yml` from Kvin. This time it produces **four** bounded reports (two image/backing and two volume preflight) plus one Kvar PLAY RECAP. Then plan an explicitly authorized, short quiescence and consistent complete-volume export with off-host retention and isolated restore; do not confuse metadata presence with a backup. Keep Kvar and its NPM fallback intact.
+
 ## CURRENT — November 11: Kvar survivor image probe classified; corrected Services CI GREEN, native rerun required
 
 **Read-only first Kvar observation accepted** (both active Quadlets, persistent volumes, exposed ports, and exact running image IDs), recap `ok=8 changed=0 failed=0`. Both original `status:partial` results were specific to unproven image-platform and registry digests, not container availability.
