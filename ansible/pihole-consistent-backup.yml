@@ -1,0 +1,368 @@
+---
+# Default-off rootful Kvar Pi-hole consistent snapshot. Stops only the
+# original Pi-hole service temporarily, always attempts restart, and exports
+# both configured volumes in the same stopped interval. Never changes DNS
+# authority, firewall, YXORP, LinkStack, or original volume contents.
+- name: Create same-quiescence private Pi-hole volume snapshots on incumbent Kvar
+  hosts: npm_proxy_legacy
+  become: true
+  gather_facts: true
+  vars:
+    pihole_backup_dir: /var/lib/sanctum-services/backups/pihole
+    pihole_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+    pihole_etc_archive: "{{ pihole_backup_dir }}/pihole-etc-{{ pihole_stamp }}.tar"
+    pihole_dnsmasq_archive: "{{ pihole_backup_dir }}/pihole-dnsmasq-{{ pihole_stamp }}.tar"
+    pihole_expected_image_id: 64c81b3c8132f3e7ae56925a1668d2cfa5a53c509c43b4c1cc71591e0f42c3d8
+    pihole_expected_image_ref: docker.io/pihole/pihole:latest
+    pihole_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/pihole-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Kvar rootful source and explicit DNS interruption approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvar.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'root'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_pihole_consistent_backup_approved | default(false) | bool
+          - sanctum_pihole_dns_interruption_approved | default(false) | bool
+          - not (sanctum_pihole_restore_approved | default(false) | bool)
+          - not (sanctum_pihole_cutover_approved | default(false) | bool)
+          - pihole_stamp is match('^[0-9]{8}t[0-9]{6}$')
+        fail_msg: >-
+          A Pi-hole backup intentionally interrupts its DNS and web service.
+          Only original rootful Kvar with both explicit approvals is permitted.
+
+    - name: Privately observe current rootful Pi-hole image, ports, Quadlet and mounts
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivors.py') }}"
+          - --service
+          - pihole
+      register: pihole_snapshot_incumbent
+      changed_when: false
+      no_log: true
+
+    - name: Refuse image drift or different rootful Pi-hole persistence before downtime
+      ansible.builtin.assert:
+        that:
+          - (pihole_snapshot_incumbent.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (pihole_snapshot_incumbent.stdout | from_json).scope == 'rootful'
+          - (pihole_snapshot_incumbent.stdout | from_json).container == 'pihole'
+          - (pihole_snapshot_incumbent.stdout | from_json).container_running | bool
+          - (pihole_snapshot_incumbent.stdout | from_json).image_id == pihole_expected_image_id
+          - (pihole_snapshot_incumbent.stdout | from_json).image_reference == pihole_expected_image_ref
+          - (pihole_snapshot_incumbent.stdout | from_json).mounts == [{'destination':'/etc/dnsmasq.d','read_write':true,'type':'volume','volume_name':'systemd-pihole_etc-dnsmasq'}, {'destination':'/etc/pihole','read_write':true,'type':'volume','volume_name':'systemd-pihole_etc-pihole'}]
+          - (pihole_snapshot_incumbent.stdout | from_json).port_mappings == [{'container_port':'53/tcp','host_ip':'0.0.0.0','host_port':53},{'container_port':'53/udp','host_ip':'0.0.0.0','host_port':53},{'container_port':'80/tcp','host_ip':'0.0.0.0','host_port':82}]
+          - (pihole_snapshot_incumbent.stdout | from_json).service_unit.active == 'active'
+          - (pihole_snapshot_incumbent.stdout | from_json).service_unit.quadlet_source == '/etc/containers/systemd/pihole.container'
+          - not ((pihole_snapshot_incumbent.stdout | from_json).host_or_app_mutation_performed | bool)
+        fail_msg: Current Pi-hole runtime has drifted; refuse any stop or backup.
+
+    - name: Check both rootful Pi-hole volume identities exist
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ item }}"]
+      loop:
+        - systemd-pihole_etc-pihole
+        - systemd-pihole_etc-dnsmasq
+      register: pihole_volumes_present
+      changed_when: false
+      failed_when: pihole_volumes_present.rc not in [0, 1]
+
+    - name: Refuse missing Pi-hole volume before interruption
+      ansible.builtin.assert:
+        that:
+          - (pihole_volumes_present.results | map(attribute='rc') | list) == [0, 0]
+
+    - name: Verify original Pi-hole system service active before interruption
+      ansible.builtin.command:
+        argv: [systemctl, is-active, pihole.service]
+      register: pihole_before_service
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse stop if original rootful Pi-hole service is not active
+      ansible.builtin.assert:
+        that:
+          - pihole_before_service.rc == 0
+          - (pihole_before_service.stdout | trim) == 'active'
+
+    - name: Inspect backup directory without following links
+      ansible.builtin.stat:
+        path: "{{ pihole_backup_dir }}"
+        follow: false
+      register: pihole_backup_directory
+
+    - name: Refuse non-directory and symlinked private backup destination
+      ansible.builtin.assert:
+        that:
+          - not (pihole_backup_directory.stat.islnk | default(false))
+          - not (pihole_backup_directory.stat.exists | default(false)) or (pihole_backup_directory.stat.isdir | default(false))
+          - not (pihole_backup_directory.stat.exists | default(false)) or (pihole_backup_directory.stat.pw_name == 'root')
+
+    - name: Create private root-owned archive destination
+      ansible.builtin.file:
+        path: "{{ pihole_backup_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Refuse overwriting either existing final or partial tar
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ pihole_etc_archive }}"
+        - "{{ pihole_etc_archive }}.partial"
+        - "{{ pihole_dnsmasq_archive }}"
+        - "{{ pihole_dnsmasq_archive }}.partial"
+      register: pihole_output_paths
+
+    - name: Require all four archive filenames unoccupied
+      ansible.builtin.assert:
+        that:
+          - (pihole_output_paths.results | map(attribute='stat') | selectattr('exists', 'defined') | selectattr('exists') | list | length) == 0
+
+    - name: Reserve both private volume tar partials exclusively
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; fd=os.open(sys.argv[1],os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600);os.close(fd)"
+          - "{{ item }}.partial"
+      loop:
+        - "{{ pihole_etc_archive }}"
+        - "{{ pihole_dnsmasq_archive }}"
+      changed_when: true
+      no_log: true
+
+    - name: Quiesce original Pi-hole for both complete same-stop exports
+      block:
+        - name: Stop only incumbent rootful Pi-hole service
+          ansible.builtin.systemd_service:
+            name: pihole.service
+            state: stopped
+
+        - name: Require inactive system Pi-hole before touching either volume
+          ansible.builtin.command:
+            argv: [systemctl, is-active, pihole.service]
+          register: pihole_stopped
+          changed_when: false
+          failed_when: false
+
+        - name: Refuse exporting while the service is still active
+          ansible.builtin.assert:
+            that:
+              - pihole_stopped.rc != 0
+              - (pihole_stopped.stdout | trim) != 'active'
+
+        - name: Observe only running rootful containers named Pi-hole
+          ansible.builtin.command:
+            argv:
+              - podman
+              - ps
+              - --filter
+              - name=^pihole$
+              - --format
+              - "{{ '{{.Names}}' }}"
+          register: pihole_running_after_stop
+          changed_when: false
+          no_log: true
+
+        - name: Refuse export if exact Pi-hole container still runs
+          ansible.builtin.assert:
+            that:
+              - (pihole_running_after_stop.stdout | trim) == ''
+
+        - name: Export original stopped rootful etc-pihole volume
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - export
+              - systemd-pihole_etc-pihole
+              - --output
+              - "{{ pihole_etc_archive }}.partial"
+          register: pihole_etc_export
+          changed_when: pihole_etc_export.rc == 0
+          no_log: true
+
+        - name: Export original stopped rootful dnsmasq volume in same interval
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - export
+              - systemd-pihole_etc-dnsmasq
+              - --output
+              - "{{ pihole_dnsmasq_archive }}.partial"
+          register: pihole_dnsmasq_export
+          changed_when: pihole_dnsmasq_export.rc == 0
+          no_log: true
+
+        - name: Confirm rootful Pi-hole still stopped after both exports
+          ansible.builtin.command:
+            argv: [systemctl, is-active, pihole.service]
+          register: pihole_still_stopped
+          changed_when: false
+          failed_when: false
+
+        - name: Refuse consistent acceptance if service restarted during copying
+          ansible.builtin.assert:
+            that:
+              - pihole_still_stopped.rc != 0
+              - (pihole_still_stopped.stdout | trim) != 'active'
+      always:
+        - name: Restart original Pi-hole service even if an export failed
+          ansible.builtin.systemd_service:
+            name: pihole.service
+            state: started
+
+        - name: Observe system Pi-hole after guaranteed restart attempt
+          ansible.builtin.command:
+            argv: [systemctl, is-active, pihole.service]
+          register: pihole_restarted
+          changed_when: false
+          failed_when: false
+
+        - name: Require original rootful Pi-hole service has returned active
+          ansible.builtin.assert:
+            that:
+              - pihole_restarted.rc == 0
+              - (pihole_restarted.stdout | trim) == 'active'
+            fail_msg: Pi-hole service did not restart; stop and diagnose incumbent.
+
+    - name: Privately inspect original rootful Pi-hole runtime after restart
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivors.py') }}"
+          - --service
+          - pihole
+      register: pihole_after_backup
+      changed_when: false
+      no_log: true
+
+    - name: Require same image, both volumes and DNS ports after restart
+      ansible.builtin.assert:
+        that:
+          - (pihole_after_backup.stdout | from_json).container_running | bool
+          - (pihole_after_backup.stdout | from_json).image_id == pihole_expected_image_id
+          - (pihole_after_backup.stdout | from_json).image_reference == pihole_expected_image_ref
+          - (pihole_after_backup.stdout | from_json).mounts == (pihole_snapshot_incumbent.stdout | from_json).mounts
+          - (pihole_after_backup.stdout | from_json).port_mappings == (pihole_snapshot_incumbent.stdout | from_json).port_mappings
+        fail_msg: Pi-hole restarted but running image/mount/port identity changed.
+
+    - name: Check local Pi-hole HTTP service availability after restart
+      ansible.builtin.uri:
+        url: http://127.0.0.1:82/admin/
+        status_code: [200, 301, 302, 303, 307, 308, 401, 403]
+        follow_redirects: none
+        timeout: 5
+      register: pihole_backup_http
+      retries: 15
+      delay: 2
+      until: pihole_backup_http.status | default(0) in [200, 301, 302, 303, 307, 308, 401, 403]
+      changed_when: false
+      no_log: true
+
+    - name: Require both exported archives are private root-owned files
+      ansible.builtin.stat:
+        path: "{{ item }}.partial"
+        follow: false
+      loop:
+        - "{{ pihole_etc_archive }}"
+        - "{{ pihole_dnsmasq_archive }}"
+      register: pihole_export_stats
+
+    - name: Reject wrong type, ownership, size or mode before archive validation
+      ansible.builtin.assert:
+        that:
+          - (pihole_export_stats.results | map(attribute='stat.isreg') | list) == [true, true]
+          - (pihole_export_stats.results | map(attribute='stat.islnk') | list) == [false, false]
+          - (pihole_export_stats.results | map(attribute='stat.pw_name') | list) == ['root', 'root']
+          - (pihole_export_stats.results | map(attribute='stat.mode') | list) == ['0600', '0600']
+          - (pihole_export_stats.results | map(attribute='stat.size') | min | int) > 0
+
+    - name: Privately verify etc-pihole tar safe content and both SQLite databases
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ pihole_validator }}"
+          - etc-pihole
+          - "{{ pihole_etc_archive }}.partial"
+      register: pihole_etc_validation
+      changed_when: false
+      no_log: true
+
+    - name: Privately verify configured empty dnsmasq volume archive structure
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ pihole_validator }}"
+          - etc-dnsmasq
+          - "{{ pihole_dnsmasq_archive }}.partial"
+      register: pihole_dnsmasq_validation
+      changed_when: false
+      no_log: true
+
+    - name: Require safe complete rootful backup pair with SQLite integrity
+      ansible.builtin.assert:
+        that:
+          - (pihole_etc_validation.stdout | from_json).archive_verified | bool
+          - (pihole_etc_validation.stdout | from_json).sqlite_integrity == 'ok'
+          - (pihole_etc_validation.stdout | from_json).required_state_present | bool
+          - (pihole_dnsmasq_validation.stdout | from_json).archive_verified | bool
+          - (pihole_dnsmasq_validation.stdout | from_json).regular_file_count | int == 0
+          - not ((pihole_etc_validation.stdout | from_json).archive_contents_returned | bool)
+          - not ((pihole_dnsmasq_validation.stdout | from_json).archive_contents_returned | bool)
+
+    - name: Publish validated etc-pihole archive without clobber
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys;os.link(sys.argv[1],sys.argv[2]);os.unlink(sys.argv[1])"
+          - "{{ pihole_etc_archive }}.partial"
+          - "{{ pihole_etc_archive }}"
+      changed_when: true
+
+    - name: Publish validated dnsmasq archive without clobber
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys;os.link(sys.argv[1],sys.argv[2]);os.unlink(sys.argv[1])"
+          - "{{ pihole_dnsmasq_archive }}.partial"
+          - "{{ pihole_dnsmasq_archive }}"
+      changed_when: true
+
+    - name: Report bounded rootful Pi-hole same-stop private source backup acceptance
+      ansible.builtin.debug:
+        msg:
+          source: kvar.outer.sanctum
+          service: pihole
+          etc_pihole_archive: "{{ pihole_etc_archive }}"
+          etc_pihole_size_bytes: "{{ (pihole_etc_validation.stdout | from_json).archive_size_bytes | int }}"
+          etc_pihole_sha256: "{{ (pihole_etc_validation.stdout | from_json).archive_sha256 }}"
+          dnsmasq_archive: "{{ pihole_dnsmasq_archive }}"
+          dnsmasq_size_bytes: "{{ (pihole_dnsmasq_validation.stdout | from_json).archive_size_bytes | int }}"
+          dnsmasq_sha256: "{{ (pihole_dnsmasq_validation.stdout | from_json).archive_sha256 }}"
+          gravity_and_ftl_sqlite_integrity: ok
+          original_image_id_preserved: true
+          original_service_restarted: true
+          original_http_status: "{{ pihole_backup_http.status | int }}"
+          both_volumes_exported_while_original_stopped: true
+          kvar_private_backup_pair_accepted: true
+          off_host_copy_accepted: false
+          isolated_kvin_pihole_recovery_accepted: false
+          real_client_dns_filtering_accepted: false
+          other_kvar_or_kvin_service_changed: false
+          dns_authority_or_firewall_or_proxy_changed: false
+          next_gate: transfer both verified private tar archives off Kvar and restore isolated rootful Kvin volumes
