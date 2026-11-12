@@ -193,6 +193,30 @@
               - linkstack_backup_restarted.stdout | trim == 'active'
             fail_msg: Original LinkStack did not restart successfully; stop here.
 
+    - name: Privately observe original image and volume after LinkStack restart
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivors.py') }}"
+          - --service
+          - linkstack
+      register: linkstack_backup_after_restart
+      changed_when: false
+      no_log: true
+
+    - name: Refuse claiming clean backup if restart changed original image or mount
+      ansible.builtin.assert:
+        that:
+          - (linkstack_backup_after_restart.stdout | from_json).container_running | bool
+          - (linkstack_backup_after_restart.stdout | from_json).image_id == linkstack_expected_image_id
+          - (linkstack_backup_after_restart.stdout | from_json).image_reference == linkstack_expected_image_ref
+          - (linkstack_backup_after_restart.stdout | from_json).mounts == (linkstack_backup_incumbent.stdout | from_json).mounts
+          - (linkstack_backup_after_restart.stdout | from_json).port_mappings == (linkstack_backup_incumbent.stdout | from_json).port_mappings
+        fail_msg: >-
+          LinkStack restarted but its container identity drifted. The incumbent
+          must be reviewed before accepting any backup or further deployment.
+
     - name: Verify incumbent LinkStack HTTP service returned
       ansible.builtin.uri:
         url: http://127.0.0.1:8081/
