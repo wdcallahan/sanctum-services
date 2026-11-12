@@ -291,7 +291,7 @@ def collect(host, user):
             if code == 0:
                 removed, _, _ = invoke(["podman", "rm", "--force", CASES[label]])
                 result["cleanup"][label + "_container_removed"] = removed == 0
-                if removed:
+                if removed != 0:
                     raise Refused("trial_container_cleanup_failed")
             elif code == 1:
                 result["cleanup"][label + "_container_removed"] = True
