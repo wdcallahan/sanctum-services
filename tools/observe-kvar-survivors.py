@@ -132,6 +132,42 @@ def safe_unit(raw):
             "enabled": fields["UnitFileState"], "quadlet_source": source}
 
 
+def local_image_listing(raw, running_id):
+    """Project only an exact running-image match from local image-list JSON.
+
+    No registry requests, no other image names, labels, image-config environment,
+    or arbitrary local store metadata are returned.
+    """
+    rows = parse_json(raw)
+    if not isinstance(rows, list) or len(rows) > 512:
+        return {"status": "unavailable"}
+    matches = []
+    for item in rows:
+        if not isinstance(item, dict):
+            return {"status": "unavailable"}
+        image_id = item.get("Id", item.get("ID"))
+        if not isinstance(image_id, str):
+            continue
+        if image_id.removeprefix("sha256:") != running_id.removeprefix("sha256:"):
+            continue
+        if not SAFE_ID.fullmatch(image_id):
+            return {"status": "unavailable"}
+        digest = item.get("Digest")
+        digest = digest if isinstance(digest, str) and re.fullmatch(r"sha256:[a-f0-9]{64}", digest) else None
+        repo_digests = item.get("RepoDigests")
+        remote = (sorted({v for v in repo_digests if isinstance(v, str)
+                          and re.fullmatch(r"[A-Za-z0-9_.:/-]{1,170}@sha256:[a-f0-9]{64}", v)})
+                  if isinstance(repo_digests, list) and len(repo_digests) <= 20 else [])
+        matches.append({"digest": digest, "repo_digests": remote})
+    if not matches:
+        return {"status": "not_listed"}
+    if len(matches) > 1 and len({json.dumps(m, sort_keys=True) for m in matches}) > 1:
+        return {"status": "ambiguous"}
+    return {"status": "matched_running_image",
+            "manifest_digest_candidate": matches[0]["digest"],
+            "repo_digests": matches[0]["repo_digests"]}
+
+
 def collect(service, host, account, runner=query):
     if service not in CHOICES:
         return {"status": "refused", "reason": "unselected_service"}
@@ -198,6 +234,17 @@ def collect(service, host, account, runner=query):
                        "repo_digests": digests})
         attempts.append({"selector": selector, "status": "matched_container_image"})
         break
+    if "image_platform" not in result:
+        # A template failure must not masquerade as a missing local image.
+        # Podman's documented read-only image listing is an independent
+        # bounded source. Match the *running container's* full immutable ID.
+        listing = local_image_listing(
+            runner(["podman", "images", "--no-trunc", "--format", "json"]),
+            image_id)
+        attempts.append({"selector": "local_image_listing", "status": listing["status"]})
+        if listing["status"] == "matched_running_image":
+            result["local_manifest_digest_candidate"] = listing["manifest_digest_candidate"]
+            result["repo_digests"] = listing["repo_digests"]
     result["image_probe"] = {"attempts": attempts,
                              "pullable_digest_known": bool(result.get("repo_digests"))}
     command = ["systemctl"]
