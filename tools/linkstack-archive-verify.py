@@ -45,7 +45,7 @@ def inspect(archive):
     if file_path.stat().st_size > LIMIT_BYTES + 512 * LIMIT_ENTRIES:
         raise ValueError("oversize_archive")
 
-    total, count = 0, 0
+    total, count, files = 0, 0, 0
     seen = set()
     markers = set()
     with tempfile.TemporaryDirectory(prefix="sanctum-linkstack-verify-") as tmp:
@@ -70,6 +70,7 @@ def inspect(archive):
                     continue
                 if member.size < 0:
                     raise ValueError("invalid_size")
+                files += 1
                 total += member.size
                 if total > LIMIT_BYTES:
                     raise ValueError("oversize_payload")
@@ -113,7 +114,7 @@ def inspect(archive):
         "archive_verified": True,
         "sqlite_integrity": "ok",
         "configuration_file_present": True,
-        "regular_file_count": len(seen),  # includes directory records, bounded
+        "regular_file_count": files,
         "regular_file_bytes": total,
         "archive_bytes": file_path.stat().st_size,
         "archive_sha256": h.hexdigest(),
