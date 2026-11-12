@@ -11,3 +11,12 @@ kuma_candidate:
   tag_at_lookup: "2.5.9"
   platform: linux/arm64
   status: registry_only
+# Candidate ARM64 platform digest observed in Kvar's exact-running image
+# RepoDigests and independently matched to Docker Hub's linux/arm64 latest
+# listing on 2026-11-12. Kvin native pull/runtime still NOT accepted.
+linkstack_candidate:
+  image: docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1
+  tag_at_lookup: latest
+  platform: linux/arm64
+  source_running_image_id: 53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65
+  status: registry_only
