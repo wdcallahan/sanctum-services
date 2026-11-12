@@ -41,7 +41,7 @@ class ProductionPromotionTest(unittest.TestCase):
                      "Require old Kvin port-80 stage already removed with its own runbook",
                      "Require new retained Kuma actually responds on its private Kvin listener"):
             self.assertIn(name,stages)
-        assert stages.index("Require old Kvin port-80 stage already removed with its own runbook") < stages.index("Render exactly eight production routes with Kuma and selected LinkStack backends")
+        assert stages.index("Require old Kvin port-80 stage already removed with its own runbook") < stages.index("Render exactly eight production routes with Kuma and selected LinkStack and Pi-hole backends")
 
     def test_only_known_source_manifest_promoted(self):
         self.assertEqual([r["hostname"] for r in self.manifest if r["enabled"]],
