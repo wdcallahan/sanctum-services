@@ -1,0 +1,74 @@
+---
+# Kvin-only rootless LinkStack differential diagnosis.
+# Original accepted restore volume is NEVER mounted or altered.
+# :Z and :U apply ONLY to a newly imported disposable volume cloned from
+# the exact checksum-verified Kvin-local archive. :U may recursively chown
+# ~10,523 files; this explicit gate authorizes that *cloned* data mutation.
+- name: Diagnose isolated restored LinkStack volume labeling and ownership
+  hosts: kuma
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require exact Kvin rootless operator and separate cloned-volume mutation approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - not ansible_check_mode
+          - sanctum_linkstack_clone_mount_diagnostic_approved | default(false) | bool
+          - sanctum_linkstack_disposable_relabel_chown_approved | default(false) | bool
+          - not (sanctum_linkstack_cutover_approved | default(false) | bool)
+          - not (sanctum_linkstack_consistent_backup_approved | default(false) | bool)
+          - not (sanctum_linkstack_offhost_transfer_approved | default(false) | bool)
+          - not (sanctum_linkstack_restore_approved | default(false) | bool)
+        fail_msg: >-
+          This source-qualified diagnostic operates only on a disposable
+          Kvin rootless clone of the exact verified backup, including
+          optional :Z relabel and :U ownership conversion of that clone.
+          It may not alter accepted restore volume, Kvar, any existing
+          application, host sysctls, proxy, DNS, or firewall.
+
+    - name: Execute bounded container-only port-80 plus cloned-volume access comparison
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/diagnose-linkstack-volume-mount.py') }}"
+      register: linkstack_volume_diagnosis
+      changed_when: true
+      no_log: true
+
+    - name: Require private report contracts and no production mutations
+      ansible.builtin.assert:
+        that:
+          - (linkstack_volume_diagnosis.stdout | from_json).schema == 'sanctum-linkstack-volume-mount-diagnostic/v1'
+          - (linkstack_volume_diagnosis.stdout | from_json).observer == 'kvin.outer.sanctum'
+          - (linkstack_volume_diagnosis.stdout | from_json).status in ['observed', 'partial', 'cleanup_incomplete']
+          - (linkstack_volume_diagnosis.stdout | from_json).source_archive_unchanged | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).accepted_restore_volume_unchanged | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).host_sysctl_unchanged | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).kvar_and_production_untouched | bool
+          - not ((linkstack_volume_diagnosis.stdout | from_json).private_content_or_raw_logs_returned | bool)
+          - not ((linkstack_volume_diagnosis.stdout | from_json).restored_application_accepted | bool)
+
+    - name: Report sanitized LinkStack restored-volume mount and labeling differential
+      ansible.builtin.debug:
+        msg: "{{ linkstack_volume_diagnosis.stdout | from_json }}"
+
+    - name: Require cleanup of all clone trial containers, copied volume, and private network
+      ansible.builtin.assert:
+        that:
+          - (linkstack_volume_diagnosis.stdout | from_json).status != 'cleanup_incomplete'
+          - (linkstack_volume_diagnosis.stdout | from_json).cleanup.image_only_container_removed | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).cleanup.plain_container_removed | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).cleanup.relabel_container_removed | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).cleanup.ownership_container_removed | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).cleanup.clone_volume_removed | bool
+          - (linkstack_volume_diagnosis.stdout | from_json).cleanup.internal_network_removed | bool
+        fail_msg: >-
+          Private diagnostic cleanup incomplete; do not run another trial
+          or remove original restoration data. Inspect only the fixed
+          temporary resource names named in source.
