@@ -211,7 +211,7 @@ class KvarSurvivors(unittest.TestCase):
         for play, service in zip(plays, ("linkstack", "pihole")):
             self.assertFalse(play["gather_facts"])
             tasks = play["tasks"]
-            self.assertEqual(len(tasks), 4)
+            self.assertEqual(len(tasks), 7)
             self.assertIn("kvar.outer.sanctum",
                           str(tasks[0]["ansible.builtin.assert"]["that"]))
             command = tasks[1]
