@@ -1,5 +1,18 @@
 # Sanctum Services — Session Continuation
 
+## November 12 — Kvar rootful Pi-hole consistent backup NATIVE ACCEPTED; move its actual state to Kvin
+
+**Operator-native result:** Nova ran `ansible/pihole-consistent-backup.yml` with explicit short Pi-hole DNS interruption approval on Kvar. **`ok=37 changed=8 failed=0 unreachable=0 skipped=0`**. Original rootful Pi-hole stopped only while both volumes were exported and restarted successfully, original image/mounts/ports preserved, `/admin/` HTTP302, both private archives validated, gravity/FTL SQLite integrity **ok**. Sources under `/var/lib/sanctum-services/backups/pihole/`: `pihole-etc-20261112t161524.tar` **1,305,682,432 bytes**, SHA256 `4731ee1765d33a14ef1a01dabbac23e43effaca941695281b3f74cdb5f72e3da`; `pihole-dnsmasq-20261112t161524.tar` **1024 bytes**, SHA256 `5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef`. The dnsmasq archive correctly contains no regular files. **Kvar backup pair accepted; Kvar Pi-hole remains running; no off-host copy or Kvin import accepted yet.**
+
+**Next operator action after new Services source CI:** source-managed `ansible/pihole-kvin-restore.yml` performs the actual 1.3 GB private streaming copy through Kvin's existing SSH access to Kvar on port 10022 and noninteractive remote sudo; checks both exact tar sizes/hashes, then creates and imports **two distinct rootful Kvin Podman volumes**. This is real data migration, not simulated HTTP or a disposable copy. No changes to Kvar service, host DNS, firewall or existing Kvin apps. If remote `sudo -n` or SSH is unavailable, transfer fails without overwriting original backup; fix the actual access issue. This step does NOT start Pi-hole. The following task is to create its persistent Kvin Quadlet with restored volumes and start real Pi-hole, then use normal production DNS/UI clients. Don't implement an elaborate isolated browser or nonproduction acceptance stage.
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/pihole-kvin-restore.yml \
+  -e sanctum_pihole_kvin_restore_approved=true
+```
+
+
 ## November 12 — Source CI green for Yarn postcheck correction; next Kvar migration dependency is Pi-hole
 
 **Services CI [#43316639235 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43316639235)** for commit `eba1dfcb5d80d8b1b8bedc94c14ef40bced810d7`. The old Yarn frontend smoke test in `ansible/yxorp.yml` is now intentionally **nonfatal** to independent application route reconciliation; a timeout is still exposed as `status=-1` and `yarn_frontend_accepted=false` rather than incorrectly aborting LinkStack's postcheck. This has **not** been run on Kvin and does not need a host rerun to accept already working LinkStack.

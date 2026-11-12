@@ -1,0 +1,114 @@
+---
+# Import the operator-accepted Kvar Pi-hole snapshot to Kvin's rootful volumes.
+# This is real recovery work, not a disposable test; the service is not started
+# and Kvar's running Pi-hole / DNS / YXORP / firewall are not modified.
+- name: Copy original Pi-hole backup to Kvin and restore durable rootful volumes
+  hosts: yxorp
+  become: false
+  gather_facts: true
+  vars:
+    pihole_kvin_archive_dir: /home/wdc2/.local/share/sanctum-services/backups/pihole
+    pihole_kvin_restore_items:
+      - type: etc-pihole
+        archive: pihole-etc-20261112t161524.tar
+        volume: sanctum-pihole-etc-20261112t161524
+      - type: etc-dnsmasq
+        archive: pihole-dnsmasq-20261112t161524.tar
+        volume: sanctum-pihole-dnsmasq-20261112t161524
+  tasks:
+    - name: Require the existing Kvin controller and explicit volume restoration approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_pihole_kvin_restore_approved | default(false) | bool
+        fail_msg: Only approved Kvin rootful volume restore from the fixed original Kvar backup is supported.
+
+    - name: Stream and verify exact existing Kvar backup archives onto Kvin
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/stream-pihole-snapshot.py') }}"
+          - "{{ item.type }}"
+      loop: "{{ pihole_kvin_restore_items }}"
+      loop_control:
+        label: "{{ item.type }}"
+      register: pihole_kvin_archive_stream
+      changed_when: (pihole_kvin_archive_stream.stdout | from_json).copied | bool
+      no_log: true
+
+    - name: Require both transferred archives verified on Kvin
+      ansible.builtin.assert:
+        that:
+          - pihole_kvin_archive_stream.results | length == 2
+          - pihole_kvin_archive_stream.results | map(attribute='stdout') | map('from_json') | selectattr('verified', 'equalto', true) | list | length == 2
+        fail_msg: The exact original archives were not both independently verified after transfer.
+
+    - name: Require distinct rootful destination volumes absent before importing
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ item.volume }}"]
+      loop: "{{ pihole_kvin_restore_items }}"
+      loop_control:
+        label: "{{ item.volume }}"
+      become: true
+      register: pihole_kvin_preexisting_volumes
+      changed_when: false
+      failed_when: pihole_kvin_preexisting_volumes.rc not in [0, 1]
+
+    - name: Refuse overwriting an existing volume or partial prior import
+      ansible.builtin.assert:
+        that:
+          - pihole_kvin_preexisting_volumes.results | map(attribute='rc') | list == [1, 1]
+        fail_msg: A Pi-hole destination volume already exists; never merge the archive onto it.
+
+    - name: Create two rootful Kvin destination volumes without touching old services
+      ansible.builtin.command:
+        argv: [podman, volume, create, "{{ item.volume }}"]
+      loop: "{{ pihole_kvin_restore_items }}"
+      loop_control:
+        label: "{{ item.volume }}"
+      become: true
+      changed_when: true
+
+    - name: Import exact previously validated Pi-hole tar archives into new rootful volumes
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - import
+          - "{{ item.volume }}"
+          - "{{ pihole_kvin_archive_dir }}/{{ item.archive }}"
+      loop: "{{ pihole_kvin_restore_items }}"
+      loop_control:
+        label: "{{ item.type }}"
+      become: true
+      changed_when: true
+      no_log: true
+
+    - name: Require restored rootful volumes now exist
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ item.volume }}"]
+      loop: "{{ pihole_kvin_restore_items }}"
+      loop_control:
+        label: "{{ item.volume }}"
+      become: true
+      register: pihole_kvin_imported_volumes
+      changed_when: false
+
+    - name: Report completed Pi-hole state migration boundary
+      ansible.builtin.debug:
+        msg:
+          source: kvar.outer.sanctum
+          destination: "{{ inventory_hostname }}"
+          original_backup_stamp: 20261112t161524
+          verified_archive_count: 2
+          restored_rootful_volumes: "{{ pihole_kvin_restore_items | map(attribute='volume') | list }}"
+          old_kvar_pihole_modified_or_stopped: false
+          other_live_kvin_services_or_dns_modified: false
+          pihole_application_started_on_kvin: false
+          next_action: Reconcile the native Pi-hole Quadlet and start the restored service on Kvin
