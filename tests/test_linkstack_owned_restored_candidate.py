@@ -111,7 +111,9 @@ class OwnedCandidateContract(unittest.TestCase):
         self.assertIn("Host: dir.nexus.sanctum", args)
         self.assertTrue(http["no_log"])
         self.assertEqual(http["retries"], 12)
-        self.assertIn("'200'", str(self.task("Require HTTP 200")["ansible.builtin.assert"]["that"]))
+        accepted = next(x for x in block["block"]
+                        if x["name"].startswith("Require HTTP 200"))
+        self.assertIn("'200'", str(accepted["ansible.builtin.assert"]["that"]))
         cleanup = self.task("Require both disposable resources")
         self.assertIn("linkstack_owned_cleanup_container", str(cleanup))
         self.assertIn("linkstack_owned_cleanup_network", str(cleanup))
