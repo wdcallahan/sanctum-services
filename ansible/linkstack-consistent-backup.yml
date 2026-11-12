@@ -229,6 +229,24 @@
       until: linkstack_backup_http.status | default(0) in [200, 301, 302, 307, 308]
       changed_when: false
 
+    - name: Inspect retained private partial archive permissions after export
+      ansible.builtin.stat:
+        path: "{{ linkstack_backup_partial }}"
+        follow: false
+      register: linkstack_exported_archive_stat
+
+    - name: Require an ordinary private mode 0600 archive before inspection
+      ansible.builtin.assert:
+        that:
+          - linkstack_exported_archive_stat.stat.isreg | default(false)
+          - not (linkstack_exported_archive_stat.stat.islnk | default(false))
+          - linkstack_exported_archive_stat.stat.pw_name == 'wdc2'
+          - linkstack_exported_archive_stat.stat.mode == '0600'
+          - linkstack_exported_archive_stat.stat.size | int > 0
+        fail_msg: >-
+          Snapshot file ownership, mode or type is unsafe; retain private
+          partial evidence and refuse promotion until investigated.
+
     - name: Privately validate exported SQLite and complete safe archive
       ansible.builtin.command:
         argv:
