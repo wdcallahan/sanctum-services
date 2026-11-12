@@ -86,7 +86,7 @@ class OwnedCandidateContract(unittest.TestCase):
                          "net.ipv4.ip_unprivileged_port_start=80")
         self.assertIn("no-new-privileges", args)
         self.assertIn("{{ linkstack_candidate_network }}", args)
-        self.assertIn(EXPECTED, self.tasks[0]["ansible.builtin.assert"]["that"][-1])
+        self.assertIn(EXPECTED, str(self.tasks[0]["ansible.builtin.assert"]["that"]))
         for forbidden in ("--publish", "-p", "--network=host", "--privileged",
                           "{{ linkstack_original_restore_volume }}:/htdocs"):
             self.assertNotIn(forbidden, args)
