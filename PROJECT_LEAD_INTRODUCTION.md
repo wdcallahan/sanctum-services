@@ -1,5 +1,15 @@
 # Sanctum Services — Session Continuation
 
+**CI ACCEPTED and next native operator boundary — November 12:** Full [Services source and Ansible syntax CI #43285610612 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/43285610612). The current default-off diagnostic is `ansible/linkstack-port80-bind-diagnose.yml`, **NOT** the old image runtime or restored-app test. It tests only the exact already-cached ARM64 image, on a new internal/no-DNS bridge in two throwaway **image-only** rootless containers, one ordinary and one with **only container-network-namespace** `net.ipv4.ip_unprivileged_port_start=80`. No host sysctl, service, published port, original volume, Kvar app, database, DNS, firewall, YXORP or Pi-hole change. Both temp containers and network are cleaned in finally with pre-existing name collision refusal. This tests the actual low-port bind permission hypothesis; does not assert Kvin restored app works.
+
+**Run on Kvin only after explicit opt-in:**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/linkstack-port80-bind-diagnose.yml \
+  -e sanctum_linkstack_namespaced_port80_diagnostic_approved=true
+```
+Send **entire output** (no need to trim); one report `Report sanitized LinkStack namespaced port-80 bind comparison` and Kvin recap, or failed task. If `comparison=namespaced_low_port_policy_enables_startup`, implement the same isolated per-container network permission in a *separately guarded restored-app test*, not a global sysctl. If it fails, inspect its `start_command_failed` vs exit categories and do not misclassify a Podman unsupported namespaced sysctl as proof of a different Apache cause.
+
 ## CURRENT — November 12: native LinkStack Apache stderr confirms port-80 bind denied; namespace-only differential CI pending
 
 **Native receipt:** Nova reran `ansible/linkstack-image-runtime-diagnose.yml` after the stdout/stderr diagnostic fix. Kvin `ok=6 changed=1 unreachable=0 failed=0 skipped=0`, all temporary image-only containers and internal/no-DNS bridge successfully removed. Both ordinary rootless Podman and the additional `no-new-privileges` case report `Running:false, ExitCode:1, OOMKilled:false, http_status:null`. Both passed static image prerequisites and Apache `httpd -t`; entrypoint banners reached `Running Apache` before exit. **Captured stderr error classes for BOTH**: `apache_bind`, `apache_listen_socket`, `apache_log_open`, `permission_denied`. This is positive evidence Apache's socket binding was denied, not failure of the verified archive or imported SQLite. Apache's secondary `AH00015` log-open message can result from a failed bind; do not assume it requires an independent logging fix.
