@@ -158,18 +158,48 @@ def collect(service, host, account, runner=query):
         return dict(result, status="partial", reason="bounded_container_metadata_unavailable")
     result.update({"container_running": raw["running"], "image_reference": image_ref,
                    "image_id": image_id, "mounts": mounts, "port_mappings": ports})
-    img = parse_json(runner(["podman", "image", "inspect", "--format", IMAGE_FORMAT, image_id]))
-    if isinstance(img, dict):
+    # Container identity is already observed. A successful running container
+    # does NOT imply that Podman's local image-inspect is still accessible.
+    # Try by the exact observed immutable ID first; use the existing local tag
+    # only as a read-only fallback and only if its ID matches the container.
+    # Never pull or resolve a registry tag as part of this observation.
+    attempts = []
+    for target, selector in ((image_id, "container_image_id"),
+                             (image_ref, "local_image_reference")):
+        response = runner(["podman", "image", "inspect", "--format", IMAGE_FORMAT, target])
+        if response is None:
+            attempts.append({"selector": selector, "status": "command_unavailable"})
+            continue
+        img = parse_json(response)
+        if not isinstance(img, dict):
+            attempts.append({"selector": selector, "status": "invalid_output"})
+            continue
+        actual_id = img.get("id")
+        if (not isinstance(actual_id, str) or not SAFE_ID.fullmatch(actual_id)):
+            attempts.append({"selector": selector, "status": "invalid_identity"})
+            continue
+        if actual_id.removeprefix("sha256:") != image_id.removeprefix("sha256:"):
+            attempts.append({"selector": selector, "status": "different_local_image"})
+            # A different local latest tag must never pin this running container.
+            break
+        if img.get("os") != "linux" or img.get("arch") not in ("arm64", "amd64"):
+            attempts.append({"selector": selector, "status": "invalid_platform"})
+            continue
         digest_list = img.get("repo_digests")
         digests = (sorted({v for v in digest_list
                            if isinstance(v, str) and
                            re.fullmatch(r"[A-Za-z0-9_.:/-]{1,170}@sha256:[a-f0-9]{64}", v)})
                    if isinstance(digest_list, list) and len(digest_list) <= 20 else [])
-        if (img.get("os") == "linux" and img.get("arch") in ("arm64", "amd64")
-                and isinstance(img.get("id"), str)
-                and SAFE_ID.fullmatch(img["id"])):
-            result.update({"image_platform": "linux/" + img["arch"],
-                           "repo_digests": digests})
+        local_digest = img.get("digest")
+        if not isinstance(local_digest, str) or not re.fullmatch(r"sha256:[a-f0-9]{64}", local_digest):
+            local_digest = None
+        result.update({"image_platform": "linux/" + img["arch"],
+                       "local_image_digest": local_digest,
+                       "repo_digests": digests})
+        attempts.append({"selector": selector, "status": "matched_container_image"})
+        break
+    result["image_probe"] = {"attempts": attempts,
+                             "pullable_digest_known": bool(result.get("repo_digests"))}
     command = ["systemctl"]
     if cfg["scope"] == "rootless":
         command.append("--user")
@@ -177,7 +207,8 @@ def collect(service, host, account, runner=query):
                 "-p", "LoadState", "-p", "ActiveState",
                 "-p", "UnitFileState", "-p", "SourcePath"]
     result["service_unit"] = safe_unit(runner(command))
-    result["status"] = ("observed" if "image_platform" in result
+    result["status"] = ("observed" if result["image_probe"]["pullable_digest_known"]
+                        and "image_platform" in result
                         and result["service_unit"]["status"] == "observed"
                         else "partial")
     result["next_gate"] = ("qualify immutable image and safe consistent volume backup,"
