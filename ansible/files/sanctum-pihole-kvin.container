@@ -1,0 +1,29 @@
+# Actual restored Pi-hole on Kvin, using original accepted Kvar snapshot.
+# Native LAN service. The Kvar installation is kept running for fallback.
+# This exact ARM64 2026.11.0 digest is the original Kvar observed repo digest:
+# https://github.com/pi-hole/docker-pi-hole/pkgs/container/pihole
+[Unit]
+Description=Sanctum Pi-hole on Kvin (restored original ad-blocking data)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=ghcr.io/pi-hole/pihole@sha256:13089e5c4d33c5cd8eb7b011949a380145f3ff1405dea24c81dd54dcb255b792
+ContainerName=sanctum-pihole-kvin
+Volume=sanctum-pihole-etc-20261112t161524:/etc/pihole:Z
+Volume=sanctum-pihole-dnsmasq-20261112t161524:/etc/dnsmasq.d:Z
+# Bind the LAN address instead of competing with Kvin's local resolver.
+PublishPort=192.168.0.192:53:53/tcp
+PublishPort=192.168.0.192:53:53/udp
+PublishPort=192.168.0.192:82:80/tcp
+Environment=TZ=America/Chicago
+# Pi-hole DNS must accept clients via the default Podman bridge.
+Environment=FTLCONF_dns_listeningMode=ALL
+Pull=never
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=180
+
+[Install]
+WantedBy=multi-user.target

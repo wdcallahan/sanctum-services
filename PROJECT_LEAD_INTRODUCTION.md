@@ -1,5 +1,20 @@
 # Sanctum Services — Session Continuation
 
+## November 12 — actual Kvar Pi-hole snapshot imported into permanent Kvin volumes; deploy real Kvin service NEXT
+
+**Native Kvin receipt accepted:** Nova ran the source-managed `ansible/pihole-kvin-restore.yml` from commit `31894ad7ef3a6ab677b8eb4c825b5d167a4c8d71`: **`ok=10 changed=3 failed=0 unreachable=0 skipped=0`**. Both exact 20261112t161524 archives were privately streamed to Kvin, source SHA-256/size verified, and original rootful `sanctum-pihole-etc-20261112t161524` plus `sanctum-pihole-dnsmasq-20261112t161524` volumes created and imported. Kvar Pi-hole unchanged/running. Backup and Kvin volume recovery **ACCEPTED**; Pi-hole has **not yet been started** on Kvin.
+
+**Next source-managed real service deployment:** `ansible/pihole-kvin-deploy.yml` installs a rootful Kvin Quadlet using the **original image ID** `64c81b3c8132f3e7ae56925a1668d2cfa5a53c509c43b4c1cc71591e0f42c3d8` and matching official Pi-hole 2026.11.0 Linux ARM64 digest `ghcr.io/pi-hole/pihole@sha256:13089e5c4d33c5cd8eb7b011949a380145f3ff1405dea24c81dd54dcb255b792` (official [Pi-hole package](https://github.com/pi-hole/docker-pi-hole/pkgs/container/pihole)). Original restored volumes mounted at `/etc/pihole` and `/etc/dnsmasq.d`. Real Kvin LAN `192.168.0.192` TCP/UDP53 and web TCP82 are published; use bridge listening mode ALL. Leaves YXORP production port80, Peanut DNS authority, Kvar Pi-hole, client configuration and host firewall untouched. The target ports could conflict or be blocked by firewalld; if so, address the *actual observed* startup or client failure rather than adding another test architecture.
+
+**NEXT single operator action on Kvin after source CI green:**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/pihole-kvin-deploy.yml \
+  -e sanctum_pihole_kvin_deploy_approved=true
+```
+On successful service start and local admin HTTP, retarget the existing `pihole.nexus.sanctum` YXORP route to Kvin web port82, and check actual client DNS/ad blocking. Source has not been applied to a host; only the volume import has native acceptance. No more backup/import reruns or disposable container probes.
+
+
 ## November 12 — Kvar rootful Pi-hole consistent backup NATIVE ACCEPTED; move its actual state to Kvin
 
 **Operator-native result:** Nova ran `ansible/pihole-consistent-backup.yml` with explicit short Pi-hole DNS interruption approval on Kvar. **`ok=37 changed=8 failed=0 unreachable=0 skipped=0`**. Original rootful Pi-hole stopped only while both volumes were exported and restarted successfully, original image/mounts/ports preserved, `/admin/` HTTP302, both private archives validated, gravity/FTL SQLite integrity **ok**. Sources under `/var/lib/sanctum-services/backups/pihole/`: `pihole-etc-20261112t161524.tar` **1,305,682,432 bytes**, SHA256 `4731ee1765d33a14ef1a01dabbac23e43effaca941695281b3f74cdb5f72e3da`; `pihole-dnsmasq-20261112t161524.tar` **1024 bytes**, SHA256 `5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef`. The dnsmasq archive correctly contains no regular files. **Kvar backup pair accepted; Kvar Pi-hole remains running; no off-host copy or Kvin import accepted yet.**

@@ -60,6 +60,9 @@ on:
       - "tools/diagnose-linkstack-image-runtime.py"
       - "tests/test_linkstack_image_runtime_diagnose.py"
       - "ansible/pihole-consistent-backup.yml"
+      - "ansible/files/sanctum-pihole-kvin.container"
+      - "ansible/pihole-kvin-deploy.yml"
+      - "tests/test_pihole_kvin_deploy.py"
       - "tools/pihole-archive-verify.py"
       - "tests/test_pihole_consistent_backup.py"
       - "ansible/linkstack-port80-bind-diagnose.yml"
@@ -181,6 +184,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_linkstack_image_runtime_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_pihole_consistent_backup.py'
           python3 -m unittest discover -s tests -p 'test_pihole_kvin_restore.py'
+          python3 -m unittest discover -s tests -p 'test_pihole_kvin_deploy.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_port80_bind_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_volume_mount_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_owned_restored_candidate.py'
@@ -241,6 +245,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-image-runtime-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-consistent-backup.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-kvin-restore.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-kvin-deploy.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-port80-bind-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-volume-mount-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-owned-restored-candidate.yml --syntax-check

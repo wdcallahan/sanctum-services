@@ -1,0 +1,118 @@
+---
+# Start the real restored Pi-hole on Kvin; no Kvar outage, DNS authority,
+# client DNS assignment, firewall or proxy changes.
+- name: Deploy recovered rootful Pi-hole on Kvin's LAN address
+  hosts: yxorp
+  gather_facts: true
+  become: true
+  vars:
+    pihole_kvin_image: "ghcr.io/pi-hole/pihole@sha256:13089e5c4d33c5cd8eb7b011949a380145f3ff1405dea24c81dd54dcb255b792"
+    pihole_kvin_expected_image_id: 64c81b3c8132f3e7ae56925a1668d2cfa5a53c509c43b4c1cc71591e0f42c3d8
+    pihole_kvin_quadlet: /etc/containers/systemd/sanctum-pihole-kvin.container
+    pihole_kvin_unit: sanctum-pihole-kvin.service
+    pihole_kvin_volumes:
+      - sanctum-pihole-etc-20261112t161524
+      - sanctum-pihole-dnsmasq-20261112t161524
+  tasks:
+    - name: Require approved exact Kvin rootful production Pi-hole scope
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'root'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_pihole_kvin_deploy_approved | default(false) | bool
+          - "'192.168.0.192' in ansible_facts['all_ipv4_addresses']"
+        fail_msg: Pi-hole deployment requires approved Kvin, its expected LAN address and existing restored volumes.
+
+    - name: Verify the two previously imported rootful Pi-hole volumes exist
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ item }}"]
+      loop: "{{ pihole_kvin_volumes }}"
+      register: pihole_kvin_volume_present
+      changed_when: false
+      failed_when: pihole_kvin_volume_present.rc not in [0, 1]
+
+    - name: Refuse missing original Pi-hole state rather than starting empty
+      ansible.builtin.assert:
+        that:
+          - pihole_kvin_volume_present.results | map(attribute='rc') | list == [0, 0]
+
+    - name: Check whether the original pinned ARM64 image is already cached
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ pihole_kvin_image }}"]
+      register: pihole_kvin_image_exists
+      changed_when: false
+      failed_when: pihole_kvin_image_exists.rc not in [0, 1]
+
+    - name: Pull only the pinned original Pi-hole image if necessary
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ pihole_kvin_image }}"]
+      when: pihole_kvin_image_exists.rc == 1
+      changed_when: true
+
+    - name: Read pulled image identity
+      ansible.builtin.command:
+        argv: [podman, image, inspect, --format, "{{ '{{.ID}}' }}", "{{ pihole_kvin_image }}"]
+      register: pihole_kvin_image_id
+      changed_when: false
+
+    - name: Read pulled image architecture
+      ansible.builtin.command:
+        argv: [podman, image, inspect, --format, "{{ '{{.Architecture}}' }}", "{{ pihole_kvin_image }}"]
+      register: pihole_kvin_image_arch
+      changed_when: false
+
+    - name: Require original exact Kvar image ID and ARM64 on Kvin
+      ansible.builtin.assert:
+        that:
+          - (pihole_kvin_image_id.stdout | trim | regex_replace('^sha256:', '')) == pihole_kvin_expected_image_id
+          - (pihole_kvin_image_arch.stdout | trim) == 'arm64'
+        fail_msg: The selected digest is not the original Kvar ARM64 Pi-hole image; do not start it.
+
+    - name: Install the original-state Pi-hole Kvin rootful Quadlet
+      ansible.builtin.copy:
+        src: files/sanctum-pihole-kvin.container
+        dest: "{{ pihole_kvin_quadlet }}"
+        owner: root
+        group: root
+        mode: '0644'
+      register: pihole_kvin_quadlet_written
+
+    - name: Start or reconcile only the restored Kvin Pi-hole service
+      ansible.builtin.systemd_service:
+        name: "{{ pihole_kvin_unit }}"
+        daemon_reload: "{{ pihole_kvin_quadlet_written.changed }}"
+        state: "{{ 'restarted' if pihole_kvin_quadlet_written.changed else 'started' }}"
+
+    - name: Verify actual Kvin Pi-hole admin listener on the normal LAN address
+      ansible.builtin.uri:
+        url: http://192.168.0.192:82/admin/
+        use_proxy: false
+        follow_redirects: none
+        status_code: [200, 301, 302, 303, 307, 308, 401, 403]
+        timeout: 8
+      register: pihole_kvin_http
+      retries: 10
+      delay: 2
+      until: pihole_kvin_http.status | default(0) in [200, 301, 302, 303, 307, 308, 401, 403]
+      changed_when: false
+      no_log: true
+
+    - name: Report actual Kvin Pi-hole service startup outcome
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          service: "{{ pihole_kvin_unit }}"
+          restored_volumes: "{{ pihole_kvin_volumes }}"
+          dns_ipv4: 192.168.0.192
+          dns_tcp_udp_port: 53
+          admin_http_port: 82
+          admin_http_status: "{{ pihole_kvin_http.status | int }}"
+          kvar_original_service_untouched: true
+          other_kvin_apps_proxy_dns_and_firewall_untouched: true
+          new_pihole_service_running: true
+          named_ui_and_real_client_filtering_not_yet_accepted: true
+          next_action: Point existing production pihole.nexus.sanctum upstream at Kvin port 82 and test real DNS clients
