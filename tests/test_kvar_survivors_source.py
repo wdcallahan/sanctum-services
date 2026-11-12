@@ -19,6 +19,15 @@ def observation_runner(service, account="wdc2", bad_mount=False):
     calls = []
     def runner(argv):
         calls.append(argv)
+        if argv[:2] == ["podman", "images"]:
+            return json.dumps([{
+                "Id": IMAGE_ID,
+                "Repository": "docker.io/example/" + service,
+                "Tag": "1.2.3",
+                "Digest": "sha256:" + "b" * 64,
+                "RepoDigests": ["docker.io/example/" + service + "@sha256:" + "b" * 64],
+                "Labels": {"LEAK": SENTINEL},
+            }, {"Id": "e" * 64, "Repository": "private/" + SENTINEL}])
         if argv[:3] == ["podman", "container", "inspect"]:
             data = {
                 "name": service,
@@ -109,9 +118,43 @@ class KvarSurvivors(unittest.TestCase):
             return run(argv)
         r = module.collect("linkstack", "kvar.outer.sanctum", "wdc2", runner=changed_image)
         self.assertEqual(r["status"], "partial")
-        self.assertEqual(r["image_probe"]["attempts"][-1]["status"], "different_local_image")
-        self.assertFalse(r["image_probe"]["pullable_digest_known"])
-        self.assertNotIn("repo_digests", r)
+        self.assertEqual(r["image_probe"]["attempts"][1]["status"], "different_local_image")
+        self.assertEqual(r["image_probe"]["attempts"][-1]["status"], "matched_running_image")
+        self.assertTrue(r["image_probe"]["pullable_digest_known"])
+        self.assertNotIn("image_platform", r)
+        self.assertNotIn(SENTINEL, json.dumps(r))
+
+    def test_image_list_fallback_rejects_wrong_image_and_suppresses_other_names(self):
+        run, commands = observation_runner("linkstack")
+        def no_image_inspect(argv):
+            if argv[:3] == ["podman", "image", "inspect"]:
+                return None
+            return run(argv)
+        r = module.collect("linkstack", "kvar.outer.sanctum", "wdc2",
+                           runner=no_image_inspect)
+        self.assertEqual(r["status"], "partial")
+        self.assertEqual(r["image_probe"]["attempts"][-1],
+                         {"selector": "local_image_listing",
+                          "status": "matched_running_image"})
+        self.assertEqual(r["repo_digests"],
+                         ["docker.io/example/linkstack@sha256:" + "b" * 64])
+        self.assertNotIn(SENTINEL, json.dumps(r))
+        self.assertTrue(any(c[:2] == ["podman", "images"] for c in commands))
+        self.assertNotIn("image_platform", r)
+
+    def test_image_listing_ambiguous_or_unavailable_is_not_false_identity(self):
+        for raw, expected in [
+            ("bad-json", "unavailable"),
+            ("[]", "not_listed"),
+            (json.dumps([{"Id": "e" * 64}]), "not_listed"),
+            (json.dumps([{"Id": IMAGE_ID, "Digest": "sha256:" + "b" * 64,
+                          "RepoDigests": []},
+                         {"Id": IMAGE_ID, "Digest": "sha256:" + "c" * 64,
+                          "RepoDigests": []}]), "ambiguous"),
+        ]:
+            res = module.local_image_listing(raw, IMAGE_ID)
+            self.assertEqual(res["status"], expected)
+            self.assertNotIn("repo_digests", res)
 
     def test_missing_repo_digest_preserves_partial_without_inventing_pull_ref(self):
         run, _ = observation_runner("pihole")
