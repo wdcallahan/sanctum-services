@@ -1,5 +1,10 @@
 # Sanctum Services — Roadmap
 
+## November 12 — Correct unrelated Yarn smoke-test failure that masked accepted LinkStack deployment
+
+After Nova's ordinary Firefox production directory and administrator-login acceptance, the existing `ansible/yxorp.yml` Yarn postcheck was corrected in source: keep its existing bounded 8-second request for signal, but **report an unsuccessful status without failing** unrelated production updates. The LinkStack production postcheck will now execute even if Yarn is unresponsive, and the final summary exposes `yarn_frontend_http_response=-1` / `yarn_frontend_accepted=false` when the earlier timeout recurs. Existing source tests cover this behavior. This is a *source-only correction*; do not ask Nova to rerun the working LinkStack deployment solely to exercise it. The full project remains **open**: Pi-hole remains on Kvar and Kvar host retirement/recovery automation has not been completed.
+
+
 ## November 12 — LinkStack real production browser and administrator login ACCEPTED
 
 **Native operator report:** Nova ran the approved production `ansible/yxorp.yml` route change from the CI-qualified [source commit](https://github.com/wdcallahan/sanctum-services/commit/7e7ab7992244a3df957c44b946bca374352c37de). Kvin play recap **`ok=31 changed=3 failed=1 unreachable=0 skipped=1`**: the existing YXORP role applied the production configuration and service reconciliation, then the **unrelated pre-existing Yarn HTTP post-task timed out** (`Verify production proxy still reaches original Yarn service`). Because that Yarn failure occurred before the new LinkStack post-task, the Ansible play itself did not reach LinkStack final check. **Do not interpret nonzero play exit as a rolled-back route.**

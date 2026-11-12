@@ -97,6 +97,21 @@ class ProductionPromotionTest(unittest.TestCase):
         self.assertIn("Remove only the verified production Quadlet",names)
         self.assertIn("Require no production service still running",names)
 
+    def test_existing_yarn_failure_cannot_abort_linkstack_acceptance(self):
+        """Existing Yarn timeout was incorrectly failing an otherwise working LinkStack deployment."""
+        post=self.play["post_tasks"]
+        yarn=next(t for t in post if t["name"]=="Observe existing Yarn route without blocking unrelated service updates")
+        linkstack=next(t for t in post if t["name"]=="Verify normal production LinkStack route responds through YXORP")
+        self.assertLess(post.index(yarn),post.index(linkstack))
+        self.assertIs(yarn["failed_when"],False)
+        self.assertIs(yarn["changed_when"],False)
+        self.assertEqual(yarn["ansible.builtin.uri"]["timeout"],8)
+        report=next(t for t in post if t["name"]=="Report bounded Kvin YXORP production listener readiness")
+        data=report["ansible.builtin.debug"]["msg"]
+        self.assertIn("yarn_frontend_accepted",data)
+        self.assertIn("default(-1)",data["yarn_frontend_http_response"])
+        self.assertIn("preexisting Yarn path not responding",data["yarn_frontend_note"])
+
     def test_real_ansible_projection_fixture_and_source_ci(self):
         c=CI.read_text()
         self.assertIn("test_yxorp_production_promotion.py",c)
