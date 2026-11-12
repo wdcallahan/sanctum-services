@@ -3,6 +3,8 @@
 # Never touches Kvar, existing services, production routes or the restored volume's
 # archived source. The disposable internal bridge and test container are
 # removed even on trial failure. The bridge has no default external route.
+# Native image-only A/B test: Apache nonroot port-80 bind succeeds only with
+# net.ipv4.ip_unprivileged_port_start=80 inside the container namespace.
 - name: Qualify pinned LinkStack ARM64 image and boot restored data in isolation
   hosts: kuma
   gather_facts: true
@@ -222,6 +224,11 @@
               - "{{ linkstack_trial_network }}"
               - --security-opt
               - no-new-privileges
+              # Kvin native image-only test proved rootless apache:apache
+              # needs this threshold to bind Apache's port 80. The setting
+              # is limited to this disposable container's net namespace.
+              - --sysctl
+              - net.ipv4.ip_unprivileged_port_start=80
               - --pull
               - never
               - --volume
@@ -330,6 +337,8 @@
           temporary_container_removed: true
           temporary_internal_network_removed: true
           isolated_only_internal_network_used: true
+          container_network_namespace_low_port_override_used: true
+          host_low_port_sysctl_unchanged: true
           isolated_restored_volume_retained: true
           existing_kvin_service_or_volume_changed: false
           kvar_source_or_services_changed: false
