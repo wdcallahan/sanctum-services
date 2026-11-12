@@ -41,6 +41,33 @@
       ansible.builtin.debug:
         msg: "{{ kvar_linkstack_source.stdout | from_json }}"
 
+    - name: Observe LinkStack volume metadata and likely SQLite file placement
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivor-volumes.py') }}"
+          - --service
+          - linkstack
+      register: kvar_linkstack_volume_preflight
+      changed_when: false
+      no_log: true
+
+    - name: Require bounded rootless LinkStack volume metadata
+      ansible.builtin.assert:
+        that:
+          - (kvar_linkstack_volume_preflight.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (kvar_linkstack_volume_preflight.stdout | from_json).service == 'linkstack'
+          - (kvar_linkstack_volume_preflight.stdout | from_json).scope == 'rootless'
+          - (kvar_linkstack_volume_preflight.stdout | from_json).status in ['observed', 'partial']
+          - not ((kvar_linkstack_volume_preflight.stdout | from_json).configuration_changed | bool)
+          - not ((kvar_linkstack_volume_preflight.stdout | from_json).file_contents_read | bool)
+          - not ((kvar_linkstack_volume_preflight.stdout | from_json).data_exported | bool)
+
+    - name: Report bounded LinkStack volume backup preflight
+      ansible.builtin.debug:
+        msg: "{{ kvar_linkstack_volume_preflight.stdout | from_json }}"
+
 - name: Inspect wanted rootful Kvar Pi-hole recovery prerequisites
   hosts: npm_proxy_legacy
   become: true
@@ -80,3 +107,30 @@
     - name: Report bounded Pi-hole image and backing discovery
       ansible.builtin.debug:
         msg: "{{ kvar_pihole_source.stdout | from_json }}"
+
+    - name: Observe rootful Pi-hole volume metadata and known database file placement
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/observe-kvar-survivor-volumes.py') }}"
+          - --service
+          - pihole
+      register: kvar_pihole_volume_preflight
+      changed_when: false
+      no_log: true
+
+    - name: Require bounded rootful Pi-hole volume metadata
+      ansible.builtin.assert:
+        that:
+          - (kvar_pihole_volume_preflight.stdout | from_json).observer == 'kvar.outer.sanctum'
+          - (kvar_pihole_volume_preflight.stdout | from_json).service == 'pihole'
+          - (kvar_pihole_volume_preflight.stdout | from_json).scope == 'rootful'
+          - (kvar_pihole_volume_preflight.stdout | from_json).status in ['observed', 'partial']
+          - not ((kvar_pihole_volume_preflight.stdout | from_json).configuration_changed | bool)
+          - not ((kvar_pihole_volume_preflight.stdout | from_json).file_contents_read | bool)
+          - not ((kvar_pihole_volume_preflight.stdout | from_json).data_exported | bool)
+
+    - name: Report bounded Pi-hole volume backup preflight
+      ansible.builtin.debug:
+        msg: "{{ kvar_pihole_volume_preflight.stdout | from_json }}"
