@@ -1,5 +1,16 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
+## November 12 — Pi-hole retention reconsidered; use existing Peanut DNS for blocking
+
+**New operator direction:** Nova says Sanctum will **not return to advertising Pi-hole as a client DNS server** and questions whether its original "retain for ad blocking" decision still serves a purpose. Actual Pi-hole behavior: this is a DNS filtering resolver, **not** a transparent network filter. Without direct clients or a resolver forwarding queries to it, it provides **no network ad filtering**. The completed restored Kvin service and named admin UI are functional, but the desktop direct-`dig` checks only establish reachability; they did not demonstrate any blocking. **Pi-hole is therefore a retirement candidate**, not an accepted permanent service requirement. Do not disable, remove, or reimage either host based on this analysis alone; retain the working Kvin service and backups until the replacement decision is made.
+
+**Evidence from authoritative DNS owner:** [Maintenance's Peanut `named.conf.options.j2`](https://github.com/wdcallahan/sanctum-maintenance/blob/main/roles/sanctum_dns/templates/named.conf.options.j2) has `recursion yes` and `dnssec-validation auto`; [`named.conf.local.j2`](https://github.com/wdcallahan/sanctum-maintenance/blob/main/roles/sanctum_dns/templates/named.conf.local.j2) publishes Sanctum forward and reverse zones. BIND9 supports [Response Policy Zones](https://bind9.readthedocs.io/en/latest/reference.html#response-policy-zone-rpz-rewriting), which can deny selected **recursive** public-domain replies on the *existing* Peanut resolver. This is the direct, source-owned network ad-filtering approach without assigning clients a new DNS server or inserting Pi-hole as a forwarding hop. DNSSEC validation, list provenance/updates, policy scope, false-positive overrides and untouched internal authoritative results need normal Maintenance design. **DNS source owner: Sanctum Maintenance, not Services.** No RPZ has been deployed.
+
+**Endpoint complement:** Firefox [uBlock Origin](https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/) blocks actual network requests and browser page elements; DNS filters cannot selectively suppress ads served from the same origin as desired content. Neither Pi-hole nor RPZ filters applications that deliberately bypass the configured resolver (e.g. independent encrypted DNS). Whole-network HTTP(S) interception would require actual inline routing and TLS interception/trust, and is not a drop-in alternative.
+
+**Project disposition:** The November 8 "retain Pi-hole" decision was based on the assumption it would still do ad filtering for some clients; that utility is now under reconsideration. Prefer **Peanut BIND RPZ plus endpoint blocking where needed**, subject to deciding whether network-wide policy is wanted. Do not continue Pi-hole-specific migration gates merely to prove unused ad filtering. If Nova confirms no real Pi-hole consumers and selects the replacement or no network filtering, update intended estate/retirement plan accordingly. Preserve Kvar until unrelated Kvar exit criteria are complete.
+
+
 ## November 10 correction — preserve existing Yarn NPM proxy host in the reconstruction baseline
 
 The existing Kvar NPM `yarn.inner.sanctum` proxy-host 11 is
