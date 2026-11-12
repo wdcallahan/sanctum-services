@@ -1,5 +1,11 @@
 # LinkStack recovered candidate: controlled browser acceptance (Kvin)
 
+## November 12: native anonymous login/proxy-form qualification ACCEPTED
+
+Nova ran `ansible/linkstack-anonymous-login-proxy-probe.yml` on Kvin; recap **`ok=9 changed=0 failed=0 unreachable=0 skipped=0`**. Guards verified the exact active rootless recovered image, data volume, and Kvin **loopback-only** port. Direct Kvar, Kvar NPM, direct Kvin and HTTP absolute-form Kvin all answered anonymous `GET /login` with **HTTP 200/HTML**, bounded complete bodies, and **no redirects**. Their finite cookie flags matched: `Set-Cookie`, `HttpOnly`, `SameSite=Lax`, no explicit `Domain`, and no `Secure` attribute. **`candidate_proxy_request_compatible=true`**; both Kvar comparison flags were `true`. No credentials, authentication, Firefox, SSH tunnel, production config or routing changes. This qualifies only anonymous login response and origin-form vs absolute-form behavior, **not** actual Firefox rendering, proxy fail-closed behavior, or authenticated admin.
+
+**Next step is the desktop browser procedure below**, not another native Ansible probe. Kvar remains the correct incumbent target of the ordinary `dir.nexus.sanctum` route, so an unisolated login would simply verify Kvar instead of Kvin. In the isolated Firefox profile, verify first that the login form loads via the tunnel, and that with the SSH tunnel stopped a fresh uncached request **fails** (does not reach Kvar); reestablish the tunnel before entering any credentials. If proxy behavior or HTTPS redirect differs from this probe, do not authenticate; redesign the path.
+
 ## Native state, November 12, 2026
 
 - Kvin rootless service `sanctum-linkstack-kvin-candidate.service` is **running** from the pinned original Kvar ARM64 image, using ownership-adjusted retained volume `sanctum-linkstack-qualified-20261112t105926`.
@@ -8,9 +14,9 @@
 - Exact live `dir.nexus.sanctum` YXORP backend remains **Kvar**. No source data deletion or retirement of old services permitted. Older Kvin accepted unmodified restore volume and both private archives preserved.
 - The public home page did not contain a **matching discoverable login link**. LinkStack's official [FAQ](https://docs.linkstack.org/faq/) says administrator sign-in begins at **`/login`**; absence of an anchor on the public home page is expected and is not a login failure.
 
-## Current source-owned, read-only gate
+## Completed source-owned, read-only gate (historical command; do not rerun)
 
-Run on Kvin **only with separate approval**:
+The following command was already executed successfully on Kvin with separate approval (retained as historical evidence; **do not rerun for this accepted gate**):
 
 ```bash
 cd ~/src/sanctum-services && git pull &&
@@ -20,9 +26,9 @@ cd ~/src/sanctum-services && git pull &&
 
 This play verifies the exact active rootless candidate image, persisted recovered volume and loopback-only port, then performs **anonymous GET `/login`** from direct Kvar, Kvar NPM and Kvin loopback. On Kvin it additionally sends an HTTP **absolute-form** request target (`GET http://dir.nexus.sanctum/login`) to the same loopback backend, simulating the request that an SSH-forwarded Firefox **HTTP proxy** would send. It never follows redirects or submits a form, password, authorization or session cookie. Output consists only of status, MIME class, finite redirect host/scheme categories, cookie-attribute flags and whether both candidate request forms behave comparably; it does not expose HTML, `Location`, cookies or CSRF values. Like any anonymous login-page GET, it may cause the application to allocate an anonymous session; there are no intended configuration writes.
 
-**Native result not yet obtained.** Do **not** set up a browser session solely because this source exists. On native report, check whether the absolute proxy request is compatible with the ordinary request, any redirect goes to a different host or to HTTPS, and any `Secure` cookie implies HTTPS is required. If proxy-form differs or redirects require HTTPS, stop and design a separately guarded path; do not put credentials into a browser that can silently reach Kvar.
+**Native result obtained and compatible.** The documented isolated Firefox procedure may now be tested, initially without credentials. If the actual browser behaves differently, redirects to HTTPS, or cannot be proved to fail closed, stop before authentication.
 
-## Conditional browser procedure, after compatible native result
+## Next browser procedure — after compatible native result
 
 The intended solution preserves the **browser origin `http://dir.nexus.sanctum`** while carrying requests to **Kvin**. It must not use the ordinary live Firefox profile. It must not rely on the host's real DNS answer for `dir.nexus.sanctum` or on temporary changes to DNS, /etc/hosts, YXORP or Kvar NPM.
 
