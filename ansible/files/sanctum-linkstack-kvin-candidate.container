@@ -1,0 +1,23 @@
+# Recovered LinkStack Kvin candidate, intentionally NOT an active YXORP backend.
+# Exact pinned original ARM64 image from Kvar; same proven rootless runtime
+# properties as the native isolated recovery trial. Rootless wd c2 only.
+# No data or credentials are stored in this file; .env stays in the named volume.
+[Unit]
+Description=Sanctum LinkStack recovered candidate (Kvin loopback only)
+
+[Container]
+Image=docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1
+ContainerName=sanctum-linkstack-kvin-candidate
+Volume=sanctum-linkstack-qualified-20261112t105926:/htdocs:Z
+PublishPort=127.0.0.1:18081:80/tcp
+Sysctl=net.ipv4.ip_unprivileged_port_start=80
+NoNewPrivileges=true
+Pull=never
+Environment=HTTP_SERVER_NAME=localhost
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=90
+
+[Install]
+WantedBy=default.target
