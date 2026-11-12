@@ -1,4 +1,4 @@
-"""LinkStack pinned image and network-none restored-app trial contract."""
+"""LinkStack pinned image and disposable internal-only network restored-app contract."""
 from pathlib import Path
 import unittest
 import yaml
@@ -51,6 +51,8 @@ class LinkStackRestoredAppTrial(unittest.TestCase):
             self.assertIn(required, g)
         self.assertEqual(self.play["vars"]["linkstack_trial_volume"],
                          "sanctum-linkstack-restore-test-20261112t105926")
+        self.assertEqual(self.play["vars"]["linkstack_trial_network"],
+                         "sanctum-linkstack-internal-trial-20261112t105926")
 
     def test_restored_volume_must_exist_and_pass_sqlite_before_image_pull(self):
         names = [t["name"] for t in self.tasks]
@@ -89,13 +91,13 @@ class LinkStackRestoredAppTrial(unittest.TestCase):
         self.assertIs(run["changed_when"], False)
 
     def test_disposable_app_never_uses_external_network_or_live_volume(self):
-        block = self.task("Boot only disposable LinkStack")
+        block = self.task("Boot disposable LinkStack")
         self.assertIn("always", block)
         steps = block["block"]
         start = next(t for t in steps if t["name"].startswith("Start an isolated"))
         self.assertTrue(start["no_log"])
         args = start["ansible.builtin.command"]["argv"]
-        for item in ("--detach", "--name", "--network", "none",
+        for item in ("--detach", "--name", "--network",
                      "--pull", "never", "--volume",
                      "sanctum-linkstack-restore-test-20261112t105926:/htdocs"):
             if item == "sanctum-linkstack-restore-test-20261112t105926:/htdocs":
@@ -103,6 +105,8 @@ class LinkStackRestoredAppTrial(unittest.TestCase):
                 self.assertIn(":/htdocs", " ".join(map(str,args)))
             else:
                 self.assertIn(item,args)
+        self.assertIn("{{ linkstack_trial_network }}", args)
+        self.assertNotIn("none", args)
         for forbidden in ("-p", "--publish", "--network=host", "linkstack:/htdocs", "--privileged"):
             self.assertNotIn(forbidden,args)
         http = next(t for t in steps if t["name"].startswith("Observe application HTTP"))
@@ -117,6 +121,43 @@ class LinkStackRestoredAppTrial(unittest.TestCase):
         self.assertIn("linkstack_trial_started",cleanup["when"])
         self.assertIn("linkstack_trial_container", str(cleanup["ansible.builtin.command"]["argv"]))
         self.assertTrue(cleanup["no_log"])
+        net_cleanup = block["always"][1]
+        self.assertEqual(net_cleanup["ansible.builtin.command"]["argv"][:3],
+                         ["podman", "network", "rm"])
+        self.assertIn("linkstack_trial_network", str(net_cleanup))
+        self.assertTrue(net_cleanup["no_log"])
+
+    def test_internal_bridge_created_only_for_trial_without_dns_or_external_route(self):
+        block = self.task("Boot disposable LinkStack")
+        tasks = block["block"]
+        create = next(t for t in tasks if t["name"].startswith("Create only a disposable"))
+        cmd = create["ansible.builtin.command"]["argv"]
+        self.assertEqual(cmd[:3], ["podman", "network", "create"])
+        self.assertIn("--internal", cmd)
+        self.assertIn("--disable-dns", cmd)
+        self.assertIn("bridge", cmd)
+        self.assertTrue(create["no_log"])
+        verify = next(t for t in tasks if t["name"].startswith("Require network is exactly"))
+        clauses = str(verify["ansible.builtin.assert"]["that"])
+        for flag in ("driver", "bridge", "internal", "dns_enabled",
+                     "linkstack_trial_network"):
+            self.assertIn(flag, clauses)
+        preflight = self.task("Require unoccupied unique temporary internal network identity")
+        self.assertIn("linkstack_trial_network_present.rc == 1",
+                      str(preflight["ansible.builtin.assert"]["that"]))
+        self.assertLess([t["name"] for t in tasks].index(create["name"]),
+                        [t["name"] for t in tasks].index("Start an isolated restored-app trial container without publishing a port"))
+
+    def test_trial_checks_process_alive_before_internal_http(self):
+        block = self.task("Boot disposable LinkStack")
+        names = [t["name"] for t in block["block"]]
+        self.assertLess(names.index("Refuse HTTP acceptance if restored app has already exited"),
+                        names.index("Observe application HTTP response using configured internal loopback"))
+        inspect = next(t for t in block["block"] if t["name"].startswith("Inspect only whether"))
+        self.assertIn(".State.Running", str(inspect["ansible.builtin.command"]))
+        self.assertTrue(inspect["no_log"])
+        self.assertTrue(block["always"][0]["no_log"])
+        self.assertTrue(block["always"][1]["no_log"])
 
     def test_no_production_app_proxy_or_kvar_mutation_and_report_truthfulness(self):
         text = PLAY.read_text()
@@ -132,6 +173,8 @@ class LinkStackRestoredAppTrial(unittest.TestCase):
         self.assertIs(report["live_client_directory_or_admin_accepted"],False)
         self.assertIs(report["independent_disaster_recovery_backup_accepted"],False)
         self.assertIs(report["isolated_restored_volume_retained"],True)
+        self.assertIs(report["temporary_internal_network_removed"],True)
+        self.assertIs(report["isolated_only_internal_network_used"],True)
 
     def test_ci_runs_source_check_and_syntax_check(self):
         wf = (ROOT / ".github/workflows/yxorp-source-check.yml").read_text()
