@@ -216,7 +216,7 @@
           ansible.builtin.assert:
             that:
               - linkstack_trial_http.rc == 0
-              - linkstack_trial_http.stdout | trim in ['200', '301', '302', '303', '307', '308']
+              - (linkstack_trial_http.stdout | trim) in ['200', '301', '302', '303', '307', '308']
             fail_msg: Offline restored LinkStack did not serve an accepted HTTP status.
       always:
         - name: Remove only the newly created disposable trial container
