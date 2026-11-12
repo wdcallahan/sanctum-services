@@ -1,5 +1,19 @@
 # Kvar survivor recovery inputs — LinkStack and Pi-hole
 
+## November 12 — native four-report preflight ACCEPTED; image inspect defect identified
+
+Nova supplied the entire native `ansible/kvar-survivors-source.yml` result: `kvar.outer.sanctum ok=14 changed=0 failed=0`. Both image-list fallbacks matched the exact running image ID, and both exposed two repository digests but no platform, so the image reports remain `status:partial`; *digest strings from the local store are not Kvin ARM64 qualification*.
+
+LinkStack: image ID `53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65` unchanged; rootless `linkstack` volume at `/htdocs` contains **10,523 regular files, 1,827 dirs, 84,805,553 regular-file bytes, zero symlinks/specials**. `.env` and `database/database.sqlite` are regular files. Local manifest digest candidate `sha256:2920f70e15ae01a9d943cc90b96fc6198f6ac79260491deabf96103c42d49357`; an additional distinct repo digest `sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1` is recorded.
+
+Pi-hole: newly observed image ID `64c81b3c8132f3e7ae56925a1668d2cfa5a53c509c43b4c1cc71591e0f42c3d8`, **different** from the first two native receipts `edb7f703649f4b6ab8b14f28d12f15e8cbe1c50a2092458e9b640bd6bc6fe59e`. Update/recreate **cause unknown**. Rootful `systemd-pihole_etc-pihole` volume at `/etc/pihole` contains **56 regular files, six dirs, 1,310,387,005 regular-file bytes, zero symlinks/specials**; `pihole.toml`, `gravity.db`, and `pihole-FTL.db` regular. `systemd-pihole_etc-dnsmasq` at `/etc/dnsmasq.d` is empty but remains declared in live Quadlet. Local manifest digest candidate `sha256:66c798d79a95c2691f280329c3611dba1746117c61c9f331907ca35a06a52778`; additional repo digest `sha256:13089e5c4d33c5cd8eb7b011949a380145f3ff1405dea24c81dd54dcb255b792`.
+
+**Total regular-file bytes: 1,395,192,558** (~1.30 GiB), not archive size or full allocated storage. No live data bytes read, no SQLite consistency/backup/restore accepted; `changed=0`.
+
+**Source defect isolated:** The `podman image inspect --format` renderer used `{{json .Id}}` where Podman's documented Go template key is **`{{json .ID}}`** (uppercase ID). That likely made both direct image-inspect calls fail in both namespaces, leaving the independent image-listing fallback to provide digests. Updated `tools/observe-kvar-survivors.py` and added a regression test for documented `.ID` casing; cause must be confirmed by a new native result. Podman manual: https://docs.podman.io/en/latest/markdown/podman-image-inspect.1.html .
+
+**Next source work:** inspect Kvar Quadlet update ownership and free capacity for a cross-host backup, plus Kvin staging and restore space, read-only. Then separately authorize a *consistent*, briefly quiesced complete export and isolated restore; no live app interruption or proxy/DNS changes yet. Do not repeat a broad volume scan just to retake these accepted counts.
+
 ## November 11 — second native image probe receipt, and bounded volume preflight prepared
 
 Nova reran `ansible/kvar-survivors-source.yml` from Kvin on Kvar: **`ok=8 changed=0 unreachable=0 failed=0`**. Both original services remain running; their image IDs, port maps, Quadlet sources and named persistent volumes match the first observation. Image inspection by **running image ID AND local `latest` name** failed for **both rootless LinkStack and rootful Pi-hole**, returning `image_probe.attempts[0/1].status: command_unavailable`. `pullable_digest_known:false` for both. This categorization means the subprocess returned nonzero or an unavailable result; it **does not prove either image is absent from the local store**. Do not select an image by the mutable `latest` name or guess a digest.
