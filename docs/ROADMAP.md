@@ -14,6 +14,17 @@
 
 ## Active execution plan — Wednesday, November 11, 2026
 
+## CURRENT — November 11: Kvar LinkStack + Pi-hole read-only recovery-source observer CI GREEN; native inputs next
+
+**Next single Kvin operator action:** The existing Maintenance inventory already established rootless Kvar LinkStack's persistent `linkstack` volume at `/htdocs` and rootful Pi-hole's two config volumes. No need to repeat broad inventory. Services source now provides `ansible/kvar-survivors-source.yml` and `tools/observe-kvar-survivors.py` to inspect **only** the two wanted services in the proper distinct privilege namespaces on old Kvar. It reports bounded selected image reference/id/digest, ports, mount destination/volume names and safe service/Quadlet source status, suppressing raw inspection, environment, content and credentials. Both plays are read-only and have no rollout, backup, data access or app mutation. Source tests and full Services CI [#43126902608 **PASSED**](https://github.com/wdcallahan/sanctum-services/actions/runs/43126902608); **no native Kvar observation yet**.
+
+One command **on Kvin**, using the current Services inventory and logged-in Navigator:
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kvar-survivors-source.yml
+```
+Return the **two PLAY RECAP** rows and bounded `Report bounded LinkStack image and backing discovery` and `Report bounded Pi-hole image and backing discovery` `msg` dictionaries (or failed task). `partial` means input unknown, not failure to report. Read [docs/runbooks/kvar-survivor-recovery-inputs.md](docs/runbooks/kvar-survivor-recovery-inputs.md). This is a **real host evidence boundary**; do not choose images or design a live restore from speculation. Kvar NPM and all apps remain running. After native evidence, prepare owned consistent backups, isolated Kvin restores and actual client acceptance separately.
+
 ## CURRENT — November 11: Mace named Kuma authentication accepted; browser monitor/Socket.IO next
 
 Nova confirmed from Mace that `kuma.nexus.sanctum` resolves to **`192.168.0.192`**, Firefox loaded its live login, and the existing **`sanctum-admin`** user successfully authenticated through Kvin YXORP. Mark actual Mace client resolution and browser login accepted. The visible monitor state, sustained browser Socket.IO/WebSocket updates, and other apps' named-client behavior are **not yet evidenced**. Keep Kvar fallback. The previous instructions omitted the browser username and blurred the distinction between the saved Kuma login password and unrelated Vault unlock key; corrected operational docs, no account rotation needed.
