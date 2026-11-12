@@ -73,6 +73,9 @@ on:
       - "ansible/files/sanctum-linkstack-kvin-candidate.container"
       - "ansible/linkstack-kvin-loopback-stage.yml"
       - "tests/test_linkstack_kvin_loopback_stage.py"
+      - "tools/observe-linkstack-recovered-browser-surface.py"
+      - "ansible/linkstack-recovered-public-surface.yml"
+      - "tests/test_linkstack_recovered_public_surface.py"
       - "data/container-image-candidates.yml"
       - "tools/observe-yxorp-kvin-from-peanut.py"
       - "tests/test_yxorp_kvin_peer_http.py"
@@ -178,6 +181,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_linkstack_volume_mount_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_owned_restored_candidate.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_kvin_loopback_stage.py'
+          python3 -m unittest discover -s tests -p 'test_linkstack_recovered_public_surface.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_yarn_diagnose.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_status.py'
@@ -235,6 +239,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-volume-mount-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-owned-restored-candidate.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-kvin-loopback-stage.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-recovered-public-surface.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-yarn-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-production-remove.yml --syntax-check
           python3 tests/fixtures/verify-yxorp-production-routes.py
