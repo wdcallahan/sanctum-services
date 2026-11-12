@@ -1,5 +1,16 @@
 # Sanctum Services — Session Continuation
 
+## CURRENT — November 11: Kvar LinkStack + Pi-hole read-only recovery-source observer CI GREEN; native inputs next
+
+**Next single Kvin operator action:** The existing Maintenance inventory already established rootless Kvar LinkStack's persistent `linkstack` volume at `/htdocs` and rootful Pi-hole's two config volumes. No need to repeat broad inventory. Services source now provides `ansible/kvar-survivors-source.yml` and `tools/observe-kvar-survivors.py` to inspect **only** the two wanted services in the proper distinct privilege namespaces on old Kvar. It reports bounded selected image reference/id/digest, ports, mount destination/volume names and safe service/Quadlet source status, suppressing raw inspection, environment, content and credentials. Both plays are read-only and have no rollout, backup, data access or app mutation. Source tests and full Services CI [#43126902608 **PASSED**](https://github.com/wdcallahan/sanctum-services/actions/runs/43126902608); **no native Kvar observation yet**.
+
+One command **on Kvin**, using the current Services inventory and logged-in Navigator:
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/kvar-survivors-source.yml
+```
+Return the **two PLAY RECAP** rows and bounded `Report bounded LinkStack image and backing discovery` and `Report bounded Pi-hole image and backing discovery` `msg` dictionaries (or failed task). `partial` means input unknown, not failure to report. Read [docs/runbooks/kvar-survivor-recovery-inputs.md](docs/runbooks/kvar-survivor-recovery-inputs.md). This is a **real host evidence boundary**; do not choose images or design a live restore from speculation. Kvar NPM and all apps remain running. After native evidence, prepare owned consistent backups, isolated Kvin restores and actual client acceptance separately.
+
 ## CURRENT — November 11: Mace Firefox Kuma WebSocket upgrade 101 ACCEPTED; Kuma initial production client gate CLOSED
 
 **Actual Mace Firefox evidence:** Nova supplied the Firefox DevTools Network **WS** screenshot for `kuma.nexus.sanctum`, showing `GET /socket.io/?EIO=4&transport=websocket&sid=...` with **HTTP 101 Switching Protocols**. This is the actual browser's successful Engine.IO/Socket.IO WebSocket upgrade through Kvin production YXORP. Earlier on the same production named route, Mace resolver returned `192.168.0.192`, the existing `sanctum-admin` application login succeeded, and the `Wicket Ollama` dashboard monitor visibly reported **Up / 100% uptime**.
