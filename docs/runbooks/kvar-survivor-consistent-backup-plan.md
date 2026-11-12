@@ -1,5 +1,36 @@
 # Kvar survivors: consistent backup and isolated recovery design
 
+## November 12 — Kvar LinkStack consistent archive ACCEPTED; Kvin transfer is next
+
+Nova approved and ran `ansible/linkstack-consistent-backup.yml` from Kvin against the **original rootless LinkStack on Kvar**. Native recap: **`ok=30 changed=6 unreachable=0 failed=0`**. The original service was stopped briefly, volume `linkstack:/htdocs` exported while quiesced, and the `always` restart succeeded. Post-restart immutable image ID, mount, ports and application HTTP were accepted; original returned **HTTP 200**. The private owner-controlled source archive was promoted on Kvar only:
+
+- Source path: `/home/wdc2/.local/share/sanctum-services/backups/linkstack/linkstack-20261112t105926.tar`
+- Exact tar size: **93,845,504 bytes**
+- SHA-256: **`a1110a717d11ee1723c02f8b66557a1c122ac64137f5fa793488428b7a398eaa`**
+- Archive verifier: safe tar paths, LinkStack `.env` present, SQLite **`PRAGMA integrity_check = ok`**
+- Source report flags: `linkstack_consistent_snapshot_accepted:true`, `archive_published_private_on_kvar:true`, `archive_copied_off_kvar:false`, `isolated_kvin_restore_accepted:false`.
+
+**Operator-discovered warning repaired:** That first run emitted Ansible's top-level injected-facts deprecation on `ansible_date_time.iso8601_basic_short`. Source was corrected to `ansible_facts['date_time']['iso8601_basic_short']` with a regression test. No warning suppression; future executions use the nested mapping.
+
+### Next source-owned one-shot — exact SSH copy and isolated Kvin volume integrity
+
+`ansible/linkstack-transfer-isolated-data-restore.yml` is separate from the live snapshot operation. It has **two explicit, default-off approvals**: `sanctum_linkstack_offhost_transfer_approved=true` and `sanctum_linkstack_isolated_volume_restore_approved=true`.
+
+On Kvar, it verifies the **exact saved archive SHA, byte size, owner and mode 0600**, without restarting or accessing the live container. On Kvin, it requires aarch64, both approvals, an exact source validation fact from this run, empty distinct destination archive paths, and an absent isolated rootless volume. It reserves a 0600 partial, copies the single archive with OpenSSH `scp -B -P 10022` using **strict host-key checking** and batch mode (an existing Kvin→Kvar SSH trust path is required; the play fails safely otherwise), verifies copied SHA/size/permissions and SQLite archive integrity, then promotes the archive without overwriting another copy. Only after validation does it create `sanctum-linkstack-restore-test-20261112t105926` and import the archive into **that new volume alone**. It checks restored `.env` presence and SQLite integrity without returning data. The original Kvar `linkstack` volume and all Kvin production volumes remain untouched.
+
+The command (run on **Kvin** only after full source CI is green and with conscious approval for copying a private archive and creating the isolated test volume):
+
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/linkstack-transfer-isolated-data-restore.yml \
+  -e sanctum_linkstack_offhost_transfer_approved=true \
+  -e sanctum_linkstack_isolated_volume_restore_approved=true
+```
+
+Expected final report **`Report bounded Kvar-to-Kvin LinkStack archive transfer and isolated data restoration`**; send **the full output** and both PLAY RECAP rows. The transfer is encrypted between Kvar and Kvin over SSH; no raw archive, `.env`, database rows, login or private key should be pasted into chat. If pre-existing files, SSH trust, SHA or isolated volume checks fail, stop at that failed task rather than editing data by hand.
+
+Passing this gate establishes **off-Kvar byte-identical snapshot and isolated data import integrity**, *not* application boot, an authenticated directory page, a public backend migration, or a backup that survives simultaneous loss of both hosts. The application container still needs a separately qualified pinned linux/arm64 image and actual offline client/app acceptance before changing the live `dir.nexus` upstream.
+
 **Owner:** Sanctum Services (LinkStack and Pi-hole application data, Quadlets, and restores). Maintenance owns Kvin/Kvar host storage, firewalld, DNS and any general network changes. This document is a transaction design, **not a live backup authorization**.
 
 ## Accepted native state, November 12, 2026
