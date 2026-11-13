@@ -1,5 +1,16 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
+## CURRENT November 12 evening — Kvar temporary power-off dependency trial, not permanent retirement
+
+**Clarification after user challenge:** Ten-nine and November 12 migration source/acceptance established that the **five primary Kvar application types** have replacements on Kvin or are retired: Kvar NPM → live Kvin YXORP, old Kvar Kuma → accepted Kvin Kuma, old Kvar LinkStack → restored/accepted Kvin LinkStack, Kvar SearXNG → working preexisting Kvin EyesOnly, and Pi-hole → retired after Peanut/BIND assumed client DNS. **Wanted application migration count: zero.** Last Kvar inventory also recorded retired OpenWebUI and Endlessh, which are not to be reproduced. This does not mean old Kvar containers have been stopped, or rule out host-level network duties.
+
+**Do NOT conflate two endpoints:** A **reversible temporary Kvar shutdown test** can establish whether normal Sanctum client applications or network connectivity still depend on the old host. A **permanent format/reimage** remains a distinct, destructive operator decision requiring the complete wanted-host recovery contract and Maintenance ownership. Don't make full off-host disaster recovery a new artificial prerequisite for a temporary power-off and don't assert an outage is safe merely from seven proxy vhosts.
+
+**Single actual unknown to check before a power-off rehearsal:** Is Kvar currently advertising any Tailscale subnet routes/exit-node service or other separately needed host network function? The project names Tailscale as a private-access stopgap but does not assign its *network* endpoint definitively to Kvar. The older Kvar NPM legacy `yarn.inner.sanctum` route had six recorded requests, including three from Inner NAT egress; that observation predated current accepted routing and does not demonstrate active post-cutover dependency. Do not invent a broad old-client survey. If network-role observation is clear, Nova can choose a reversible `systemctl poweroff` on Kvar and use normal applications while Kvar is off; if anything breaks, power it back on and investigate the actual dependency. Do not format/reimage yet. The accepted seven-vhost Kvin YXORP, Peanut DNS, restored LinkStack, Kuma, working EyesOnly and established Town Square/Prism use must not be redeployed for this test.
+
+**Interpixel coordination:** This Services lead had not kept the shared board current; November 12 status and the shutdown question were posted to [Maintenance Interpixel board issue #20](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-6840512546). Keep board cross-project communications current, separately from owner issue #2 and this handoff. Work sessions resuming at 10:19 PM are an additional coordination opportunity, not a request to stop this working session at 6:42 PM.
+
+
 ## November 12 — EyesOnly normal client accepted; Pi-hole-free YXORP production applied
 
 Nova's Kvin YXORP production reconciliation after removing retired Pi-hole **passed** (`ok=34 changed=3 failed=0 skipped=1`): seven production routes, Kuma 302, LinkStack 200, no DNS/firewall/Kvar change, known Yarn check nonblocking. **Source and live state now match** on exclusion of the Pi-hole vhost. The retired Kvin Pi-hole container has not been stopped by this proxy change.
