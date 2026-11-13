@@ -1,5 +1,12 @@
 # Sanctum Services — Roadmap
 
+## CURRENT November 12 — Pi-hole excluded from the intended service estate
+
+**Nova's final service disposition:** Pi-hole is **RETIRED**, not a wanted or standby Sanctum service. Its DNS purpose migrated to Peanut/BIND and Pi-hole cannot block advertisements for clients that no longer use it for DNS. The post-cutover Pi-hole consumer audit was already accepted November 9; it is not to be repeated. There are **no more Pi-hole recovery, ad-blocking qualification, reinstatement, replacement, or backup tasks**. The already restored Kvin service, Kvar incumbent, original backup archives, and named `pihole.nexus.sanctum` YXORP route are historical deployed state only, not desired service estate. No host app, proxy, firewall, or DNS service is stopped by this documentation change. If Pi-hole is wanted again in the future, that is a new explicit installation decision.
+
+**Services project continues** with the other retained services and eventual Kvar retirement. The Pi-hole service is no longer an exit criterion. Disregard the older Pi-hole-specific "NEXT" steps elsewhere in the historical handoff/roadmap; they are superseded. [Current status: docs/SERVICE-ESTATE.md](docs/SERVICE-ESTATE.md).
+
+
 ## November 12 — Pi-hole ordinary Firefox admin and real desktop DNS access ACCEPTED; actual ad filtering still unproven
 
 **Nova's real client receipt:** The normal `pihole.nexus.sanctum` browser login works after the Kvin YXORP UI route change. From the real desktop `mace`, `dig @192.168.0.192 example.org +time=2 +tries=1` returned **NOERROR with public A answers in 16 ms**; `dig @192.168.0.192 doubleclick.net +time=2 +tries=1` returned **NOERROR with six public A answers in 12 ms**. Both used Kvin **UDP53**, confirming Kvin Pi-hole accepts normal remote LAN DNS client queries; no DNS client, DHCP, firewall or resolver configuration change was required for this explicit test. The second answer means **that exact `doubleclick.net` lookup was not blocked**. It does *not* prove that filtering is broken or that other ad hostnames are allowed. **Production UI login and real remote LAN DNS reachability ACCEPTED; actual blocking still pending.**
