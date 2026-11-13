@@ -1,5 +1,18 @@
 # Sanctum Services — Roadmap
 
+## November 12 — Source retires Pi-hole from production YXORP rebuild; apply needed
+
+**Source repair for an actual reconstruction dependency:** The now-retired Pi-hole was still required by `ansible/yxorp.yml` in stage baseline assertions, Kvin UI prechecks, and the production route set, which would wrongly cause a fresh rebuild to fail unless the retired container was installed. Source now treats the original eight-name staging manifest as historical evidence and **projects exactly seven wanted production vhosts** (all existing production names other than `pihole.nexus.sanctum`). All retained Kuma/LinkStack destinations and the six other names stay unchanged. It no longer probes Pi-hole or requires it as an app. The existing X-Project YXORP role remains the reconciler; no DNS/firewall/router/Kvar service changes. The initial `data/yxorp-routes.yml` disabled Kvar Pi-hole entry remains as provenance, not a live wanted route. Production source CI, including the real Ansible route-projection fixture, must pass before any host action.
+
+**Next Kvin host action after CI green (explicit shared-proxy config change):**
+```bash
+cd ~/src/sanctum-services && git pull &&
+~/.local/bin/ansible-navigator run ansible/yxorp.yml \
+  -e yxorp_production_cutover_approved=true
+```
+That reconciles the existing Kvin production Nginx from eight to seven app routes and removes the now-retired Pi-hole web vhost. The source-managed role may restart the shared YXORP Nginx briefly; it will not stop/remove Kvin's running Pi-hole container, Kvar's originals, or alter Peanut DNS. After the native result, accept **`http://search.nexus.sanctum/`** in ordinary Firefox: EyesOnly themed page plus one real results-producing search. No browser tunnel, extra proxy deployment or SearXNG reinstall is needed. Search recovery qualification follows its owner repository, not a blind copy from Kvar.
+
+
 ## CURRENT November 12 — Resume Kvar retirement with Search / EyesOnly; Pi-hole excluded
 
 **Immediate next retained service is Search / EyesOnly SearXNG.** The chosen Kvin Search is already deployed rootlessly; Kvar also carries an older Search service, but the November 8 native Kvar/Kvin source comparison found settings/cache backing and theme structure **different**. This does not authorize overwriting Kvin configuration with Kvar's. The live source-managed `search.nexus.sanctum` production YXORP vhost already forwards to `kvin.outer.sanctum:8083`; routing was configured but actual normal Firefox eyes-theme, interactive search results and user acceptance are not yet evidenced. The owning project is [wdcallahan/eyesonly-searxng](https://github.com/wdcallahan/eyesonly-searxng); its `README.md` and `ansible/site.yml` describe the rootless Quadlet, eight themed overlay mounts and existing persistent volumes `search_etc_searxng` / `search_var_cache_searxng`. Do not rerun initial deploy or regenerate its existing Vault secret to prove it is there.

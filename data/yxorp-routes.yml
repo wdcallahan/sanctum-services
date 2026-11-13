@@ -3,6 +3,9 @@
 # The eight observed NPM names are accounted for in enabled/disabled route
 # entries or explicitly excluded as the old NPM administration UI.
 # This is NOT yet complete behavioral equivalence (headers/custom locations).
+# Pi-hole is RETIRED as of November 12; its old disabled stage entry remains
+# only as historical Kvar NPM provenance. Production ansible/yxorp.yml
+# explicitly filters it out and renders seven intended application routes.
 # Only Yarn is enabled for the initial rootful Peanut HTTP:80 trial.
 # Disabled routes are staging gates, NOT retirement decisions. Preserve
 # incumbent NPM host entries in the migration baseline unless the operator

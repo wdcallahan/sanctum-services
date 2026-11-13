@@ -1,4 +1,4 @@
-"""Production YXORP projection: eight names, Kuma plus reversible app targets."""
+"""Production YXORP projection: seven wanted names, Kuma plus reversible LinkStack."""
 from pathlib import Path
 import unittest
 import yaml
@@ -33,7 +33,8 @@ class ProductionPromotionTest(unittest.TestCase):
                      "not ansible_check_mode"):
             self.assertIn(expr,gate)
         names=[r["hostname"] for r in self.manifest]
-        self.assertEqual(sorted(names),sorted(self.play["vars"]["yxorp_production_expected_names"]))
+        self.assertEqual(sorted(names),sorted(self.play["vars"]["yxorp_production_expected_names"]+["pihole.nexus.sanctum"]))
+        self.assertEqual(len(self.play["vars"]["yxorp_production_expected_names"]),7)
         self.assertEqual(len(names),8)
         stages=[t["name"] for t in self.tasks]
         for name in ("Observe stage Quadlet without following links",
@@ -41,7 +42,7 @@ class ProductionPromotionTest(unittest.TestCase):
                      "Require old Kvin port-80 stage already removed with its own runbook",
                      "Require new retained Kuma actually responds on its private Kvin listener"):
             self.assertIn(name,stages)
-        assert stages.index("Require old Kvin port-80 stage already removed with its own runbook") < stages.index("Render exactly eight production routes with Kuma and selected LinkStack and Pi-hole backends")
+        assert stages.index("Require old Kvin port-80 stage already removed with its own runbook") < stages.index("Render seven wanted production routes with Kuma and selected LinkStack backend")
 
     def test_only_known_source_manifest_promoted(self):
         self.assertEqual([r["hostname"] for r in self.manifest if r["enabled"]],
@@ -50,21 +51,17 @@ class ProductionPromotionTest(unittest.TestCase):
         self.assertEqual(prod["yxorp_production_kuma_http"],"http://127.0.0.1:13001/")
         self.assertEqual(prod["yxorp_production_routes"],[])
         self.assertEqual(prod["yxorp_production_linkstack_backend"],"kvin")
-        self.assertEqual(prod["yxorp_production_pihole_backend"],"kvin")
-        project=next(t for t in self.tasks if t["name"].startswith("Render exactly eight"))
+        project=next(t for t in self.tasks if t["name"].startswith("Render seven wanted"))
         self.assertEqual(project["loop"],"{{ yxorp_routes }}")
+        self.assertEqual(project["when"],"item.hostname != 'pihole.nexus.sanctum'")
         expression=project["ansible.builtin.set_fact"]["yxorp_production_routes"]
         self.assertIn("combine({'enabled': true})",expression)
         self.assertIn("'upstream_host': '127.0.0.1'",expression)
         self.assertIn("'upstream_port': 13001",expression)
         self.assertIn("'upstream_port': (18081 if yxorp_production_linkstack_backend == 'kvin' else 8081)",expression)
         self.assertIn("item.hostname == 'dir.nexus.sanctum'",expression)
-        self.assertIn("item.hostname == 'pihole.nexus.sanctum'",expression)
-        self.assertIn("'192.168.0.192' if yxorp_production_pihole_backend == 'kvin'",expression)
         self.assertIn("kvar.outer.sanctum",expression)
         self.assertIn("http://127.0.0.1:18081/",PROD.read_text())
-        self.assertIn("http://192.168.0.192:82/admin/",PROD.read_text())
-        self.assertIn("http://127.0.0.1/admin/",PROD.read_text())
         self.assertIn("status_code: [200]",PROD.read_text())
         self.assertIn("if item.hostname == 'kuma.nexus.sanctum'",expression)
         self.assertIn("else {}",expression)
@@ -78,11 +75,10 @@ class ProductionPromotionTest(unittest.TestCase):
                             yaml.safe_load((ROOT/"ansible/vars/yxorp-kvin-stage.yml").read_text())["yxorp_service_name"])
         self.assertNotIn("firewall-cmd",PROD.read_text())
         self.assertNotIn("data/dns.yml",PROD.read_text())
-        pihole=next(t for t in self.tasks if t["name"].startswith("Require real restored Kvin Pi-hole"))
-        self.assertEqual(pihole["when"],"yxorp_production_pihole_backend == 'kvin'")
-        self.assertEqual(pihole["ansible.builtin.uri"]["status_code"],[200,301,302,303])
-        post=next(t for t in self.play["post_tasks"] if t["name"].startswith("Verify real production Pi-hole"))
-        self.assertEqual(post["ansible.builtin.uri"]["status_code"],[200,301,302,303])
+        production=self.play["pre_tasks"][-2]["ansible.builtin.assert"]["that"]
+        self.assertIn("yxorp_production_routes | length == 7",production)
+        self.assertIn("yxorp_production_routes | selectattr('hostname', 'equalto', 'pihole.nexus.sanctum') | list | length == 0",production)
+        self.assertNotIn("yxorp_production_pihole_backend",PROD.read_text())
 
     def test_explicit_production_reversal_preserves_incumbent_and_app_data(self):
         path=ROOT/"ansible/yxorp-production-remove.yml"

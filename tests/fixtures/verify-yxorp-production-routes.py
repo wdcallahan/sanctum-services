@@ -10,38 +10,34 @@ ROOT=Path(__file__).resolve().parents[2]
 source=yaml.safe_load((ROOT/"ansible/yxorp.yml").read_text())[0]
 routes=yaml.safe_load((ROOT/"data/yxorp-routes.yml").read_text())["yxorp_routes"]
 task=next(t for t in source["pre_tasks"]
-          if t["name"]=="Render exactly eight production routes with Kuma and selected LinkStack and Pi-hole backends")
+          if t["name"]=="Render seven wanted production routes with Kuma and selected LinkStack backend")
 select=next(t for t in source["pre_tasks"]
             if t["name"]=="Promote verified full production manifest for the existing YXORP role")
-expected={r["hostname"]:dict(r) for r in routes}
+expected={r["hostname"]:dict(r) for r in routes if r["hostname"]!="pihole.nexus.sanctum"}
 for r in expected.values():
     r["enabled"]=True
 expected["kuma.nexus.sanctum"]["upstream_host"]="127.0.0.1"
 expected["kuma.nexus.sanctum"]["upstream_port"]=13001
 
 for backend in ("kvin", "kvar"):
-  for pihole_backend in ("kvin", "kvar"):
     selected=[dict(r) for r in expected.values()]
     for r in selected:
         if r["hostname"]=="dir.nexus.sanctum":
             r["upstream_host"]="127.0.0.1" if backend=="kvin" else "kvar.outer.sanctum"
             r["upstream_port"]=18081 if backend=="kvin" else 8081
-        if r["hostname"]=="pihole.nexus.sanctum":
-            r["upstream_host"]="192.168.0.192" if pihole_backend=="kvin" else "kvar.outer.sanctum"
-            r["upstream_port"]=82
     play={
       "name":"Synthetic execution of actual production route projection",
       "hosts":"localhost","gather_facts":False,
       "vars":{**source["vars"],"yxorp_routes":routes,
               "yxorp_production_linkstack_backend":backend,
-              "yxorp_production_pihole_backend":pihole_backend,
               "expected_yxorp_routes":selected},
       "tasks":[task,select,{
-        "name":"Demand exact eight names, Kuma target and reversible LinkStack alone",
+        "name":"Demand exact seven names, Kuma target, no Pi-hole, and reversible LinkStack",
         "ansible.builtin.assert":{"that":[
           "yxorp_routes == expected_yxorp_routes",
-          "yxorp_routes | length == 8",
-          "yxorp_routes | selectattr('enabled','equalto',true) | list | length == 8",
+          "yxorp_routes | length == 7",
+          "yxorp_routes | selectattr('enabled','equalto',true) | list | length == 7",
+          "yxorp_routes | selectattr('hostname','equalto','pihole.nexus.sanctum') | list | length == 0",
           "yxorp_routes | selectattr('hostname', 'equalto', 'kuma.nexus.sanctum') | map(attribute='upstream_host') | list == ['127.0.0.1']",
         ]}
       }]
@@ -54,4 +50,4 @@ for backend in ("kvin", "kvar"):
         if p.returncode:
             print(p.stdout);print(p.stderr)
             raise SystemExit(p.returncode)
-print("PASS: Kvin/Kvar LinkStack and Pi-hole switches project independently; all other origins unchanged")
+print("PASS: Kvin/Kvar LinkStack switches preserve six other wanted origins; retired Pi-hole is absent")
