@@ -7,6 +7,7 @@ import stat
 import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("nextcloud_assemble", ROOT / "tools/nextcloud-recovery-assemble.py")
@@ -77,6 +78,17 @@ class NextcloudRecoveryAssemble(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nonregular_or_linked_source"):
             self.assemble()
         self.assertFalse(self.output.exists())
+
+    def test_unreadable_subtree_fails_closed_instead_of_silent_skip(self):
+        def unreadable_walk(root, followlinks=False, onerror=None):
+            self.assertIsNotNone(onerror)
+            onerror(PermissionError("unreadable private subtree"))
+            yield ()  # os.walk is a generator; error occurs during iteration
+
+        with mock.patch.object(module.os, "walk", side_effect=unreadable_walk):
+            with self.assertRaises(PermissionError):
+                self.assemble()
+        self.assertFalse((self.output / "manifest.json").exists())
 
     def test_output_cannot_be_inside_application_source(self):
         with self.assertRaisesRegex(ValueError, "output_inside_source"):
