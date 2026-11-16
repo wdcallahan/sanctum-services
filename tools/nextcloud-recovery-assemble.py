@@ -10,6 +10,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import posixpath
 from pathlib import Path
 import shutil
 import stat
@@ -60,7 +61,12 @@ def validate_internal_link(root, link):
     trusting the producer's inspection of the live source filesystem.
     """
     target = os.readlink(link)
-    if not target or os.path.isabs(target) or "\\x00" in target or "\\\\" in target:
+    if not target or os.path.isabs(target) or chr(0) in target or chr(92) in target:
+        raise ValueError("unsafe_source_link")
+    relative_name = link.relative_to(root).as_posix()
+    effective = posixpath.normpath(posixpath.join(
+        posixpath.dirname(relative_name), target))
+    if effective == ".." or effective.startswith("../"):
         raise ValueError("unsafe_source_link")
     try:
         resolved = link.resolve(strict=True)
