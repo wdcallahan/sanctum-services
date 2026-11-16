@@ -12,6 +12,8 @@ on:
       - "tests/test_nextcloud_recovery_bundle.py"
       - "tools/nextcloud-recovery-bundle.py"
       - "tools/nextcloud-recovery-assemble.py"
+      - "tools/nextcloud-recovery-readability.py"
+      - "tests/test_nextcloud_recovery_readability.py"
       - "tests/test_nextcloud_recovery_assemble.py"
       - "ansible/vars/yxorp-kvin-stage.yml"
       - "ansible/inventory/hosts.yml"
@@ -182,6 +184,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_inputs.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_bundle.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_assemble.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_readability.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_consistent_backup.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_promotion.py'
