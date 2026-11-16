@@ -6,6 +6,74 @@ source-managed, but **full-instance backup, independent storage, and an
 isolated recovery have not been accepted**. This document authorizes no
 application downtime or database change.
 
+## Operator model — two Ansible jobs and one protected recovery point
+
+**What Nova should picture:** This is a straightforward Ansible-managed backup
+and restore of one running Nextcloud instance, not a new security architecture.
+Nextcloud's application and user files are in the **bind-mounted host directory**
+`/home/wdc2/srv/sanctum-services/nextcloud/html` (mounted at
+`/var/www/html` inside the container), **not** a separately named Podman
+volume. Nextcloud's records and Calendar entries also depend on its **own**
+database in the Maintenance-owned PostgreSQL service. The user-specific
+private config inputs live separately under
+`/home/wdc2/.config/sanctum-services/nextcloud`.
+
+**Backup playbook, eventual result:**
+
+1. Confirm destination and sufficient available space; obtain the exact
+   app-scoped PostgreSQL export interface from Maintenance. No whole-cluster
+   backup or PostgreSQL reconfiguration is involved.
+2. Put Nextcloud in maintenance mode while recording one consistent
+   recovery point: tar the persisted HTML tree **including links and file
+   metadata**, export **only** its PostgreSQL database, and package the
+   private inputs. Always turn maintenance mode off even if capture fails.
+3. Place one named `nextcloud-YYYYMMDDTHHMMSS/` snapshot **off Kvin**
+   (Peanut is a possible destination, not yet capacity-accepted).
+   The protected directory contains these **exact four files**:
+
+   ```text
+   nextcloud-YYYYMMDDTHHMMSS/
+     nextcloud-html.tar
+     nextcloud-postgresql.dump
+     nextcloud-private.tar
+     manifest.json
+   ```
+
+   The manifest contains file sizes and checksums. The data plus config
+   archives contain real private material; keep the **snapshot private**.
+   There is no reason to conceal ordinary symlink filenames or fixed
+   application paths from Nova. Tar entry types and safe restore paths
+   should be validated, but our own live source isn't inherently hostile.
+
+**Restore playbook, eventual result:** On a different, isolated host, verify
+the retained recovery point, stage the file tree with preserved ownership
+and links under an isolated rootless Podman namespace, stage its private
+inputs, have Maintenance restore **only** the Nextcloud database into an
+isolated database/role, start the pinned Nextcloud image and Quadlet against
+that database, and check that login, user files, a known Calendar entry,
+and normal application operations work. Existing Kvin production, other
+PostgreSQL databases, YXORP, DNS and its users stay untouched. An actual
+production cutover would be a **third, separately approved action**, not
+a side effect of a restore trial.
+
+**What already exists versus what doesn't:** The source-only guarded
+`ansible/nextcloud-consistent-backup.yml` candidate, the bundle
+producer/verifier, and their synthetic tests exist. Kvin's actual source tree
+was successfully checked read-only (28,955 regular files, 3,877 directories,
+118 safe contained links and 4 private inputs; 5,769,576,446 bytes of file
+content by metadata). **No real application backup, PostgreSQL dump,
+off-host retained snapshot, or completed restore playbook has been
+accepted yet.** The Maintenance owner export contract, destination capacity,
+native backup approval and isolated restore qualification remain open.
+
+**Why any guardrails at all?** Permission checks govern what the backup
+process can read; care is also needed not to dereference symlinks outside
+the intended source or write archive members outside the new destination
+when restoring. Those are implementation-level precautions, not a reason
+to obscure ordinary file names, lecture the operator about filesystem basics,
+or require a dozen diagnostic turns. Actual passwords, private config
+contents and credential-bearing snapshots are the information to protect.
+
 ## Recovery contents and ownership
 
 - Include the **actual** Nextcloud data directory, configuration,
