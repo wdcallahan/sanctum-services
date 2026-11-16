@@ -1,0 +1,102 @@
+"""Offline synthetic tests for the Nextcloud private bundle producer."""
+import importlib.util
+import json
+import os
+from pathlib import Path
+import stat
+import tarfile
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+spec = importlib.util.spec_from_file_location("nextcloud_assemble", ROOT / "tools/nextcloud-recovery-assemble.py")
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+
+class NextcloudRecoveryAssemble(unittest.TestCase):
+    def setUp(self):
+        self.workspace = tempfile.TemporaryDirectory()
+        self.addCleanup(self.workspace.cleanup)
+        base = Path(self.workspace.name)
+        self.html = base / "html"
+        self.private = base / "private"
+        self.dump = base / "nextcloud.dump"
+        self.output = base / "bundle"
+        for path in (self.html / "config", self.html / "data" / "alice" / "files",
+                     self.html / "custom_apps" / "calendar", self.private):
+            path.mkdir(parents=True, exist_ok=True)
+        (self.html / "config" / "config.php").write_text("PRIVATE CONFIG")
+        (self.html / "data" / "alice" / "files" / "example.txt").write_text("PRIVATE DATA")
+        (self.html / "custom_apps" / "calendar" / "marker").write_text("app")
+        for name in module.REQUIRED_PRIVATE:
+            (self.private / name).write_text("SECRET " + name)
+        self.dump.write_bytes(b"PGDMP" + b"NOT A REAL DATABASE" * 3)
+
+    def assemble(self):
+        return module.assemble(self.html, self.private, self.dump, self.output)
+
+    def test_private_bundle_is_assembled_and_integrity_validated(self):
+        result = self.assemble()
+        self.assertTrue(result["archive_and_dump_hashes_match_manifest"])
+        self.assertTrue(result["nextcloud_required_paths_present_in_archive"])
+        self.assertFalse(result["consistent_snapshot_proven"])
+        self.assertFalse(result["database_restore_tested"])
+        self.assertFalse(result["application_restore_accepted"])
+        self.assertFalse(result["independent_off_host_retention_proven"])
+        self.assertEqual(stat.S_IMODE(self.output.stat().st_mode), 0o700)
+        for path in self.output.iterdir():
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+        with tarfile.open(self.output / "nextcloud-html.tar") as archive:
+            names = archive.getnames()
+            self.assertIn("data/alice/files/example.txt", names)
+            self.assertIn("custom_apps/calendar/marker", names)
+            self.assertIn("config/config.php", names)
+        with tarfile.open(self.output / "nextcloud-private.tar") as archive:
+            self.assertEqual(set(archive.getnames()), set(module.REQUIRED_PRIVATE))
+        text = json.dumps(result)
+        self.assertNotIn("PRIVATE CONFIG", text)
+        self.assertNotIn("PRIVATE DATA", text)
+        self.assertNotIn("SECRET", text)
+
+    def test_missing_required_state_rejected_before_output(self):
+        (self.html / "config" / "config.php").unlink()
+        with self.assertRaises(ValueError):
+            self.assemble()
+        self.assertFalse(self.output.exists())
+
+    def test_symlink_in_html_tree_cannot_be_archived(self):
+        (self.html / "data" / "escape").symlink_to(self.private, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "unsafe_source_member"):
+            self.assemble()
+
+    def test_linked_private_credential_is_rejected_before_output(self):
+        path = self.private / "postgresql-password"
+        path.unlink()
+        path.symlink_to(self.dump)
+        with self.assertRaisesRegex(ValueError, "nonregular_or_linked_source"):
+            self.assemble()
+        self.assertFalse(self.output.exists())
+
+    def test_output_cannot_be_inside_application_source(self):
+        with self.assertRaisesRegex(ValueError, "output_inside_source"):
+            module.assemble(self.html, self.private, self.dump, self.html / "backup")
+        self.assertFalse((self.html / "backup").exists())
+
+    def test_existing_output_never_overwritten(self):
+        self.output.mkdir()
+        sentinel = self.output / "keep"
+        sentinel.write_text("unchanged")
+        with self.assertRaisesRegex(ValueError, "output_already_exists"):
+            self.assemble()
+        self.assertEqual(sentinel.read_text(), "unchanged")
+
+    def test_non_custom_database_rejected_without_false_success(self):
+        self.dump.write_bytes(b"plain text isn't custom pg dump")
+        with self.assertRaisesRegex(ValueError, "database_dump_not_custom_format"):
+            self.assemble()
+        self.assertFalse((self.output / "manifest.json").exists())
+
+
+if __name__ == "__main__":
+    unittest.main()
