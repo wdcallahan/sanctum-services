@@ -561,3 +561,41 @@ metadata/UID mappings needed for an isolated file restore; prove independent
 archive extraction safety; and integrate the Maintenance-owned Nextcloud-only
 database dump when its contract is available. A real maintenance-mode
 interruption is separately approval-gated.
+
+## November 16 — apparent 5.77 GB, disk inventory and Kvin/Peanut role correction
+
+Nova has **not moved normal user files into Nextcloud yet**. The accepted
+one-byte readability scan summed the *apparent lengths of ordinary files in
+the whole bind-mounted HTML tree*, not `du` filesystem blocks and **not**
+the size of user uploads. Nextcloud's official container layout places
+the shipped `apps`, application code and dependencies under
+`/var/www/html` alongside `data` (actual user files) and `config`.
+The ordinary observed `apps/.../*.js.map.license` symbolic links are
+application build products. The reason for the observed large total is
+**still unknown** until the directory breakdown is measured; do not
+assume uploads, runaway logs, or cache without evidence. Source:
+[official Nextcloud container layout](https://github.com/nextcloud/docker/blob/master/README.md#persistent-data).
+
+**Hardware/HA design intent from Nova:** Kvin and Peanut should be analogous
+hosts and eventually have matching SSDs; one is currently approximately
+0.5 TB and the other approximately 1 TB, with **which host has which size
+not yet verified**. They are meant to provide primary/secondary database
+service with an up-to-date peer, with redundant/hot-spare behavior for some
+workloads and possible backup custody for others. This is an operator
+**goal**, not evidence PostgreSQL replication/failover is active. A replica
+copies bad transactions too, so it is not a substitute for a retained
+historical point-in-time snapshot; and a PostgreSQL replica alone does not
+replicate Nextcloud's HTML/data files. Maintenance #17 owns the actual
+PostgreSQL topology and owner-supported scoped dump/isolated restore. The
+[latest Services-to-Maintenance contract](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6932965316)
+spells out the short application lock, database-only rollback and expected
+Kvin/Peanut authority, with **no live changes approved**.
+
+**One read-only operator discovery command** from Kvin as `wdc2` should
+show two-level HTML `du` distribution, Kvin's underlying mount and disks,
+and Peanut's filesystem free space and block device sizes via noninteractive
+SSH. Clearly tell Nova before pasting that the last part **queries Peanut
+remotely**. These are measurements for capacity and role planning only:
+no config, databases, containers or storage are changed. Choose destination
+and retention only once both actual capacities are known.
+
