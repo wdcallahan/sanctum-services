@@ -200,3 +200,28 @@ This performs no Nextcloud service change, no DB operation, no backup creation
 and prints no user files. Return the single sanitized JSON record (or the
 exact failure); report `git pull` errors if it stops before the scan.
 **Do not** send archive contents or credentials.
+
+## November 16 — first native readability refusal and diagnostic correction
+
+Nova ran the **read-only** Kvin `podman unshare` source traversal and received
+`Nextcloud bundle source traversal refused (private details withheld)`.
+This confirms the gate **refused**, not why; no private files were reported,
+no backup was created, and no application/database mutation was requested.
+**Do not infer a permission failure, symlink, or missing input from the
+generic denial. Do not alter filesystem permissions to make it pass.**
+
+The original diagnostic suppressed all cause information. Source now reports
+a fixed, private-safe JSON error containing only `status=refused`,
+`stage` (`required_inputs`, `html_tree`, `private_inputs` or `startup`),
+and `reason` (a bounded error category), with no real filenames, file
+contents, or passwords. CI tests verify redaction, failure-stage mapping
+and the previously accepted read-only success contract.
+
+**Next Kvin action once diagnostic source CI is green:** repeat the same
+nonmutating command from the immediately preceding section after normal
+`git pull`. Return the **one JSON record on stdout or stderr**, not raw
+paths or private data. This is a targeted attempt to identify the *cause*
+of the first refusal and is not reopening the earlier successful
+ten-path/occ inspections. If the gate still refuses, fix only the
+identified producer/namespace/permissions issue with review before an
+actual live backup operation.
