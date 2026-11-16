@@ -6,7 +6,7 @@ Sanctum Services is the application-deployment project for the Sanctum home lab.
 
 The first application is **Nextcloud**. The estate also includes the planned reconstruction of YXORP, LinkStack, Uptime Kuma and Pi-hole, and the future Sanctum VPN, Luanti and Home Assistant work. We build these systems for two outcomes: useful services **and** real hands-on engineering experience.
 
-> **Current status — 2026-11-11:** Nextcloud's Calendar 6.6.2 is installed with accepted bidirectional GNOME Calendar access. Maintenance's Kvin TCP 8085 firewall correction was authorized, applied and independently verified October 20; any older pre-approval statements are historical. Nextcloud's complete backup/restore and lifecycle and protected proxy access remain to be qualified. [The authoritative service estate and settled keep/retire decisions](docs/SERVICE-ESTATE.md) cover both Services-owned containers and other project owners. [Services #2](https://github.com/wdcallahan/sanctum-services/issues/2) tracks reconstructible YXORP and the full container audit.
+> **Current status — November 16, 2026:** Kvar has been **powered off** by Nova (not wiped). Kvin YXORP's seven wanted production routes, Kuma, LinkStack, and EyesOnly functionality have prior accepted evidence; Pi-hole, OpenWebUI and Endlessh are retired from the desired estate. Nextcloud is **installed and active**; Calendar 6.6.2 bidirectional GNOME Calendar use is accepted. We are developing **full-instance recovery**, not repeating the installation: the application/data directory is confirmed, the private bundle verifier/producer and guarded source-only coordinator have [passing source CI](https://github.com/wdcallahan/sanctum-services/actions/runs/43959448677), but no coordinated live backup, off-Kvin retention or isolated restore exists yet. Maintenance's Nextcloud-only PostgreSQL dump interface is pending. **Start from [the current lead handoff](PROJECT_LEAD_INTRODUCTION.md), [roadmap](docs/ROADMAP.md), [estate register](docs/SERVICE-ESTATE.md), and [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2); dated stages below are historical, not new live instructions.**
 
 ## Start here
 
@@ -40,13 +40,13 @@ A service has no initial value merely because it starts. It must be:
 
 We measure progress through demonstrated operating outcomes, not source-code volume or passing tests alone.
 
-## Initial Nextcloud pilot — container running, installer pending
+## Original Nextcloud pilot — historical deployment design
 
 - **Compute:** Kvin (ARM64), rootless Podman; host port 8085 is the chosen initial mapping to Nextcloud Apache port 80.
-- **User-facing name:** `square.nexus.sanctum`; initial pilot route is HTTP via YXORP, not yet accepted; TLS requires a separate later decision.
-- **Database:** existing Sanctum PostgreSQL, with Nextcloud's own role/database provisioned by its owner and a qualified client SCRAM path.
+- **User-facing name:** `square.nexus.sanctum` over deliberately accepted private-network HTTP; current production YXORP is on Kvin. No blanket HTTPS/CA project is required.
+- **Database:** existing Maintenance-owned shared Sanctum PostgreSQL with Nextcloud's own database and working authenticated application connection. A supported **Nextcloud-only backup/export interface** is still pending.
 - **Files:** Kvin NVMe, about **50 GiB soft budget** for the learning period; separately restorable copies planned on Peanut. Void is the intended later long-term file-storage location.
-- **Automation runtime:** centrally managed Navigator/EE workflow on the Kvin and Peanut controllers; actual runtime ownership and qualified image to be selected.
+- **Automation runtime:** Maintenance's shared Navigator/EE on Kvin/Peanut is in use and its Services consumer was accepted October 23; a separately built general-purpose EE remains a distinct workstream.
 
 Those facts and decisions may evolve. The [roadmap](docs/ROADMAP.md) identifies open choices and acceptance tests; the [architecture page](docs/architecture.md) distinguishes intended flow from deployed state.
 
@@ -62,14 +62,9 @@ The source is developed on linear `main`, with no default branch/PR workflow. Th
 [App-only playbook](ansible/apps.yml) ·
 [App management and reconstruction runbook](docs/runbooks/nextcloud-apps.md)
 
-The October 20 app management source is **not yet natively qualified**. Its
-manifest now pins Calendar 6.6.2 (reviewed release archive and SHA-256); no
-third-party app has been deployed through it yet. The normal site playbook
-reconciles approved apps only after the web installer completes. Unlisted apps
-are preserved, not silently uninstalled. No current test uploads are treated
-as irreplaceable data; eventual data recovery is a separate qualification.
+**Calendar 6.6.2 was installed and accepted in normal bidirectional GNOME Calendar use on October 21**, with the repeat application reconciliation accepted. Its version is pinned in the application manifest. Unlisted apps are preserved, not silently uninstalled. The dated October 20 exploratory-data statement is **not current permission to discard user data**. Full instance backup and restore remain the active recovery milestone.
 
-## YXORP reconstruction and Kvin staging (November 10, 2026)
+## YXORP reconstruction and Kvin staging (historical November 10 evidence)
 
 - [YXORP replacement runbook](docs/runbooks/yxorp-reconstruction.md), [declarative routes](data/yxorp-routes.yml) and [Nginx role](ansible/roles/yxorp/tasks/main.yml): rootful Nginx with host networking and normal HTTP `0.0.0.0:80`. The **Peanut-only trial passed** a Kvin same-client, same-Host **349-byte byte-identical HTTP200** Yarn content check, then was **removed** by its scoped Ansible cleanup. Peanut is an intended *future* standby, not a commissioned permanent proxy. Other routes and full user/session/WebSocket behavior remain unaccepted.
 - **Kvin's rootful HTTP80 YXORP stage is installed and locally accepted for Yarn.** The stage deployed `ok=22 changed=5 failed=0`, and its independent native four-path diagnosis returned `ok=6 changed=0 failed=0`: local health 200, staged Yarn 200, direct Yarn hostname/IP 200 and exact response-body equality on both comparisons. The earlier origin timeout did not recur, cause unknown. Kvar NPM and wildcard DNS remain production. The stage code lives in [the Kvin playbook](ansible/yxorp-kvin-stage.yml), [independent route tests](ansible/yxorp-kvin-yarn-transport-diagnose.yml), and [reversal](ansible/yxorp-kvin-stage-remove.yml); the stage is not production and should remain for further acceptance.
