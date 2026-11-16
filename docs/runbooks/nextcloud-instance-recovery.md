@@ -45,9 +45,9 @@ play recap. No passwords or raw application configuration.
 
 ## Next implementation after native observation
 
-1. Identify the effective configured data path and an appropriate **off-Kvin**
-   protected backup destination with capacity, integrity verification and
-   retention; another path on Kvin alone is not disaster recovery.
+1. Use the **confirmed** `/var/www/html/data` path and select an appropriate
+   **off-Kvin** protected backup destination with capacity, integrity
+   verification and retention; another path on Kvin alone is not disaster recovery.
 2. Create a bounded maintenance-mode operation that prevents application
    writes, takes a coordinated Nextcloud-only PostgreSQL snapshot and
    archives the required files/private configuration as **one named recovery
@@ -67,26 +67,26 @@ work. Project Joule owns Prism and Bunny Factory owns the VyOS routers.
 ## November 16 — effective data path and recovery-bundle integrity
 
 Nova's **native read-only** command on running Kvin returned exactly
-\`/var/www/html/data\` from \`podman exec -u www-data sanctum-nextcloud php
-occ config:system:get datadirectory\`. This is a confirmed configured path,
+`/var/www/html/data` from `podman exec -u www-data sanctum-nextcloud php
+occ config:system:get datadirectory`. This is a confirmed configured path,
 not an inference from directory presence. The existing Quadlet's bind
-\`~/srv/sanctum-services/nextcloud/html:/var/www/html\` includes that data
-directory, \`config/config.php\`, and \`custom_apps\`.
+`~/srv/sanctum-services/nextcloud/html:/var/www/html` includes that data
+directory, `config/config.php`, and `custom_apps`.
 
 **Do not repeat** the accepted six-task native input play or this OCC query.
 
-The source-only \`tools/nextcloud-recovery-bundle.py\` verifies one
+The source-only `tools/nextcloud-recovery-bundle.py` verifies one
 privately staged recovery bundle, with three exact artifacts: a full HTML-tree
 tar archive, a private configuration/credential tar archive, and a
 **Nextcloud-database-only** PostgreSQL custom-format dump. Its
-\`manifest.json\` must name the exact host, data directory, and database;
+`manifest.json` must name the exact host, data directory, and database;
 each artifact needs a byte count and SHA-256. The verifier rejects unexpected
 filenames, symlinks, group/world readable payloads, malformed paths,
 special archive members, missing required state, and a missing PGDMP
 header. It never extracts the archives or prints contents or credentials.
 
 Example **manifest structure** (fake digests; not a usable backup):
-\`\`\`json
+```json
 {
   "schema": "sanctum-nextcloud-recovery-bundle/v1",
   "source_host": "kvin.outer.sanctum",
@@ -98,9 +98,9 @@ Example **manifest structure** (fake digests; not a usable backup):
     "database": {"filename": "nextcloud-postgresql.dump", "bytes": 123, "sha256": "REPLACE"}
   }
 }
-\`\`\`
+```
 The validator can run offline as
-\`python3 tools/nextcloud-recovery-bundle.py /private/recovery-point\`
+`python3 tools/nextcloud-recovery-bundle.py /private/recovery-point`
 **after** the application+database snapshot operation has been designed and
 approved. It is not a command to run on live Kvin today; no recovery bundle
 exists yet.

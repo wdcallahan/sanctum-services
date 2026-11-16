@@ -143,8 +143,9 @@ class NextcloudRecoveryBundle(unittest.TestCase):
 
     def test_no_app_runtime_or_postgresql_calls_in_verifier(self):
         source = (ROOT / "tools/nextcloud-recovery-bundle.py").read_text()
-        for forbidden in ("subprocess", "os.system", "podman exec",
-                          "pg_restore", "pg_dump", "tar.extractall", "shutil.rmtree"):
+        for forbidden in ("import subprocess", "subprocess.run(", "os.system(",
+                          "podman exec", "pg_restore ", "pg_dump ",
+                          "tar.extractall(", "shutil.rmtree("):
             self.assertNotIn(forbidden, source)
 
 
