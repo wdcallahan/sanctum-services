@@ -237,6 +237,7 @@ jobs:
       - name: Check Ansible playbook syntax
         run: |
           export PATH="$HOME/.local/bin:$PATH"
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-recovery-inputs.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp-kvin-peer-http.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kvar-survivors-source.yml --syntax-check
