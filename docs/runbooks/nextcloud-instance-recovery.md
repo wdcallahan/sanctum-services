@@ -225,3 +225,44 @@ of the first refusal and is not reopening the earlier successful
 ten-path/occ inspections. If the gate still refuses, fix only the
 identified producer/namespace/permissions issue with review before an
 actual live backup operation.
+
+## November 16 — actual HTML-tree special-entry gate (no permission changes)
+
+Nova ran the source-qualified Kvin full-tree scan again. It returned exactly
+`{"application_interrupted": false, "backup_created": false,
+"file_paths_or_contents_returned": false, "reason": "unsafe_source_member",
+"stage": "html_tree", "status": "refused"}`. This establishes that the
+source contains at least one unsupported entry type **within the existing
+HTML tree**. It is not evidence of a general file-read permission failure.
+The producer currently supports only ordinary files and directories and
+the integrity validator likewise rejects symlinks and special archive
+members. **Do not strip links, silently skip the entry, chmod/chown the
+tree, or relax archive extraction safety just to make this pass.**
+
+A new standalone, read-only `tools/nextcloud-recovery-specials.py`
+classifies **all** HTML-tree entry types, aggregates unusual members by
+fixed broad component groups (`config`, `data`, `custom_apps`,
+top-level or other), and classifies links as absolute/relative,
+resolved inside/outside the source or dangling. It returns counts and
+known safe labels **only**; no individual names, link targets or file
+contents. It does not follow symbolic links or create an archive.
+
+**Next single Kvin-only operator action after CI passes:**
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+podman unshare python3 tools/nextcloud-recovery-specials.py \
+  --html-root /home/wdc2/srv/sanctum-services/nextcloud/html
+```
+
+Return the complete JSON result, or the exact command failure. This is a
+**new classification** of the accepted refusal, not another meaningless
+repeat of the existing readiness observer. If links are internal, assess a
+safe self-contained archive/restore policy and tests; if external, identify
+their real data owner and reconstructible backing *without assuming their
+targets are included*. If the offending entries are sockets, FIFOs, or
+devices, determine whether they are transient and how a consistent backup
+procedure should exclude or reconstruct them **before** modifying the
+producer and validator. No native backup, interruption or database dump is
+authorized by this scan.
