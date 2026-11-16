@@ -46,10 +46,16 @@ def new_private_file(path):
     return os.fdopen(os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600), "wb")
 
 
+def raise_walk_error(error):
+    # os.walk otherwise silently skips unreadable directories: that could
+    # publish an incomplete backup as if all application data were included.
+    raise error
+
+
 def sorted_tree(root):
     # Refuse symlinks/special members instead of silently following them or
     # producing a bundle that its own verifier will reject.
-    for directory, dirs, files in os.walk(root, followlinks=False):
+    for directory, dirs, files in os.walk(root, followlinks=False, onerror=raise_walk_error):
         dirs.sort()
         files.sort()
         for name in dirs + files:
