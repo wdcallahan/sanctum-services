@@ -10,6 +10,7 @@ on:
       - "tests/test_nextcloud_consistent_backup.py"
       - "tests/test_nextcloud_recovery_inputs.py"
       - "tests/test_nextcloud_recovery_bundle.py"
+      - "tests/test_nextcloud_internal_links.py"
       - "tools/nextcloud-recovery-bundle.py"
       - "tools/nextcloud-recovery-assemble.py"
       - "tools/nextcloud-recovery-readability.py"
@@ -185,6 +186,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_inputs.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_bundle.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_internal_links.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_assemble.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_readability.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_specials.py'
