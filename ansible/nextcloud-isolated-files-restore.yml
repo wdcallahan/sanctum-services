@@ -1,0 +1,178 @@
+---
+# SOURCE-ONLY CANDIDATE. This is the filesystem half of a Nextcloud
+# restore trial, NOT a complete application restore. It must never change
+# live Kvin, Nextcloud, PostgreSQL, DNS, proxy routes, or user services.
+# Prerequisites: a separately approved off-Kvin retained recovery-point
+# directory, verified capacity and owner-approved target selection.
+- name: Stage the verified Nextcloud file snapshot on isolated Peanut only
+  hosts: yxorp_test
+  become: false
+  gather_facts: true
+  vars:
+    nextcloud_isolated_base: /home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials
+    nextcloud_isolated_dest: "{{ nextcloud_isolated_base }}/{{ nextcloud_isolated_recovery_id | default('UNSET') }}"
+    nextcloud_isolated_html: "{{ nextcloud_isolated_dest }}/html"
+    nextcloud_isolated_private: "{{ nextcloud_isolated_dest }}/private"
+  tasks:
+    - name: Require exact nonproduction host, named retained source, and file-stage approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - not ansible_check_mode
+          - nextcloud_isolated_file_restore_approved | default(false) | bool
+          - nextcloud_isolated_recovery_id is defined
+          - (nextcloud_isolated_recovery_id | default('')) is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
+          - nextcloud_retained_bundle is defined
+          - (nextcloud_retained_bundle | default('')) is match('^/home/wdc2/[^\n]+$')
+          - nextcloud_retained_bundle | default('') != nextcloud_isolated_dest
+        fail_msg: >-
+          Refusing file restore: supply one approved private recovery-point
+          directory already on isolated Peanut and a fresh named restore ID.
+          This cannot run against Kvin or any production application.
+
+    - name: Observe named bundle and proposed isolated destination without following links
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ nextcloud_retained_bundle }}"
+        - "{{ nextcloud_isolated_dest }}"
+        - "{{ nextcloud_isolated_base }}"
+      register: nextcloud_isolated_paths
+
+    - name: Require existing bundle, fresh isolated output and private safe parent
+      ansible.builtin.assert:
+        that:
+          - nextcloud_isolated_paths.results[0].stat.isdir | default(false)
+          - not (nextcloud_isolated_paths.results[0].stat.islnk | default(false))
+          - nextcloud_isolated_paths.results[0].stat.mode == '0700'
+          - not (nextcloud_isolated_paths.results[1].stat.exists | default(false))
+          - not (nextcloud_isolated_paths.results[1].stat.islnk | default(false))
+          - not (nextcloud_isolated_paths.results[2].stat.islnk | default(false))
+          - not (nextcloud_isolated_paths.results[2].stat.exists | default(false))
+            or (nextcloud_isolated_paths.results[2].stat.isdir | default(false))
+        fail_msg: >-
+          Source must be private and readable. Isolated destination must not
+          preexist. No overwrite of a previous restore attempt is allowed.
+
+    - name: Privately verify complete named source bundle before creating restore directories
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-recovery-bundle.py') }}"
+          - "{{ nextcloud_retained_bundle }}"
+      register: nextcloud_isolated_bundle_verify
+      changed_when: false
+      no_log: true
+
+    - name: Refuse snapshot with incomplete files or archive link errors
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_isolated_bundle_verify.stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+          - (nextcloud_isolated_bundle_verify.stdout | from_json).nextcloud_required_paths_present_in_archive | bool
+          - (nextcloud_isolated_bundle_verify.stdout | from_json).postgresql_custom_dump_header_recognized | bool
+          - not ((nextcloud_isolated_bundle_verify.stdout | from_json).database_restore_tested | bool)
+          - not ((nextcloud_isolated_bundle_verify.stdout | from_json).application_restore_accepted | bool)
+        fail_msg: >-
+          Bundle validation failed or claimed capabilities it cannot prove;
+          no isolated restore directory was created.
+
+    - name: Create private restore-trial parent directory
+      ansible.builtin.file:
+        path: "{{ nextcloud_isolated_base }}"
+        state: directory
+        mode: '0700'
+
+    - name: Create a uniquely named private isolated restore directory
+      ansible.builtin.file:
+        path: "{{ nextcloud_isolated_dest }}"
+        state: directory
+        mode: '0700'
+
+    - name: Create separate application and private-input restore targets
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0700'
+      loop:
+        - "{{ nextcloud_isolated_html }}"
+        - "{{ nextcloud_isolated_private }}"
+
+    - name: Restore only the verified HTML archive into the fresh isolated tree
+      ansible.builtin.command:
+        argv:
+          - podman
+          - unshare
+          - tar
+          - --extract
+          - --numeric-owner
+          - --preserve-permissions
+          - --file
+          - "{{ nextcloud_retained_bundle }}/nextcloud-html.tar"
+          - --directory
+          - "{{ nextcloud_isolated_html }}"
+      register: nextcloud_isolated_html_extract
+      changed_when: nextcloud_isolated_html_extract.rc == 0
+      no_log: true
+
+    - name: Restore only the verified private-input archive into its separate tree
+      ansible.builtin.command:
+        argv:
+          - podman
+          - unshare
+          - tar
+          - --extract
+          - --numeric-owner
+          - --preserve-permissions
+          - --file
+          - "{{ nextcloud_retained_bundle }}/nextcloud-private.tar"
+          - --directory
+          - "{{ nextcloud_isolated_private }}"
+      register: nextcloud_isolated_private_extract
+      changed_when: nextcloud_isolated_private_extract.rc == 0
+      no_log: true
+
+    - name: Confirm the essential isolated files and directories exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+        get_checksum: false
+      loop:
+        - "{{ nextcloud_isolated_html }}/config/config.php"
+        - "{{ nextcloud_isolated_html }}/data"
+        - "{{ nextcloud_isolated_html }}/custom_apps"
+        - "{{ nextcloud_isolated_private }}/postgresql-password"
+        - "{{ nextcloud_isolated_private }}/postgresql-database"
+        - "{{ nextcloud_isolated_private }}/postgresql-username"
+        - "{{ nextcloud_isolated_private }}/nextcloud.env"
+      register: nextcloud_isolated_restored_members
+      no_log: true
+
+    - name: Require the seven essential isolated restored inputs
+      ansible.builtin.assert:
+        that:
+          - nextcloud_isolated_restored_members.results | length == 7
+          - nextcloud_isolated_restored_members.results | map(attribute='stat.exists') | select('equalto', true) | list | length == 7
+        fail_msg: >-
+          The isolated filesystem restore is incomplete. Preserve it for
+          investigation and do not start any application or touch databases.
+
+    - name: Report filesystem-only recovery stage without claiming usable Nextcloud
+      ansible.builtin.debug:
+        msg:
+          isolated_host: peanut.arcane.sanctum
+          isolated_restore_id: "{{ nextcloud_isolated_recovery_id }}"
+          isolated_application_tree_staged: true
+          isolated_private_inputs_staged: true
+          source_bundle_integrity_checked: true
+          database_dump_not_imported: true
+          nextcloud_container_not_started: true
+          live_nextcloud_untouched: true
+          postgres_cluster_untouched: true
+          user_files_or_credentials_returned: false
+          restore_application_accepted: false
+          next_dependency: Maintenance-supported isolated Nextcloud database restore and app startup verification
