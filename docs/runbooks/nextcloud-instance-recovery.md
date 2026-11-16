@@ -41,6 +41,50 @@ objective is predictable recovery with minimal missing metadata and
 minimal lost edits. This does not imply a PostgreSQL cluster restart,
 shared-server downtime, or zero-length capture window.
 
+## Accepted operating policy — brief maintenance window, two recovery modes
+
+**Nova's November 16 decision:** This is a low-traffic personal Nextcloud.
+Short scheduled overnight maintenance-mode backup windows and the possibility
+that an active client must retry an interrupted transfer are acceptable.
+We do not need a zero-downtime backup architecture. Do not promise an exact
+few-minute duration: the currently observed HTML tree alone has 5.77 GB
+of ordinary file data; measure real end-to-end tar + dump + verification
+before selecting a frequency/window. Maintenance mode is a lockout/status
+screen, not a guaranteed advance user notification or graceful resumable
+upload mechanism. Existing users may need to refresh/reconnect.
+
+**Separate supported recovery intents (both need isolated rehearsal):**
+
+- **Complete snapshot recovery:** Restore the matching HTML/config/private
+  files and Nextcloud-only database dump from one protected recovery point.
+  This is the simplest deterministic path after a lost server or filesystem.
+- **Database-only rollback with the *current* filesystem preserved:** Use a
+  selected older Nextcloud database backup **without silently replacing the
+  current data tree**. Before touching production, preserve *today's*
+  database and file tree as a new immutable recovery point, then rehearse the
+  older database with a **copy** of the current file tree in an isolated
+  instance and isolated database. Reconcile filecache/index discrepancies
+  with the supported `occ files:scan` tools when appropriate, and evaluate
+  `maintenance:data-fingerprint` and sync-client behavior for this specific
+  outdated-backup scenario. Verify current user files, deleted/moved/renamed
+  files, sharing, calendar entries, and working login. Do not treat these
+  `occ` commands as a magic reconstruction of database-only Calendar data
+  written after the rollback point. Confirm Nextcloud application version
+  and DB schema compatibility; rollback across an application/schema
+  upgrade is not assumed safe. Only then approve a production database-only
+  rollback.
+
+These are the **same Ansible recovery workflow with explicit modes**, not
+two unrelated projects. A passed tar verifier is not evidence that the
+DB-only rollback mode works; it requires a separate real isolated trial.
+No production rollback is authorized yet.
+
+Nextcloud's official [backup](https://docs.nextcloud.com/server/stable/admin_manual/maintenance/backup.html)
+and [restore/reconciliation](https://docs.nextcloud.com/server/stable/admin_manual/maintenance/restore.html#synchronising-with-clients-after-data-recovery)
+guides describe maintenance mode, client recency, data fingerprint and
+file scans. The reconciliation advice needs to be tested on the *deployed*
+Nextcloud version before claiming this mode accepted.
+
 ## Operator model — two Ansible jobs and one protected recovery point
 
 **What Nova should picture:** This is a straightforward Ansible-managed backup
