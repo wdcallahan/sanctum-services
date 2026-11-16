@@ -8,6 +8,7 @@ import argparse
 import importlib.util
 import json
 from pathlib import Path
+import stat
 import sys
 
 # Only fixed categories may cross the diagnostic boundary. Real OSError
@@ -71,18 +72,28 @@ def check(html, private):
 
     at_stage("required_inputs", check_required)
 
-    counts = {"html_regular_files": 0, "html_directories": 0, "html_file_bytes": 0}
+    counts = {
+        "html_regular_files": 0,
+        "html_directories": 0,
+        "html_relative_internal_symlinks": 0,
+        "html_file_bytes": 0,
+    }
 
     def inspect_html_tree():
         for item in producer.sorted_tree(html):
-            if item.is_file():
+            mode = item.lstat().st_mode
+            if stat.S_ISLNK(mode):
+                # Producer has already refused escaping/dangling/cyclic links.
+                # Do not follow link targets during this readability probe.
+                counts["html_relative_internal_symlinks"] += 1
+            elif stat.S_ISREG(mode):
                 # A stat alone can succeed when an actual open would fail.
                 # Read one byte but never echo any content or source paths.
                 with item.open("rb") as stream:
                     stream.read(1)
                     counts["html_file_bytes"] += item.stat().st_size
                 counts["html_regular_files"] += 1
-            elif item.is_dir():
+            elif stat.S_ISDIR(mode):
                 counts["html_directories"] += 1
             else:
                 raise ValueError("unsupported_html_source_member")
@@ -101,7 +112,7 @@ def check(html, private):
         "scope": "nextcloud_existing_html_and_four_private_inputs",
         **counts,
         "private_required_files_readable": len(producer.REQUIRED_PRIVATE),
-        "symlinks_special_members_observed": 0,
+        "unaccepted_special_members_observed": 0,
         "source_tree_readable_for_assembler_at_scan_time": True,
         "contents_or_secret_paths_returned": False,
         "application_interrupted": False,
