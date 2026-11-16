@@ -9,6 +9,8 @@ on:
       - "tests/test_nextcloud_recovery_inputs.py"
       - "tests/test_nextcloud_recovery_bundle.py"
       - "tools/nextcloud-recovery-bundle.py"
+      - "tools/nextcloud-recovery-assemble.py"
+      - "tests/test_nextcloud_recovery_assemble.py"
       - "ansible/vars/yxorp-kvin-stage.yml"
       - "ansible/inventory/hosts.yml"
       - "data/yxorp-routes.yml"
@@ -177,6 +179,7 @@ jobs:
         run: |
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_inputs.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_bundle.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_assemble.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_promotion.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_peer_http.py'
