@@ -127,7 +127,7 @@ class NextcloudRecoveryBundle(unittest.TestCase):
                 archive.addfile(info)
         self.write_payload("application", dst.read_bytes())
         self.save_manifest()
-        with self.assertRaisesRegex(ValueError, "unsafe_archive_member"):
+        with self.assertRaisesRegex(ValueError, "invalid_required_file"):
             module.verify(self.root)
 
     def test_private_permissions_and_no_symlink_payload(self):
