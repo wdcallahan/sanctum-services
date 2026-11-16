@@ -115,3 +115,44 @@ service and the narrow Nextcloud database dump interface; the Services owner
 has requested that interface on Maintenance issue #17. No production
 Nextcloud maintenance-mode change, file snapshot or DB dump has been run.
 
+
+## November 16 — private bundle producer (source only, no native backup)
+
+`tools/nextcloud-recovery-assemble.py` now provides the missing **file-level
+bundle assembly** counterpart to the earlier read-only verifier. It reads
+an **already-quiesced, accessible** Nextcloud HTML source tree, the exact four
+private credential/configuration inputs and an already-produced
+**Nextcloud-only PostgreSQL custom-format dump**. It writes three protected
+payloads and a manifest into a **new** 0700 directory (0600 files), then calls
+the existing integrity verifier. It refuses missing files, linked or special
+members, wrong dump header, pre-existing output names and output nested inside
+its own input trees. Its output deliberately continues to report
+`consistent_snapshot_proven=false`, `database_restore_tested=false` and
+`independent_off_host_retention_proven=false`.
+
+**No Kvin invocation is approved yet.** This tool neither selects a snapshot
+time nor enters/exits Nextcloud maintenance mode. It does not invoke pg_dump,
+restore PostgreSQL or copy data to Peanut. A malformed or interrupted attempt
+may leave a private **incomplete** output directory; it is never evidence
+of a successful recovery bundle. Before native use, explicitly qualify the
+existing rootless user-namespace/host-file read permissions for all Nextcloud
+data, including UID 33-owned paths. Do not work around permission errors by
+changing live ownership or broadening permissions.
+
+The source-only tests exercise complete fixture assembly, private output modes,
+missing inputs, symlinks, collision protection, unsafe destinations and invalid
+dump signatures. Production still needs the **Maintenance-owned scoped database
+export contract**, a guarded Services coordinator that confirms and restores
+Nextcloud's maintenance state, one consistent write-freeze window, protection
+and verification of an off-Kvin copy, and a real isolated restore. No current
+operator action is implied by source CI success.
+
+**Planned operator sequence (not yet an executable runbook):** review approved
+authorization and destination -> confirm correct running source and writable
+quiescence control -> enter Nextcloud maintenance mode -> Maintenance-scoped
+database export while writes remain quiesced -> assemble matching application,
+private and database bytes under the same freeze -> validate -> **always**
+restore the original maintenance state and verify service health -> transfer
+privately to an independent host and verify -> isolated restore and consumer
+acceptance. A failed database export must never silently publish the source
+bundle as a valid recovery point.
