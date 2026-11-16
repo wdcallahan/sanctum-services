@@ -6,6 +6,41 @@ source-managed, but **full-instance backup, independent storage, and an
 isolated recovery have not been accepted**. This document authorizes no
 application downtime or database change.
 
+## Consistency model — not atomically synchronized at every instant
+
+Nextcloud's file tree and PostgreSQL are **two distinct stores**; they do
+**not** have to match at the same hypothetical instant during ordinary
+operation. Do not describe a Planck-time matching requirement to Nova.
+PostgreSQL `pg_dump` produces an internally consistent database export
+even while other sessions use the database
+([PostgreSQL 18 documentation](https://www.postgresql.org/docs/18/app-pgdump.html)).
+The purpose of putting **Nextcloud** into maintenance mode for a recovery
+point is to **limit cross-store application changes while the two backups
+are taken**. It does **not** stop the shared PostgreSQL server, and it
+doesn't require simultaneous physical filesystem/DB snapshots.
+
+**Failure/rollback semantics:** If an old DB is restored while newer files
+remain, some files may no longer have the corresponding indexed metadata,
+while some database records may refer to missing/old content. Filesystem
+rescan and client reconciliation can address *some* mismatches, but cannot
+reconstruct arbitrary application-only records such as calendar entries
+that were written after the recovered database state. Conversely,
+restoring an older file tree against a newer DB can also produce
+temporarily inaccessible records. Nextcloud's
+[official restore guide](https://docs.nextcloud.com/server/stable/admin_manual/maintenance/restore.html#synchronising-with-clients-after-data-recovery)
+specifically discusses outdated backups and provides
+`maintenance:data-fingerprint` and `files:scan` as **situational** recovery
+tools; it warns that the former can produce conflicts and is **not**
+routine after every recovery. Preserve newer state before reconciliation
+and test against an isolated restore rather than rewriting live Kvin.
+
+**Operational consequence:** Aim for an application-quiesced window and
+paired files+DB recovery point as the safest, simplest *backup* approach,
+**not** because Nextcloud is incapable of surviving a mismatch. The
+objective is predictable recovery with minimal missing metadata and
+minimal lost edits. This does not imply a PostgreSQL cluster restart,
+shared-server downtime, or zero-length capture window.
+
 ## Operator model — two Ansible jobs and one protected recovery point
 
 **What Nova should picture:** This is a straightforward Ansible-managed backup
