@@ -329,3 +329,64 @@ content or any credentials. No production service or database mutation,
 no backup creation. The separate Maintenance-owned Nextcloud-only PG dump
 interface and approval for an eventual write-quiescing operation remain
 outstanding.
+
+## November 16 — complete rootless source-readability gate accepted
+
+Nova ran the **updated** rootless private+HTML scan on Kvin. Native evidence:
+
+```json
+{
+  "source_tree_readable_for_assembler_at_scan_time": true,
+  "html_regular_files": 28955,
+  "html_directories": 3877,
+  "html_relative_internal_symlinks": 118,
+  "html_file_bytes": 5769576446,
+  "private_required_files_readable": 4,
+  "unaccepted_special_members_observed": 0,
+  "application_interrupted": false,
+  "database_exported": false,
+  "recovery_bundle_created": false,
+  "consistent_snapshot_proven": false,
+  "off_host_backup_proven": false
+}
+```
+
+The native output was sanitized; this is a summary of selected fields, not an
+assertion that *every byte was read*. The scan opens each regular file for a
+one-byte readability test, checks all private inputs, and validates all 118
+relative contained links against the updated producer contract. Source file
+sizes sum to **5,769,576,446 bytes** (5.77 decimal GB) before archive overhead,
+an application database dump, working space, and an independent retained copy.
+**Do not rerun this already accepted scan or prior ten-path and data-dir
+observations.** No real backup or restoration has yet taken place.
+
+### What the links are (and are not)
+
+The previous producer refused **all** symbolic links so that a backup could not
+silently follow a pointer to outside or secret host data. The revised source
+preserves only relative, fully contained links **as links**, with the independent
+archive validator checking that their targets are actually included and safe
+inside the archive. This changed **future backup software policy**, not the
+live Nextcloud installation or its links. The classifier counted the links but
+redacted their specific names/targets; therefore their individual identity,
+purpose, and specific Nextcloud subdirectory are **not yet known**. Do not
+claim they are a specific vendor package or module without inspecting their
+names.
+
+If Nova wants to inspect examples for understanding, this **read-only Kvin
+metadata-only** command shows the first 25 relative source link names and their
+relative targets (no file contents). It is not a prerequisite for backup
+qualification; it serves the operator's understanding and may expose
+filenames, not secrets. It does not need a conspicuous operational warning.
+
+```bash
+podman unshare find /home/wdc2/srv/sanctum-services/nextcloud/html -type l \
+  -printf '%P -> %l\n' | sort | sed -n '1,25p'
+```
+
+**Next planned engineering work:** approve off-Kvin storage with enough free
+space for one 5.77 GB plus-dump snapshot and extra working headroom; preserve
+metadata/UID mappings needed for an isolated file restore; prove independent
+archive extraction safety; and integrate the Maintenance-owned Nextcloud-only
+database dump when its contract is available. A real maintenance-mode
+interruption is separately approval-gated.
