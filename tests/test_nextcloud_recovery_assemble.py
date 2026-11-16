@@ -66,9 +66,55 @@ class NextcloudRecoveryAssemble(unittest.TestCase):
             self.assemble()
         self.assertFalse(self.output.exists())
 
-    def test_symlink_in_html_tree_cannot_be_archived(self):
+    def test_contained_relative_links_are_preserved_and_verified(self):
+        (self.html / "apps").mkdir()
+        (self.html / "apps" / "calendar").symlink_to(
+            "../custom_apps/calendar", target_is_directory=True)
+        (self.html / "apps" / "config").symlink_to("../config/config.php")
+        report = self.assemble()
+        self.assertTrue(report["archive_and_dump_hashes_match_manifest"])
+        self.assertEqual(report["internal_relative_symlinks_verified"], 2)
+        with tarfile.open(self.output / "nextcloud-html.tar") as archive:
+            directory_link = archive.getmember("apps/calendar")
+            self.assertTrue(directory_link.issym())
+            self.assertEqual(directory_link.linkname, "../custom_apps/calendar")
+            file_link = archive.getmember("apps/config")
+            self.assertTrue(file_link.issym())
+            self.assertEqual(file_link.linkname, "../config/config.php")
+            self.assertFalse(any(name.startswith("apps/calendar/") for name in archive.getnames()))
+
+    def test_external_absolute_link_never_enters_archive(self):
         (self.html / "data" / "escape").symlink_to(self.private, target_is_directory=True)
+        with self.assertRaisesRegex(ValueError, "unsafe_source_link"):
+            self.assemble()
+        self.assertFalse((self.output / "manifest.json").exists())
+
+    def test_internal_absolute_link_rejected_even_when_target_contained(self):
+        (self.html / "custom_apps" / "bad").symlink_to(
+            self.html / "config" / "config.php")
+        with self.assertRaisesRegex(ValueError, "unsafe_source_link"):
+            self.assemble()
+
+    def test_internal_dangling_link_rejected(self):
+        (self.html / "custom_apps" / "bad").symlink_to("../missing")
+        with self.assertRaisesRegex(ValueError, "unsafe_source_link"):
+            self.assemble()
+
+    def test_cyclic_links_rejected(self):
+        (self.html / "custom_apps" / "a").symlink_to("b")
+        (self.html / "custom_apps" / "b").symlink_to("a")
+        with self.assertRaisesRegex(ValueError, "unsafe_source_link"):
+            self.assemble()
+
+    def test_special_fifo_rejected(self):
+        os.mkfifo(self.html / "data" / "unarchiveable")
         with self.assertRaisesRegex(ValueError, "unsafe_source_member"):
+            self.assemble()
+
+    def test_relative_lexical_escape_not_accepted(self):
+        (self.html / "data" / "escape").symlink_to(
+            "../../../" + self.html.name + "/config/config.php")
+        with self.assertRaisesRegex(ValueError, "unsafe_source_link"):
             self.assemble()
 
     def test_linked_private_credential_is_rejected_before_output(self):
