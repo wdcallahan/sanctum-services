@@ -20,7 +20,7 @@ Nova appoints **this chat as the Sanctum Services project lead**, not Bunny Fact
 
 ## Active frontier: Nextcloud complete-instance recovery
 
-**Latest accepted source checkpoint:** Services `main` commit [`c1f11c8`](https://github.com/wdcallahan/sanctum-services/commit/c1f11c80231211f2143f2fc2588ee36b4b4e67de), [CI pass 43946416164](https://github.com/wdcallahan/sanctum-services/actions/runs/43946416164), and [Services issue #2 November 16 receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6927848574). Check for any newer changes before writing.
+**Latest source checkpoint:** The previous validated input/bundle-reader release was Services `c1f11c8` ([CI 43946416164](https://github.com/wdcallahan/sanctum-services/actions/runs/43946416164)). Subsequent Nov16 source includes `tools/nextcloud-recovery-assemble.py`, `ansible/nextcloud-consistent-backup.yml`, `tools/nextcloud-recovery-readability.py`, synthetic tests and docs. [CI 43959448677](https://github.com/wdcallahan/sanctum-services/actions/runs/43959448677) passed at `c51ff0e`; later documentation commits are expected. All these are **source qualification only**, with no native write or restore. Check latest `main` and issue #2 before writing.
 
 **Native observations accepted:** `ansible/nextcloud-recovery-inputs.yml` on Kvin returned `ok=6 changed=0 failed=0`, installed/active HTTP200, all expected inputs present, **no backup or restore**. Nova separately ran `podman exec -u www-data sanctum-nextcloud php occ config:system:get datadirectory`, confirming **`/var/www/html/data`** in persistent **`/var/www/html`** host bind `~/srv/sanctum-services/nextcloud/html`. **Do not repeat** either probe.
 
@@ -31,7 +31,7 @@ Nova appoints **this chat as the Sanctum Services project lead**, not Bunny Fact
 2. Maintenance must publish its **Nextcloud-only PostgreSQL export interface** (request on [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6927299607)); at last read there was **no owner answer**. Do not impersonate that interface, manage the shared PostgreSQL cluster, dump unrelated databases or print private credentials. Advance independent Services source work while this dependency is pending.
 3. Once contracts/source are qualified and a native operation is independently approved, take an actual consistent recovery point, retain it off Kvin and verify bundle integrity. Then restore **isolated** app+DB without altering production, accept user data, known Calendar state, startup, and repeat convergence. Do not claim this outcome until demonstrated.
 
-No production downtime, database dump, off-host backup, or isolated restoration has yet been authorized or reported. Use real operator evidence before claiming any.
+**Next human action:** Once source CI has passed, Nova runs only the [read-only Kvin full-tree rootless permission/traversal gate](docs/runbooks/nextcloud-instance-recovery.md#november-16--guarded-coordinator-candidate-and-rootless-readability-gate). Return the single JSON line or precise failure. This is a new necessary source-readability gate, **not a rerun** of input presence. Maintenance's owner-export contract is still absent. The coordinator candidate is **not authorized for live use**. No production downtime, database dump, off-host backup, or isolated restoration has yet been authorized or reported. Use real operator evidence before claiming any.
 
 ## Human handoff and reading order
 
