@@ -1,0 +1,233 @@
+---
+# SOURCE-ONLY CANDIDATE. No live invocation is authorized until Maintenance
+# supplies its supported Nextcloud-only PG dump command, host access/permissions
+# are qualified, and Nova approves the brief maintenance-mode interruption.
+# This playbook does NOT establish off-Kvin retention or restore acceptance.
+- name: Assemble one consistent-source Nextcloud recovery bundle on Kvin
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_backup_root: "{{ ansible_facts['env']['HOME'] }}/.local/share/sanctum-services/backups/nextcloud"
+    nextcloud_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+    nextcloud_backup_work: "{{ nextcloud_backup_root }}/nextcloud-{{ nextcloud_backup_stamp }}.work"
+    nextcloud_backup_bundle: "{{ nextcloud_backup_root }}/nextcloud-{{ nextcloud_backup_stamp }}"
+    nextcloud_backup_dump: "{{ nextcloud_backup_work }}/nextcloud-postgresql.dump"
+    nextcloud_backup_html: "{{ ansible_facts['env']['HOME'] }}/srv/sanctum-services/nextcloud/html"
+    nextcloud_backup_private: "{{ ansible_facts['env']['HOME'] }}/.config/sanctum-services/nextcloud"
+    nextcloud_backup_assembler: "{{ nextcloud_backup_work }}/nextcloud-recovery-assemble.py"
+    nextcloud_backup_verifier: "{{ nextcloud_backup_work }}/nextcloud-recovery-bundle.py"
+  tasks:
+    - name: Require exact source, distinct write approval, and owner-supplied DB contract
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - not ansible_check_mode
+          - nextcloud_consistent_backup_approved | default(false) | bool
+          - nextcloud_database_export_contract_approved | default(false) | bool
+          - nextcloud_database_export_argv is defined
+          - (nextcloud_database_export_argv | default([]) | type_debug) == 'list'
+          - (nextcloud_database_export_argv | default([])) | length >= 2
+          - (nextcloud_database_export_argv | default(['']))[0] is match('^/')
+          - nextcloud_backup_dump in (nextcloud_database_export_argv | default([]))
+          - nextcloud_backup_stamp is match('^[0-9]{8}t[0-9]{6}$')
+        fail_msg: >-
+          Refusing live backup. This candidate requires the current exact Kvin
+          target, explicit short Nextcloud write-quiescence approval, and a
+          separately owner-approved secret-free argv list for a synchronous
+          Nextcloud-only PostgreSQL custom-format export to the exact private
+          dump path. No invented PostgreSQL interface may be used.
+
+    - name: Confirm incumbent rootless Nextcloud user service is active
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, sanctum-nextcloud.service]
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      register: nextcloud_initial_service
+      changed_when: false
+      failed_when: false
+
+    - name: Require existing active instance before changing application mode
+      ansible.builtin.assert:
+        that:
+          - nextcloud_initial_service.rc == 0
+          - (nextcloud_initial_service.stdout | trim) == 'active'
+
+    - name: Observe existing Nextcloud installed and maintenance state
+      ansible.builtin.command:
+        argv: [podman, exec, -u, www-data, sanctum-nextcloud, php, occ, status, --output=json]
+      register: nextcloud_initial_occ_status
+      changed_when: false
+      no_log: true
+
+    - name: Refuse changing an uninstalled or already-maintained instance
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_initial_occ_status.stdout | from_json).installed | bool
+          - not ((nextcloud_initial_occ_status.stdout | from_json).maintenance | bool)
+        fail_msg: >-
+          The Nextcloud instance must already be installed and not in
+          maintenance mode. Do not override another maintenance operation.
+
+    - name: Check private target names without following existing symlinks
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ nextcloud_backup_work }}"
+        - "{{ nextcloud_backup_bundle }}"
+      register: nextcloud_backup_target_stats
+
+    - name: Refuse collision with a prior attempt or existing private bundle
+      ansible.builtin.assert:
+        that:
+          - not (nextcloud_backup_target_stats.results[0].stat.exists | default(false))
+          - not (nextcloud_backup_target_stats.results[1].stat.exists | default(false))
+        fail_msg: Backup names already exist; preserve them and use a new timestamp.
+
+    - name: Create the bounded private backup parent
+      ansible.builtin.file:
+        path: "{{ nextcloud_backup_root }}"
+        state: directory
+        mode: '0700'
+
+    - name: Create this invocation's new private work area
+      ansible.builtin.file:
+        path: "{{ nextcloud_backup_work }}"
+        state: directory
+        mode: '0700'
+
+    - name: Install only this repository's read-only bundle producer into private staging
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../tools/nextcloud-recovery-assemble.py"
+        dest: "{{ nextcloud_backup_assembler }}"
+        mode: '0700'
+
+    - name: Install the corresponding integrity checker beside the producer
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../tools/nextcloud-recovery-bundle.py"
+        dest: "{{ nextcloud_backup_verifier }}"
+        mode: '0700'
+
+    - name: Quiesce Nextcloud and collect one application-plus-database recovery point
+      block:
+        - name: Enable write-quiescing Nextcloud maintenance mode
+          ansible.builtin.command:
+            argv: [podman, exec, -u, www-data, sanctum-nextcloud, php, occ, maintenance:mode, --on]
+          changed_when: true
+          no_log: true
+
+        - name: Confirm the application is actually quiesced
+          ansible.builtin.command:
+            argv: [podman, exec, -u, www-data, sanctum-nextcloud, php, occ, status, --output=json]
+          register: nextcloud_during_status
+          changed_when: false
+          no_log: true
+
+        - name: Require active write-quiescence before any database dump
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_during_status.stdout | from_json).maintenance | bool
+            fail_msg: Nextcloud maintenance mode did not become active.
+
+        - name: Invoke ONLY the separately approved Maintenance database export interface
+          ansible.builtin.command:
+            argv: "{{ nextcloud_database_export_argv }}"
+          register: nextcloud_database_export_result
+          changed_when: nextcloud_database_export_result.rc == 0
+          no_log: true
+
+        - name: Require one nonlinked private database artifact from the owner interface
+          ansible.builtin.stat:
+            path: "{{ nextcloud_backup_dump }}"
+            follow: false
+            get_checksum: false
+          register: nextcloud_database_export_stat
+          no_log: true
+
+        - name: Reject missing, linked, empty, or overly exposed owner dump
+          ansible.builtin.assert:
+            that:
+              - nextcloud_database_export_stat.stat.isreg | default(false)
+              - not (nextcloud_database_export_stat.stat.islnk | default(false))
+              - nextcloud_database_export_stat.stat.mode == '0600'
+              - nextcloud_database_export_stat.stat.size | int > 5
+            fail_msg: Owner export did not produce a private regular Nextcloud-only dump.
+
+        - name: Assemble file, credential and database bytes under the SAME freeze
+          ansible.builtin.command:
+            argv:
+              - podman
+              - unshare
+              - python3
+              - "{{ nextcloud_backup_assembler }}"
+              - --html-root
+              - "{{ nextcloud_backup_html }}"
+              - --private-root
+              - "{{ nextcloud_backup_private }}"
+              - --database-dump
+              - "{{ nextcloud_backup_dump }}"
+              - --output
+              - "{{ nextcloud_backup_bundle }}"
+          register: nextcloud_backup_assembled
+          changed_when: nextcloud_backup_assembled.rc == 0
+          no_log: true
+
+        - name: Require the bundle verifier's bounded integrity result
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_backup_assembled.stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+              - (nextcloud_backup_assembled.stdout | from_json).nextcloud_required_paths_present_in_archive | bool
+              - (nextcloud_backup_assembled.stdout | from_json).postgresql_custom_dump_header_recognized | bool
+              - not ((nextcloud_backup_assembled.stdout | from_json).database_restore_tested | bool)
+              - not ((nextcloud_backup_assembled.stdout | from_json).independent_off_host_retention_proven | bool)
+            fail_msg: Local file+database assembly is not accepted.
+      always:
+        - name: Restore original nonmaintenance Nextcloud state even after failure
+          ansible.builtin.command:
+            argv: [podman, exec, -u, www-data, sanctum-nextcloud, php, occ, maintenance:mode, --off]
+          changed_when: true
+          no_log: true
+
+        - name: Confirm Nextcloud left maintenance mode
+          ansible.builtin.command:
+            argv: [podman, exec, -u, www-data, sanctum-nextcloud, php, occ, status, --output=json]
+          register: nextcloud_after_status
+          changed_when: false
+          no_log: true
+
+        - name: Fail if the original installed/operating mode was not restored
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_after_status.stdout | from_json).installed | bool
+              - not ((nextcloud_after_status.stdout | from_json).maintenance | bool)
+            fail_msg: >-
+              Nextcloud did not return to its original nonmaintenance mode.
+              Do not accept a backup or continue with other host changes.
+
+    - name: Confirm Nextcloud HTTP returned from the maintenance window
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:8085/status.php"
+        status_code: [200]
+        timeout: 5
+      changed_when: false
+
+    - name: Remove only this invocation's transient duplicate dump and tool copies
+      ansible.builtin.file:
+        path: "{{ nextcloud_backup_work }}"
+        state: absent
+
+    - name: Report one locally assembled recovery point without disaster-recovery overclaim
+      ansible.builtin.debug:
+        msg:
+          source: kvin.outer.sanctum
+          bundle_private_on_kvin: "{{ nextcloud_backup_bundle }}"
+          bundle_hashes_match_manifest: true
+          original_nextcloud_maintenance_state_restored: true
+          nextcloud_database_export_owner_interface_used: true
+          copied_off_kvin: false
+          independent_restore_tested: false
+          next_action: protected off-Kvin custody plus isolated app and database restore
