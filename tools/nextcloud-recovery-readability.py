@@ -15,6 +15,7 @@ import sys
 # messages often contain private filenames, so never show their raw text.
 SAFE_SOURCE_REASONS = {
     "unsafe_source_member",
+    "unsafe_source_link",
     "non_directory_or_linked_source",
     "nonregular_or_linked_source",
     "empty_required_file",
