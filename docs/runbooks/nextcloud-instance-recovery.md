@@ -74,6 +74,30 @@ to obscure ordinary file names, lecture the operator about filesystem basics,
 or require a dozen diagnostic turns. Actual passwords, private config
 contents and credential-bearing snapshots are the information to protect.
 
+## Source-only isolated restore staging candidate
+
+`ansible/nextcloud-isolated-files-restore.yml` now expresses the **simple
+filesystem half** of the restore job. Its only managed host is the
+**separate Peanut trial** (`peanut.arcane.sanctum`), not Kvin. It requires
+an explicitly supplied recovery-point directory *already retained on Peanut*,
+a fresh named destination and explicit approval; it first verifies the four
+expected bundle members and manifest, then uses `podman unshare tar` to
+extract `nextcloud-html.tar` and `nextcloud-private.tar` into separate
+**new, isolated** directories. GNU tar and the user namespace preserve
+the archive's numeric ownership, modes and links; production Kvin stays
+unchanged. Its output deliberately says **database not imported; no container
+started; restore not accepted**. On failure, partial isolated staging remains
+available for review, never silently treated as usable restoration.
+
+This is a **source candidate only** until CI and native qualification.
+No retained source bundle exists yet, destination capacity is not accepted,
+and the playbook is **not** an instruction to execute it today. The actual
+database restore, isolated database creation, Quadlet start and user Calendar
+acceptance are separate remaining stages of the same eventual Ansible
+restore workflow, not extra service migrations. If Peanut is later rejected
+as the independent recovery host, revise the target explicitly rather than
+silently redirect to production Kvin.
+
 ## Recovery contents and ownership
 
 - Include the **actual** Nextcloud data directory, configuration,
