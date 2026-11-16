@@ -156,3 +156,47 @@ restore the original maintenance state and verify service health -> transfer
 privately to an independent host and verify -> isolated restore and consumer
 acceptance. A failed database export must never silently publish the source
 bundle as a valid recovery point.
+
+## November 16 — guarded coordinator candidate and rootless-readability gate
+
+`ansible/nextcloud-consistent-backup.yml` is now a **source-only guarded
+candidate**, not an approved operating playbook. It requires an exact Kvin
+target, separate explicit live/write-quiescence authorization, and an
+approved **complete owner-supplied argv list** for a synchronous scoped
+PostgreSQL dump whose output path matches its privately staged destination.
+It refuses an uninstalled or already-maintained instance, enables
+maintenance mode, confirms that status, invokes the owner export, assembles
+files while writes are quiesced, and has an Ansible `always` sequence to
+return Nextcloud to its prior **nonmaintenance** state. That source and its
+unit/syntax checks do **not** prove a successful live run, full maintenance
+consistency (including independent writers), the owner interface, archive
+read permissions, off-host retention, or restore. **Never paste this
+playbook's approval variables or invoke it until these prerequisites are
+settled.** The resulting files, if ever produced, are only a local Kvin
+bundle until independently protected on another host.
+
+Before using this coordinator, the new
+`tools/nextcloud-recovery-readability.py` can traverse the entire
+current HTML bind and four private credential/config inputs **read-only**
+within the same `podman unshare` rootless user namespace planned for the
+producer. It attempts a one-byte read from every regular file and rejects
+symlinks/special members and unreadable subtrees. It returns *only aggregate
+counts and boolean status*, not paths or contents. This is a distinct
+necessary gate from the already accepted ten-path presence observer.
+A pass establishes source readability at that instant, **not** a snapshot,
+absence of concurrent writers, owner dump interface, or recovery.
+
+**Single Kvin-only read-only operator check after CI accepts this source**:
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+podman unshare python3 tools/nextcloud-recovery-readability.py \
+  --html-root /home/wdc2/srv/sanctum-services/nextcloud/html \
+  --private-root /home/wdc2/.config/sanctum-services/nextcloud
+```
+
+This performs no Nextcloud service change, no DB operation, no backup creation
+and prints no user files. Return the single sanitized JSON record (or the
+exact failure); report `git pull` errors if it stops before the scan.
+**Do not** send archive contents or credentials.
