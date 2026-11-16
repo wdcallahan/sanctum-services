@@ -3,6 +3,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 spec = importlib.util.spec_from_file_location("nextcloud_readability", ROOT / "tools/nextcloud-recovery-readability.py")
@@ -45,8 +46,35 @@ class Readability(unittest.TestCase):
 
     def test_missing_secret_refuses(self):
         (self.private / "postgresql-password").unlink()
-        with self.assertRaises(ValueError):
+        with self.assertRaises(module.SourceAccessRefused) as error:
             module.check(self.html, self.private)
+        self.assertEqual(error.exception.stage, "private_inputs")
+        self.assertEqual(error.exception.reason, "nonregular_or_linked_source")
+
+    def test_private_symlink_is_categorized_without_exposing_target(self):
+        password = self.private / "postgresql-password"
+        password.unlink()
+        password.symlink_to(self.html / "data" / "user" / "files" / "document.txt")
+        with self.assertRaises(module.SourceAccessRefused) as error:
+            module.check(self.html, self.private)
+        self.assertEqual(error.exception.stage, "private_inputs")
+        self.assertEqual(error.exception.reason, "nonregular_or_linked_source")
+        self.assertNotIn(str(self.html), str(error.exception))
+
+    def test_html_permission_failure_identifies_stage_without_private_path(self):
+        private_path = str(self.html / "data" / "user" / "files" / "document.txt")
+        with mock.patch.object(module.producer, "sorted_tree",
+                               side_effect=PermissionError(private_path)):
+            with self.assertRaises(module.SourceAccessRefused) as error:
+                module.check(self.html, self.private)
+        self.assertEqual(error.exception.stage, "html_tree")
+        self.assertEqual(error.exception.reason, "permission_denied")
+        self.assertNotIn(private_path, str(error.exception))
+
+    def test_unrecognized_os_error_cannot_escape_as_a_path(self):
+        error = OSError("private file: /home/user/secret-key.txt")
+        self.assertEqual(module.safe_reason(error), "filesystem_error")
+        self.assertEqual(module.safe_reason(ValueError("private value")), "invalid_source")
 
 
 if __name__ == "__main__":
