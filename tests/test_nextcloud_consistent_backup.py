@@ -63,7 +63,7 @@ class NextcloudConsistentBackupContract(unittest.TestCase):
         self.assertIs(msg["independent_restore_tested"], False)
         self.assertIn("protected off-Kvin", msg["next_action"])
         self.assertIn("mode: '0700'", self.raw)
-        self.assertIn("mode: '0600'", self.raw)
+        self.assertIn("nextcloud_database_export_stat.stat.mode == '0600'", self.raw)
 
 
 if __name__ == "__main__":
