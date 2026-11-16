@@ -29,6 +29,7 @@ class Readability(unittest.TestCase):
     def test_scan_reports_counts_without_secret_content(self):
         report = module.check(self.html, self.private)
         self.assertEqual(report["html_regular_files"], 2)
+        self.assertEqual(report["html_relative_internal_symlinks"], 0)
         self.assertGreaterEqual(report["html_directories"], 4)
         self.assertEqual(report["private_required_files_readable"], 4)
         self.assertTrue(report["source_tree_readable_for_assembler_at_scan_time"])
@@ -39,10 +40,23 @@ class Readability(unittest.TestCase):
         self.assertNotIn(str(self.html), str(report))
         self.assertNotIn(str(self.private), str(report))
 
-    def test_linked_content_refuses_whole_tree(self):
+    def test_contained_relative_links_are_counted_not_followed(self):
+        (self.html / "data" / "internal").symlink_to(
+            "user/files/document.txt")
+        (self.html / "custom_apps" / "docs").symlink_to(
+            "../data/user/files", target_is_directory=True)
+        result = module.check(self.html, self.private)
+        self.assertEqual(result["html_relative_internal_symlinks"], 2)
+        self.assertEqual(result["html_regular_files"], 2)
+        self.assertTrue(result["source_tree_readable_for_assembler_at_scan_time"])
+
+    def test_external_link_refused_without_disclosing_target(self):
         (self.html / "data" / "link").symlink_to(self.private, target_is_directory=True)
-        with self.assertRaisesRegex(ValueError, "unsafe_source_member"):
+        with self.assertRaises(module.SourceAccessRefused) as error:
             module.check(self.html, self.private)
+        self.assertEqual(error.exception.stage, "html_tree")
+        self.assertEqual(error.exception.reason, "unsafe_source_link")
+        self.assertNotIn(str(self.private), str(error.exception))
 
     def test_missing_secret_refuses(self):
         (self.private / "postgresql-password").unlink()
