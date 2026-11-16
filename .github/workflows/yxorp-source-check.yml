@@ -5,6 +5,8 @@ on:
       - "ansible/roles/yxorp/**"
       - "ansible/yxorp*.yml"
       - "ansible/group_vars/yxorp.yml"
+      - "ansible/nextcloud-recovery-inputs.yml"
+      - "tests/test_nextcloud_recovery_inputs.py"
       - "ansible/vars/yxorp-kvin-stage.yml"
       - "ansible/inventory/hosts.yml"
       - "data/yxorp-routes.yml"
@@ -171,6 +173,7 @@ jobs:
         run: python3 -m pip install --user PyYAML Jinja2 'ansible-core>=2.17,<2.23'
       - name: Check desired-state contract
         run: |
+          python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_inputs.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_production_promotion.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_kvin_peer_http.py'

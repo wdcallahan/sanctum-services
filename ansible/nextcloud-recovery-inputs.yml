@@ -1,0 +1,94 @@
+---
+# Read-only Kvin inspection. This is NOT an application backup or restore.
+- name: Observe the Nextcloud recovery inputs already present on Kvin
+  hosts: nextcloud
+  become: false
+  gather_facts: true
+  vars:
+    nextcloud_recovery_home: "{{ ansible_facts['env']['HOME'] }}"
+    nextcloud_recovery_files:
+      - name: html_root
+        path: "{{ nextcloud_recovery_home }}/srv/sanctum-services/nextcloud/html"
+      - name: instance_config
+        path: "{{ nextcloud_recovery_home }}/srv/sanctum-services/nextcloud/html/config/config.php"
+      - name: default_data_directory
+        path: "{{ nextcloud_recovery_home }}/srv/sanctum-services/nextcloud/html/data"
+      - name: custom_apps_directory
+        path: "{{ nextcloud_recovery_home }}/srv/sanctum-services/nextcloud/html/custom_apps"
+      - name: private_config_directory
+        path: "{{ nextcloud_recovery_home }}/.config/sanctum-services/nextcloud"
+      - name: database_password_file
+        path: "{{ nextcloud_recovery_home }}/.config/sanctum-services/nextcloud/postgresql-password"
+      - name: database_name_file
+        path: "{{ nextcloud_recovery_home }}/.config/sanctum-services/nextcloud/postgresql-database"
+      - name: database_user_file
+        path: "{{ nextcloud_recovery_home }}/.config/sanctum-services/nextcloud/postgresql-username"
+      - name: environment_file
+        path: "{{ nextcloud_recovery_home }}/.config/sanctum-services/nextcloud/nextcloud.env"
+      - name: quadlet_source
+        path: "{{ nextcloud_recovery_home }}/.config/containers/systemd/sanctum-nextcloud.container"
+  tasks:
+    - name: Require the exact installed Services application target
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+        fail_msg: This observer is only for Kvin's current ordinary-user instance.
+
+    - name: Observe file and directory presence without hashing or reading contents
+      ansible.builtin.stat:
+        path: "{{ item.path }}"
+        follow: false
+        get_checksum: false
+        get_mime: false
+        get_attributes: false
+      loop: "{{ nextcloud_recovery_files }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: nextcloud_recovery_stats
+      no_log: true
+
+    - name: Observe the user service state without restarting it
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - --user
+          - is-active
+          - sanctum-nextcloud.service
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      register: nextcloud_recovery_unit
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Observe only the local Nextcloud status endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ nextcloud_host_port }}/status.php"
+        method: GET
+        return_content: false
+        status_code: [200]
+        timeout: 5
+      register: nextcloud_recovery_http
+      changed_when: false
+      failed_when: false
+      check_mode: false
+      no_log: true
+
+    - name: Report only bounded recovery-input availability
+      ansible.builtin.debug:
+        msg:
+          target: "{{ inventory_hostname }}"
+          operation: read_only_recovery_inputs
+          files_present: "{{ dict(nextcloud_recovery_files | map(attribute='name') | zip(nextcloud_recovery_stats.results | map(attribute='stat.exists'))) }}"
+          service_active: "{{ nextcloud_recovery_unit.rc == 0 and (nextcloud_recovery_unit.stdout | trim) == 'active' }}"
+          local_status_200: "{{ nextcloud_recovery_http.status | default(0) == 200 }}"
+          instance_installed: "{{ nextcloud_recovery_http.json.installed | default(false) | bool }}"
+          instance_in_maintenance: "{{ nextcloud_recovery_http.json.maintenance | default(false) | bool }}"
+          default_data_path_is_authoritative: unknown_until_config_review
+          database_snapshot_observed: false
+          off_host_backup_observed: false
+          restore_qualified: false
+          application_interrupted: false
+          configuration_changed: false
