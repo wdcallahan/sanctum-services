@@ -266,3 +266,66 @@ devices, determine whether they are transient and how a consistent backup
 procedure should exclude or reconstruct them **before** modifying the
 producer and validator. No native backup, interruption or database dump is
 authorized by this scan.
+
+## November 16 — internal-link discovery and source-policy correction
+
+Nova ran the Kvin metadata-only classifier and returned this **native,
+nonmutating source topology receipt**:
+
+| Source class | Count |
+| --- | ---: |
+| Ordinary directories | 3,877 |
+| Ordinary files | 28,955 |
+| Symbolic links | **118** |
+| Other special entries (FIFO, device, socket, unknown) | **0** |
+| Absolute or externally resolving links | **0** |
+| Dangling or unresolved links | **0** |
+
+All 118 links are **relative**, resolve **inside the same HTML tree**, and
+occur under the classifier's broad `other` region (neither `data`,
+`config`, nor `custom_apps`). Total entries reported: 32,950.
+**Do not rerun the classifier without a specific new reason.**
+
+**Revised Services source policy (source-only until CI + native gate):**
+
+- Preserve a relative link *as a link*, rather than copy its target data,
+  silently omit it or follow it out of the persistent tree.
+- Producer `tools/nextcloud-recovery-assemble.py` permits a link only if
+  relative, lexically confined to the HTML source and strictly resolvable
+  inside that same source. Missing, cyclic, absolute and external targets
+  are rejected. The file walk never descends through a link. Private
+  credentials remain ordinary file-only inputs.
+- Independent `tools/nextcloud-recovery-bundle.py` archive verification
+  requires every application link to be relative, archive-confined,
+  resolvable through any finite internal link chain to a member **actually
+  present in the archive**. Reject linked parents with archive entries
+  underneath them, duplicate paths, dangling/cyclic/escaping links,
+  hardlinks and special file types. Private credential tar links are still
+  forbidden. Verifier performs **zero archive extraction**.
+- `tools/nextcloud-recovery-readability.py` now checks the complete real
+  source tree, verifies link eligibility without dereferencing linked file
+  contents, and returns sanitized counts (including
+  `html_relative_internal_symlinks`). Source tests simulate both allowed
+  links and malicious archive metadata.
+- This acceptance is for archive **construction and verification**, **not**
+  direct unsafe extraction. The *future isolated restore* must implement
+  and test a separate extraction strategy that does not follow preexisting
+  or archived symlinks outside its new private staging root.
+
+**Next native test after all modified code passes CI:**
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+podman unshare python3 tools/nextcloud-recovery-readability.py \
+  --html-root /home/wdc2/srv/sanctum-services/nextcloud/html \
+  --private-root /home/wdc2/.config/sanctum-services/nextcloud
+```
+
+This is **not a retry of an unchanged diagnostic**: it qualifies the
+source-selected preservation policy against the actual **118 already
+identified** links. Expect one sanitized JSON record; do not send user
+content or any credentials. No production service or database mutation,
+no backup creation. The separate Maintenance-owned Nextcloud-only PG dump
+interface and approval for an eventual write-quiescing operation remain
+outstanding.
