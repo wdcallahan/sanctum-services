@@ -52,16 +52,38 @@ def raise_walk_error(error):
     raise error
 
 
+def validate_internal_link(root, link):
+    """Require one relative, non-dangling link entirely contained in HTML root.
+
+    Preserve link identity instead of dereferencing it. The archive validator
+    independently checks all link targets *inside the archive*, rather than
+    trusting the producer's inspection of the live source filesystem.
+    """
+    target = os.readlink(link)
+    if not target or os.path.isabs(target) or "\\x00" in target or "\\\\" in target:
+        raise ValueError("unsafe_source_link")
+    try:
+        resolved = link.resolve(strict=True)
+    except (OSError, RuntimeError):
+        raise ValueError("unsafe_source_link") from None
+    if not resolved.is_relative_to(root.resolve(strict=True)):
+        raise ValueError("unsafe_source_link")
+    return target
+
+
 def sorted_tree(root):
-    # Refuse symlinks/special members instead of silently following them or
-    # producing a bundle that its own verifier will reject.
+    # Symlinks are preserved only when relative and resolved entirely inside
+    # this source. os.walk must not descend through a linked directory.
+    # Devices, sockets, FIFOs, dangling/external links are never archived.
     for directory, dirs, files in os.walk(root, followlinks=False, onerror=raise_walk_error):
         dirs.sort()
         files.sort()
         for name in dirs + files:
             candidate = Path(directory) / name
             mode = candidate.lstat().st_mode
-            if not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
+            if stat.S_ISLNK(mode):
+                validate_internal_link(root, candidate)
+            elif not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
                 raise ValueError("unsafe_source_member")
             yield candidate
 
