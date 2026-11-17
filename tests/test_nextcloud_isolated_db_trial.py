@@ -54,14 +54,20 @@ class PeanutIsolatedDatabaseTrial(unittest.TestCase):
         self.assertIn("nextcloud_db_trial_password_file",argv[-1])
         self.assertGreaterEqual(invoke["async"],1800)
         self.assertTrue(invoke["no_log"])
-        for forbidden in ("pg_restore", "CREATE DATABASE", "podman run",
-                          "systemctl", "state: restarted", "podman pull", "become: true"):
+        for forbidden in ("pg_restore", "CREATE DATABASE",
+                          "systemctl", "state: restarted", "become: true"):
             self.assertNotIn(forbidden,self.raw)
+        self.assertIn("nextcloud_isolated_db_image_cache_approved | default(false) | bool",self.raw)
+        self.assertIn("podman, pull, \"{{ nextcloud_db_trial_pg_image }}\"",self.raw)
+        self.assertIn("podman, image, inspect",self.raw)
+        self.assertIn("postgres [(]PostgreSQL[)] 18",self.raw)
+        self.assertIn("--network=none",self.raw)
+        self.assertIn("--pull=never",self.raw)
 
     def test_prior_file_stage_and_fresh_private_handoff_checked_before_write(self):
         before=self.names.index("Require previously accepted isolated files and a fresh owner-private handoff")
         verify=self.names.index("Require verified application files and PostgreSQL custom dump")
-        image=self.names.index("Refuse unqualified image or implicit registry download")
+        image=self.names.index("Refuse unknown or incompatible PostgreSQL image before touching private handoff")
         created=self.names.index("Create only a fresh private handoff directory under previously staged files")
         invoked=self.names.index("Invoke ONLY the Maintenance-owned isolated Nextcloud PostgreSQL restore helper")
         self.assertLess(before,verify)
