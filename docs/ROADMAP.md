@@ -34,40 +34,35 @@ dated and now-stale "CURRENT" paragraphs below.
    DNS/firewall changes. [Native evidence](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6952289320).
    The mechanism is deployed; the *first future scheduled image refresh*
    has not yet been observed. Do not rerun normal route tests by default.
-2. **Kuma update lifecycle:** deployed fixed image digest, no declared
-   registry auto-update. Qualify its own SQLite backup and isolated restore,
-   then correct the moving-image and source-owned recurring update path.
-   Do not conflate "not yet implemented" with an externally imposed
-   restriction.
-   **Current source progress:** existing native Kvin offline SQLite
-   backup/isolated restore was accepted November 11; a separate
-   `ansible/kuma-retain-on-peanut.yml` transfers that **same**
-   SHA-verified 290816-byte archive to Peanut without touching live Kuma.
-   **Nova executed this Kvin→Peanut copy successfully**:
-   `ok=13 changed=2 failed=0`; archive SHA accepted independently
-   on Peanut, while live Kuma was untouched. Kuma's owner source was
-   subsequently corrected to **`:2`** (NOT deprecated `:latest`
-   which still tracks v1), rootless `AutoUpdate=registry`, and updated
-   role/recovery-trial contracts; [full CI 44116110856 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44116110856).
-   **Native Kvin apply PASSED November 17:** `ok=10 changed=3
-   failed=0 skipped=1`; running Kuma user service was reconciled to
-   major-v2 moving image policy and returned HTTP302, original SQLite
-   volume retained. The existing user Podman auto-update timer was
-   already active; no future scheduled update history is claimed.
-   The Nov11 off-host archive remains a known-good PRE-upgrade recovery
-   point. Source initial-stage report still emitted old hardcoded
-   negative acceptance flags, which were NOT actual login/monitor
-   observations and have been removed in later source. The new
-   **read-only post-upgrade** `ansible/kuma-post-update-verify.yml`
-   checks existing vaulted login and saved Wicket monitor/heartbeat
-   without modifying service or monitor. **[Full CI passed
-   44121324665](https://github.com/wdcallahan/sanctum-services/actions/runs/44121324665)**.
-   Await native observation before declaring the post-update
-   application session accepted.
-3. **LinkStack update lifecycle:** running Kvin restored candidate uses
-   original digest and `Pull=never`; reconcile wanted persistent state,
-   backup/restore ownership and move to sustained unattended update
-   lifecycle while retaining the accepted user-facing directory.
+2. **Kuma v2 moving-image lifecycle — NATIVE APPLIED AND AUTHENTICATED:**
+   Original Kvin SQLite backup/isolated restore accepted Nov11, independent
+   Peanut SHA retention `ok=13 changed=2 failed=0` Nov17.
+   Updated `docker.io/louislam/uptime-kuma:2`, rootless Quadlet
+   `AutoUpdate=registry` on Kvin (native `ok=10 changed=3 failed=0`).
+   **READ-ONLY post-update verification ACCEPTED Nov17**:
+   `ok=12 changed=0 failed=0`, `sanctum-admin` vaulted login succeeded,
+   existing Wicket monitor ID 1 persisted, reported Up with heartbeat age
+   40 seconds. Preexisting Kvin user Podman updater timer was active.
+   No first scheduled registry-refresh occurrence yet. This migration is
+   complete; do NOT repeat initial installation/backup/monitor/browser
+   checks just to delay other Services work.
+3. **LinkStack moving-image update lifecycle — CURRENT ACTION:**
+   Live Kvin LinkStack directory accepted previously; still has its old
+   exact digest and `Pull=never`. **NATIVE current Kvin consistent
+   backup PASSED Nov17**: `ok=25 changed=5 failed=0`, archive
+   `linkstack-kvin-20261117t105833.tar` with SHA256
+   `301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05`,
+   size `93849600`, SQLite integrity `ok`. Original user
+   LinkStack restarted and returned HTTP200; no proxy or DNS change.
+   New `ansible/linkstack-kvin-retain-on-peanut.yml` transfers **that
+   exact snapshot** to Peanut and independently validates hashes and
+   SQLite without any live-service interruption. **Native Peanut
+   transfer NOT YET RUN**; qualify the playbook with source CI first.
+   After accepted off-host retention, correct the **current**
+   LinkStack Quadlet to upstream moving `:latest` plus rootless
+   `AutoUpdate=registry`, keeping the actual working volume and
+   accepted named browser route intact. Prior November12 Kvar archive
+   remains a historical recovery point, not the current data backup.
 4. **Nextcloud scheduled backups and update policy:** real owner-scoped
    recoverable snapshot exists, but recurrence/failure notification and
    supported automatic application maintenance updates do **not**.
