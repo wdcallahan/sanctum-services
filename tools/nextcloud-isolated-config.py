@@ -91,9 +91,9 @@ def prepare(recovery_id, html_dir, password_file):
             raise Refusal("requires_unlinked_restored_directory")
     if stat.S_IMODE(expected.lstat().st_mode) != 0o700:
         raise Refusal("requires_private_restore_directory")
-    private_regular(html_dir / "config" / "config.php") if False else None
-    if not (html_dir / "config" / "config.php").is_file():
-        raise Refusal("missing_restored_nextcloud_config")
+    installed_config = (html_dir / "config" / "config.php").lstat()
+    if not stat.S_ISREG(installed_config.st_mode):
+        raise Refusal("missing_or_linked_restored_nextcloud_config")
     receipt = expected_handoff / "postgresql-trial.json"
     cid, tables = load_receipt(receipt, password_file)
     private_regular(password_file)
