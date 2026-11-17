@@ -43,11 +43,16 @@ dated and now-stale "CURRENT" paragraphs below.
    backup/isolated restore was accepted November 11; a separate
    `ansible/kuma-retain-on-peanut.yml` transfers that **same**
    SHA-verified 290816-byte archive to Peanut without touching live Kuma.
-   Its source CI must pass before operator execution. The upstream
-   Uptime Kuma 2 image channel is **`:2`**, not `:latest`;
-   [upstream marks `:latest` deprecated for v1](https://github.com/louislam/uptime-kuma/wiki/Docker-Tags).
-   Move to a supported update channel only after preserving the
-   known-good data and reconciling old fixed-digest tests.
+   **Nova executed this Kvin→Peanut copy successfully**:
+   `ok=13 changed=2 failed=0`; archive SHA accepted independently
+   on Peanut, while live Kuma was untouched. Kuma's owner source was
+   subsequently corrected to **`:2`** (NOT deprecated `:latest`
+   which still tracks v1), rootless `AutoUpdate=registry`, and updated
+   role/recovery-trial contracts; [full CI 44116110856 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44116110856).
+   **Native Kvin apply still pending**. The existing user Podman auto-update
+   timer was already active; installer may restart production Kuma on
+   latest major-v2 image and perform an in-place SQLite migration.
+   The Nov11 off-host archive is a known-good PRE-upgrade recovery point.
 3. **LinkStack update lifecycle:** running Kvin restored candidate uses
    original digest and `Pull=never`; reconcile wanted persistent state,
    backup/restore ownership and move to sustained unattended update
