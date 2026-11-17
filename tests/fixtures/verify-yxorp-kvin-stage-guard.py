@@ -16,12 +16,12 @@ ROLE = ROOT / "ansible/roles/yxorp/tasks/main.yml"
 stage_guard = yaml.safe_load(ROLE.read_text(encoding="utf-8"))[0][
     "ansible.builtin.assert"]["that"][3]
 
-DIGEST = "docker.io/library/nginx@sha256:564a09935b00f058ca1b28c742169ba817499baa0479807bf7f373fe2804fbf7"
+CHANNEL = "docker.io/library/nginx:stable-alpine"
 STAGE = {
     "yxorp_deployment_scope": "kvin_stage",
     "yxorp_kvin_stage_approved": True,
     "yxorp_production_cutover_approved": False,
-    "yxorp_image": DIGEST,
+    "yxorp_image": CHANNEL,
     "yxorp_config_dir": "/etc/sanctum-services/yxorp-kvin-stage",
     "yxorp_quadlet_file": "/etc/containers/systemd/sanctum-yxorp-kvin-stage.container",
     "yxorp_service_name": "sanctum-yxorp-kvin-stage.service",
@@ -42,6 +42,7 @@ PEANUT = {
 }
 cases = [
     ("stage authorized with production still closed", "kvin.outer.sanctum", STAGE, True),
+    ("stage refuses frozen digest", "kvin.outer.sanctum", {**STAGE, "yxorp_image": "docker.io/library/nginx@sha256:" + "a" * 64}, False),
     ("stage not approved", "kvin.outer.sanctum", {**STAGE, "yxorp_kvin_stage_approved": False}, False),
     ("stage cannot inherit production approval", "kvin.outer.sanctum", {**STAGE, "yxorp_production_cutover_approved": True}, False),
     ("stage refuses wrong Quadlet", "kvin.outer.sanctum", {**STAGE, "yxorp_quadlet_file": "/etc/containers/systemd/sanctum-yxorp.container"}, False),
