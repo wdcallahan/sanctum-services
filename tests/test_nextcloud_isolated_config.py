@@ -125,7 +125,8 @@ class IsolatedConfigContract(unittest.TestCase):
                     trial.prepare(rid,html,password)
 
     def test_path_and_override_drift_refused(self):
-        self.assertNotIn("podman",SOURCE.read_text())
+        self.assertNotIn("subprocess.run(",SOURCE.read_text())
+        self.assertNotIn("os.system(",SOURCE.read_text())
         self.assertIn("O_EXCL",SOURCE.read_text())
         self.assertIn("O_NOFOLLOW",SOURCE.read_text())
         self.assertIn("os.fchown(target.fileno(), 33, 33)",SOURCE.read_text())
