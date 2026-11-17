@@ -5,6 +5,7 @@ Wants=network-online.target
 
 [Container]
 Image={{ kuma_image }}
+AutoUpdate=registry
 ContainerName={{ kuma_container_name }}
 # Rootless network choice follows the qualified Kvin Nextcloud pattern;
 # reachability from Kuma to Wicket must still pass independently.
