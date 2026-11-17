@@ -1,5 +1,21 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — First installed weekly backup one-shot source/CI READY; next true operator action
+
+**MOST RECENT ACCEPTED KVIN:** `sanctum-nextcloud-backup.timer` was installed/enabled on `wdc2@kvin`, native `ok=13 changed=3 failed=0`, Sunday 03:30 local, original app unchanged. This installer is complete—do NOT repeat.
+
+**PIXEL CONTINUED WITHOUT OPERATOR**: Committed `ansible/nextcloud-backup-service-first-run.yml`, tested by `tests/test_nextcloud_backup_service_first_run.py`, wired into CI, and updated [recovery runbook](docs/runbooks/nextcloud-instance-recovery.md), [roadmap](docs/ROADMAP.md), [Services #2](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6958888968). **FULL SOURCE+TEST+ANSIBLE SYNTAX [CI 44160831925 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44160831925)**. With separate live-backup approval, this tests the ALREADY installed rootless user `sanctum-nextcloud-backup.service`, not the old direct manual backup: pre- and post- Kvin recovery-point inventory proves exactly one new ID; successful systemd one-shot return; independently verifies all four artifacts and identical manifest on both Kvin+Peanut; requires Nextcloud back to healthy nonmaintenance state. This IS a new real backup and consumes disk/bandwidth and a short app pause. It does not update Nextcloud, reinstall timer, prune old backups or touch other PG databases. Native first service run **not yet performed**; natural future Sunday timer execution **also not yet observed**.
+
+**NOVA ACTION REQUIRED (next real boundary):** In the normal `wdc2@kvin` shell, no sudo, explicitly authorize **one new complete consistent backup from the installed user-service path**:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-backup-service-first-run.yml \
+  -e nextcloud_first_backup_run_approved=true
+```
+**Warn first:** This starts the installed service once, temporarily enters Nextcloud maintenance mode, snapshots original HTML/private+Nextcloud-only DB through Maintenance's qualified helper, retains/verifies independently on Peanut, and verifies normal mode afterwards. No immediate user-service restart/update, no auto-prune. Ask exact **`TASK [Report actual installed weekly Nextcloud backup service execution and Peanut recovery acceptance]`** plus **`PLAY RECAP`**, or if failed, named failure and error. Do not ask them to re-run manual backup or scheduled timer installation. The independent Maintenance #17 isolated DB restoration and first live 34.0.6 patch are still open. Continue source work once this native service acceptance is reported.
+
 ## November 17 — Nextcloud weekly backup TIMER NATIVE INSTALLED AND ENABLED; first execution pending
 
 **LATEST EXACT USER NATIVE RECEIPT:** On `wdc2@kvin`, Nova ran `ansible/nextcloud-backup-schedule-install.yml -e nextcloud_backup_schedule_install_approved=true`. Exact task **`Report source-owned weekly Nextcloud backup schedule without claiming first occurrence`** and `PLAY RECAP` showed **`kvin.outer.sanctum ok=13 changed=3 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0`**. Actual: `installed_and_enabled=true`, rootless user `sanctum-nextcloud-backup.timer`, **Sunday 03:30 Kvin local, no delayed catch-up**, uses existing verified Kvin consistent snapshot + independently SHA-verified Peanut retention, `immediate_backup_not_triggered=true`, `current_nextcloud_not_restarted=true`, `backups_auto_pruned=false`, **`scheduled_first_run_not_yet_observed=true`**. Installation included source-defined temporary user-manager Kvin and Peanut Ansible SSH test. [Services #2 native report](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6958782891).
