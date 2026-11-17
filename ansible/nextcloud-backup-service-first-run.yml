@@ -1,0 +1,232 @@
+---
+# Supervised first execution of the ALREADY INSTALLED source-managed
+# weekly backup service, not a direct replay of a previously accepted
+# manual backup. This validates the actual user-systemd job and independently
+# verified new Kvin/Peanut recovery ID in one native operator run.
+#
+# Explicit approval authorizes a REAL new coherent backup: one short
+# Nextcloud maintenance-mode pause, scoped Maintenance PG export,
+# archive/disk and SSH transfer, and independent Peanut hash verification.
+# No Nextcloud software upgrade, user timer change or automatic pruning.
+- name: Accept one supervised execution of installed weekly Nextcloud backup service
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_first_backup_root: /home/wdc2/.local/share/sanctum-services/backups/nextcloud
+    nextcloud_first_backup_service: sanctum-nextcloud-backup.service
+    nextcloud_first_backup_timer: sanctum-nextcloud-backup.timer
+    nextcloud_first_backup_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
+    nextcloud_first_backup_peanut: peanut.arcane.sanctum
+    nextcloud_first_backup_expected_files:
+      - manifest.json
+      - nextcloud-html.tar
+      - nextcloud-private.tar
+      - nextcloud-postgresql.dump
+  tasks:
+    - name: Require original Kvin and separate real snapshot approval for first service execution
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - not ansible_check_mode
+          - nextcloud_first_backup_run_approved | default(false) | bool
+          - nextcloud_first_backup_peanut == 'peanut.arcane.sanctum'
+        fail_msg: >-
+          First real user-service backup requires explicit approval and exact
+          rootless Kvin. No other app or database may be operated on.
+
+    - name: Require installed weekly backup timer is currently enabled
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-enabled, "{{ nextcloud_first_backup_timer }}"]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_first_backup_xdg }}"
+      register: nextcloud_first_timer_enabled
+      changed_when: false
+      failed_when: >-
+        nextcloud_first_timer_enabled.rc != 0 or
+        (nextcloud_first_timer_enabled.stdout | trim) != 'enabled'
+
+    - name: Confirm installed weekly user service and production Nextcloud are not already running backup
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, "{{ item }}"]
+      loop:
+        - "{{ nextcloud_first_backup_service }}"
+        - sanctum-nextcloud.service
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_first_backup_xdg }}"
+      register: nextcloud_first_service_before
+      changed_when: false
+      failed_when: false
+
+    - name: Require backup is idle and the original Nextcloud is active before test
+      ansible.builtin.assert:
+        that:
+          - nextcloud_first_service_before.results[0].rc != 0
+          - nextcloud_first_service_before.results[1].rc == 0
+          - (nextcloud_first_service_before.results[1].stdout | trim) == 'active'
+        fail_msg: Another backup might be running or production Nextcloud is not active.
+
+    - name: Record pre-run actual Kvin recovery point names without reading private payloads
+      ansible.builtin.find:
+        paths: "{{ nextcloud_first_backup_root }}"
+        recurse: false
+        file_type: directory
+        use_regex: true
+        patterns: '^nextcloud-[0-9]{8}t[0-9]{6}$'
+        follow: false
+      register: nextcloud_first_existing_source
+      no_log: true
+
+    - name: Start only the installed backup oneshot and wait for its actual completion
+      ansible.builtin.command:
+        argv: [systemctl, --user, start, "{{ nextcloud_first_backup_service }}"]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_first_backup_xdg }}"
+      register: nextcloud_first_service_run
+      changed_when: nextcloud_first_service_run.rc == 0
+      async: 3600
+      poll: 15
+      # The already enabled weekly timer is untouched. This manually starts
+      # the same oneshot once, with its existing flock and independent SSH.
+
+    - name: Read actual completed user-service result without printing the journal
+      ansible.builtin.command:
+        argv:
+          - systemctl
+          - --user
+          - show
+          - "{{ nextcloud_first_backup_service }}"
+          - --property=Result
+          - --property=ExecMainStatus
+          - --property=ExecMainCode
+          - --property=ActiveState
+          - --no-pager
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_first_backup_xdg }}"
+      register: nextcloud_first_unit_outcome
+      changed_when: false
+
+    - name: Require actual installed backup worker exited successfully
+      ansible.builtin.assert:
+        that:
+          - "'Result=success' in nextcloud_first_unit_outcome.stdout.splitlines()"
+          - "'ExecMainStatus=0' in nextcloud_first_unit_outcome.stdout.splitlines()"
+          - "'ActiveState=inactive' in nextcloud_first_unit_outcome.stdout.splitlines()"
+        fail_msg: Installed weekly one-shot did not finish successfully; do not accept its backup.
+
+    - name: Find completed Kvin recovery points after the actual user service run
+      ansible.builtin.find:
+        paths: "{{ nextcloud_first_backup_root }}"
+        recurse: false
+        file_type: directory
+        use_regex: true
+        patterns: '^nextcloud-[0-9]{8}t[0-9]{6}$'
+        follow: false
+      register: nextcloud_first_new_source
+      no_log: true
+
+    - name: Select one fresh exact recovery ID not present before this one-shot
+      ansible.builtin.set_fact:
+        nextcloud_first_fresh_paths: >-
+          {{ (nextcloud_first_new_source.files | map(attribute='path') | list)
+             | difference(nextcloud_first_existing_source.files | map(attribute='path') | list) }}
+      changed_when: false
+      no_log: true
+
+    - name: Refuse zero or multiple new recovery points from one service execution
+      ansible.builtin.assert:
+        that:
+          - nextcloud_first_fresh_paths | length == 1
+          - (nextcloud_first_fresh_paths[0] | basename) is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
+          - nextcloud_first_fresh_paths[0] | dirname == nextcloud_first_backup_root
+        fail_msg: Installed worker did not produce exactly one new complete recovery point.
+
+    - name: Name matching source and independently copied recovery points
+      ansible.builtin.set_fact:
+        nextcloud_first_new_recovery_id: "{{ nextcloud_first_fresh_paths[0] | basename }}"
+        nextcloud_first_new_bundle: "{{ nextcloud_first_fresh_paths[0] }}"
+      changed_when: false
+
+    - name: Independently read private source and Peanut manifest metadata
+      ansible.builtin.stat:
+        path: "{{ nextcloud_first_new_bundle }}/manifest.json"
+        follow: false
+        checksum_algorithm: sha256
+        get_checksum: true
+      delegate_to: "{{ item }}"
+      loop:
+        - kvin.outer.sanctum
+        - "{{ nextcloud_first_backup_peanut }}"
+      register: nextcloud_first_manifest_checks
+      no_log: true
+
+    - name: Require matching SHA256 manifest bytes in distinct Kvin and Peanut stores
+      ansible.builtin.assert:
+        that:
+          - nextcloud_first_manifest_checks.results[0].stat.isreg | default(false)
+          - nextcloud_first_manifest_checks.results[1].stat.isreg | default(false)
+          - nextcloud_first_manifest_checks.results[0].stat.checksum == nextcloud_first_manifest_checks.results[1].stat.checksum
+        fail_msg: New source and Peanut recovery point manifests do not match.
+
+    - name: Verify each actual protected recovery bundle using the qualified verifier
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-recovery-bundle.py') }}"
+          - "{{ nextcloud_first_new_bundle }}"
+      delegate_to: "{{ item }}"
+      loop:
+        - kvin.outer.sanctum
+        - "{{ nextcloud_first_backup_peanut }}"
+      register: nextcloud_first_bundle_verify
+      changed_when: false
+      no_log: true
+
+    - name: Require matching complete application, database and private data on each host
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_first_bundle_verify.results[0].stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+          - (nextcloud_first_bundle_verify.results[0].stdout | from_json).nextcloud_required_paths_present_in_archive | bool
+          - (nextcloud_first_bundle_verify.results[0].stdout | from_json).postgresql_custom_dump_header_recognized | bool
+          - (nextcloud_first_bundle_verify.results[1].stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+          - (nextcloud_first_bundle_verify.results[1].stdout | from_json).nextcloud_required_paths_present_in_archive | bool
+          - (nextcloud_first_bundle_verify.results[1].stdout | from_json).postgresql_custom_dump_header_recognized | bool
+        fail_msg: Real source or Peanut snapshot failed independent complete-bundle verification.
+
+    - name: Confirm original Nextcloud is installed and no longer in maintenance mode
+      ansible.builtin.command:
+        argv: [podman, exec, --user, www-data, sanctum-nextcloud, php, occ, status, --output=json]
+      register: nextcloud_first_after_occ
+      changed_when: false
+      no_log: true
+
+    - name: Require Nextcloud is installed and recovered from snapshot maintenance window
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_first_after_occ.stdout | from_json).installed | bool
+          - not ((nextcloud_first_after_occ.stdout | from_json).maintenance | bool)
+          - not ((nextcloud_first_after_occ.stdout | from_json).needsDbUpgrade | default(false) | bool)
+        fail_msg: The worker did not return Nextcloud to a healthy non-maintenance mode.
+
+    - name: Report actual installed weekly Nextcloud backup service execution and Peanut recovery acceptance
+      ansible.builtin.debug:
+        msg:
+          host: kvin.outer.sanctum
+          actual_installed_service_executed: true
+          systemd_service_result: success
+          new_recovery_id: "{{ nextcloud_first_new_recovery_id }}"
+          original_nextcloud_running_normal: true
+          independent_peanut_bundle_verified: true
+          same_manifest_sha256_on_both_hosts: true
+          application_and_nextcloud_only_database_and_private_inputs_present: true
+          weekly_timer_remains_enabled: true
+          software_update_not_run: true
+          full_application_restore_not_claimed: true
+          automatic_pruning_not_performed: true
+          real_weekly_timer_firing_not_yet_observed: true
+          next_action: Observe natural Sunday timer triggering and obtain Maintenance-owned full isolated PostgreSQL restore
