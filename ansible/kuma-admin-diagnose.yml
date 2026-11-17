@@ -8,7 +8,7 @@
   vars_files:
     - /home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml
   vars:
-    kuma_admin_expected_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+    kuma_admin_expected_image: "docker.io/louislam/uptime-kuma:2"
     kuma_admin_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-admin-init.js') }}"
   tasks:
     - name: Require exact rootless Kvin Kuma and explicit read-only diagnosis approval
