@@ -142,5 +142,5 @@
           currently_up_and_recent: "{{ (kuma_verify_monitor_result.stdout | from_json).actual_up_accepted | bool }}"
           service_or_database_modified_by_test: false
           monitor_reconciled_or_changed_by_test: false
-          original_named_client_and_backup_acceptances_preserved: true
-          first_future_scheduled_auto_update_observed: false
+          historically_accepted_named_client_and_backup_tests_not_repeated: true
+          scheduled_auto_update_history_not_checked_by_this_play: true
