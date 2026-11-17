@@ -39,7 +39,7 @@ class KumaRoleContract(unittest.TestCase):
         names = [t["name"] for t in self.tasks]
         self.assertLess(names.index("Observe whether the named rootless Kuma data volume exists"),
                         names.index("Create the durable Kuma data volume when absent"))
-        self.assertLess(names.index("Observe whether the exact Kuma image exists"),
+        self.assertLess(names.index("Observe whether the chosen Kuma 2 channel is locally cached"),
                         names.index("Pull the supported Kuma 2 image channel if absent"))
         self.assertIn("Volume={{ kuma_data_volume }}:/app/data", self.quadlet)
         self.assertIn("AutoUpdate=registry", self.quadlet)
