@@ -85,21 +85,20 @@
   until: kuma_web_response.status | default(0) in [200, 302]
   changed_when: false
 
-- name: Report bounded loopback Kuma candidate staging acceptance
+- name: Report actual Kuma service deployment and bounded HTTP readiness
   ansible.builtin.debug:
     msg:
       observer: "{{ inventory_hostname }}"
       image: "{{ kuma_image }}"
-      candidate_stage_http_status: "{{ kuma_web_response.status | int }}"
+      loopback_http_status: "{{ kuma_web_response.status | int }}"
       loopback_endpoint: "http://127.0.0.1:{{ kuma_host_port }}/"
       data_volume: "{{ kuma_data_volume }}"
       desired_database_backend: "{{ kuma_db_type }}"
-      database_and_admin_setup_accepted: false
-      stage_approved: true
-      persistent_volume_created_or_present: true
       quadlet_reconciled: true
-      initial_http_only: true
-      administrator_and_monitor_state_accepted: false
-      backup_restore_and_recovery_accepted: false
-      named_lan_or_production_route_accepted: false
-      next_gate: qualify actual login, monitor reconciliation, restart and recovery before upstream cutover
+      registry_auto_update_declared: true
+      preexisting_user_podman_timer: "enabled/active in earlier native Kvin inventory"
+      app_login_checked_by_this_play: false
+      saved_monitors_checked_by_this_play: false
+      recovery_checked_by_this_play: false
+      note: Existing administrator, monitoring, off-host backup and named-browser acceptance are banked; this HTTP readiness report does not revoke them
+      next_action: Read-only post-image-update login and Wicket monitor verification (not another install or backup)
