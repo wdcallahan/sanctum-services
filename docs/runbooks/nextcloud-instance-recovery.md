@@ -1,5 +1,37 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 17 — NOV16 WHOLE-SANCTUM AUDIT OVERRIDES OLD PINNED IMAGE COMMAND
+
+**WITHDRAWN:** The below older example directing an explicit cache pull of
+Maintenance's legacy SHA-pinned PostgreSQL image is no longer actionable.
+Nova objected after recognizing it violates the intent of the [Nov16
+whole-Sanctum policy audit #38](https://github.com/wdcallahan/sanctum-maintenance/issues/38).
+Do NOT run the previous `nextcloud-isolated-db-trial-on-peanut.yml`
+command until the owner restore-helper image policy is reconciled,
+reviewed and source CI green. Historical immutable image IDs remain
+permitted for accepted snapshots and bounded fixtures, but must not be
+silently imposed as an endless installed service policy or blindly copied
+into a new download/update workflow.
+
+**Confirmed source mismatch:** Maintenance's *real production backup
+dump path* accepts compatible PostgreSQL 18 patch images, while
+`tools/restore-nextcloud-postgresql` imports an obsolete digest
+constant from its backup helper for all rootless trial container runs.
+The Services playbook now specifies **`docker.io/library/postgres:18`**
+(a moving major-version channel), but fails **before any Podman pull,
+private handoff or database creation** if the installed owner helper
+does not itself select that channel. No Services-owned PostgreSQL SQL
+implementation or unchecked image fallback was introduced.
+[Owner repair request](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6961470716).
+
+**Current valid acceptance:** weekly backup user timer enabled, one
+supervised **installed user service** backup native accepted with
+recovery `nextcloud-20261117t134454` independently verified on Peanut;
+the Nov16 restored HTML/private trial remains staged. The isolated
+full PostgreSQL+app recovery, authenticated login/files/Calendar and
+first live 34.0.6 update still await proper owner reconciliation.
+Do not rerun any banked backup or cache-qualifier procedure.
+
 ## November 17 — Real installed backup-service run accepted; isolated full recovery staged in source
 
 **NATIVE FIRST SYSTEMD ONE-SHOT PASSED:** Nova ran the supervised
