@@ -86,29 +86,14 @@ result DOES NOT prove authenticated HTTP login/user-file or calendar
 client functionality, nor does it authorize the live 34.0.6 patch;
 that full-application acceptance is a later separate stage.
 
-**NEXT AUTHORISED OPERATOR RUN AFTER SOURCE CI GREEN, from `wdc2@kvin`:**
-```bash
-cd ~/src/sanctum-services &&
-git pull --ff-only &&
-ansible-playbook -i ansible/inventory/hosts.yml \
-  ansible/nextcloud-isolated-db-trial-on-peanut.yml \
-  -e nextcloud_isolated_recovery_id=nextcloud-20261116t233618 \
-  -e nextcloud_isolated_db_trial_approved=true \
-  -e nextcloud_maintenance_restore_contract_approved=true \
-  -e nextcloud_isolated_db_image_cache_approved=true
-```
-**Read first:** This downloads an exact pinned image to Peanut rootless
-cache **only if absent**, and performs a real **new isolated database
-restore on Peanut**, consumes disk and leaves a private networkless
-PostgreSQL trial running for subsequent app validation; it does
-not run Nextcloud in production, change live DB or take another
-Kvin backup. It checks the owner helper is on Peanut and fails closed
-if missing. Exact output requested:
-**`TASK [Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application]`**
-and **`PLAY RECAP`**, or failed task with its error. The next app
-CLI playbook must not be executed until this DB trial's native receipt
-is accepted. Keep the original Nov16 restored HTML/private tree and
-the Nov17 protected Kvin/Peanut backup intact.
+**Next operator action is blocked on Maintenance-owned source reconciliation.**
+The formerly proposed pinned-digest download-and-restore command has been
+withdrawn. Services checks Maintenance's actual restore-helper image
+contract **before any pull**; at current source it still selects the
+obsolete SHA. Do not attempt a native DB trial or repeatedly probe
+previously accepted Kvin/Peanut backup stages until Maintenance updates
+its owner helper to the supported `docker.io/library/postgres:18`
+channel and the Services source tests remain green.
 
 ## November 17 — Weekly user backup timer installed; first one-shot qualification
 
