@@ -26,18 +26,17 @@
 - `ansible/nextcloud-isolated-app-cli-trial-on-peanut.yml` later runs restored original **immutable 34.0.5** Nextcloud `occ status` and Calendar `occ app:list` only in the owner-labelled DB container's **networkless namespace**, no public port, no production DB contact even if original configuration is wrong. Source postchecks deliberately say **login and user-files still untested** until separate isolated HTTP/auth acceptance. Requires original 34.0.5 image cached on Peanut, no implicit pull. A successful CLI test alone does **not** release the 34.0.6 update gate.
 - CI workflow now tests both restore playbooks, rootless overlay helper and Ansible syntax. Check latest job state before calling them green.
 
-**NEXT NATIVE ACTION after source CI GREEN:** On `wdc2@kvin` run the **isolated Peanut PostgreSQL restoration** using already accepted Nov16 bundle+file-stage. Unlike earlier backup commands, this uses Peanut rootless Podman to cache a specific official PostgreSQL image if absent, writes a private test handoff and starts a **new isolated non-production DB** `--network=none`; does not restart or mutate any shared PostgreSQL service, Kvin or Nextcloud:
-```bash
-cd ~/src/sanctum-services &&
-git pull --ff-only &&
-ansible-playbook -i ansible/inventory/hosts.yml \
-  ansible/nextcloud-isolated-db-trial-on-peanut.yml \
-  -e nextcloud_isolated_recovery_id=nextcloud-20261116t233618 \
-  -e nextcloud_isolated_db_trial_approved=true \
-  -e nextcloud_maintenance_restore_contract_approved=true \
-  -e nextcloud_isolated_db_image_cache_approved=true
-```
-**WARN** before giving: Peanut disk/cache and private restored DB, real new isolated test container persists; no production downtime or new Kvin backup, but later owner cleanup needed. Prerequisites: Maintenance checkout/helper is present on Peanut, and owner digest supports its architecture. If preflight fails, ask exact failed task/error without redoing other work. On success ask exact **`TASK [Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application]`** and **`PLAY RECAP`**. This is the first full **isolated DB** stage, not yet a recovered application login/files/Calendar acceptance.
+**NEXT OPERATOR ACTION FOR THIS RESTORE PATH IS PAUSED.** The
+formerly proposed Peanut PostgreSQL cache pull and restore command
+was **withdrawn by Nova's Nov16 whole-Sanctum audit correction**.
+Services now refuses to pull any image until the actually installed
+Maintenance helper's image contract selects the moving major
+`docker.io/library/postgres:18`. Maintenance #17 owns that source
+change and associated regression test; do not mutate shared
+PostgreSQL, bypass owner preflight, or ask Nova to repeat existing
+backup and filesystem staging. Once owner source is reconciled and
+Services CI green, issue a fresh source-matched action with the
+proper explicit consent.
 
 **Status:** live Nextcloud 34.0.5.1 still, 34.0.6 ARM64 candidate cached, separate live first-upgrade restore gate false, daily patch timer not installed; weekly backup timer enabled and user one-shot passed. Continue work rather than stopping at source-only deliverable while tool actions remain.
 
