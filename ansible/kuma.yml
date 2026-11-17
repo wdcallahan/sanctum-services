@@ -1,7 +1,7 @@
 ---
-# Proposed rootless retained Kuma deployment on Kvin.
-# Explicit stage permission + pinned tested image are required before mutation.
-- name: Reconcile the retained Sanctum Uptime Kuma candidate
+# Existing retained Kvin production Kuma; original stage flag is reused for
+# explicit authorization of an actual image/Quadlet service reconciliation.
+- name: Reconcile the retained Sanctum Uptime Kuma service
   hosts: kuma
   gather_facts: true
   become: false
