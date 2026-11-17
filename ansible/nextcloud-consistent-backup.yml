@@ -1,7 +1,8 @@
 ---
-# SOURCE-ONLY CANDIDATE. No live invocation is authorized until Maintenance
-# supplies its supported Nextcloud-only PG dump command, host access/permissions
-# are qualified, and Nova approves the brief maintenance-mode interruption.
+# SOURCE-ONLY CANDIDATE. Maintenance's published Nextcloud-only PG dump helper
+# is now integrated by path, but no live invocation is authorized until its
+# actual Kvin checkout/DB identity is qualified, retained off-host storage is
+# selected, and Nova approves the short Nextcloud maintenance interruption.
 # This playbook does NOT establish off-Kvin retention or restore acceptance.
 - name: Assemble one consistent-source Nextcloud recovery bundle on Kvin
   hosts: nextcloud
@@ -17,6 +18,13 @@
     nextcloud_backup_private: "{{ ansible_facts['env']['HOME'] }}/.config/sanctum-services/nextcloud"
     nextcloud_backup_assembler: "{{ nextcloud_backup_work }}/nextcloud-recovery-assemble.py"
     nextcloud_backup_verifier: "{{ nextcloud_backup_work }}/nextcloud-recovery-bundle.py"
+    # This is the Maintenance-owned supported helper, not a Services-side
+    # PostgreSQL dump implementation. A false approval still refuses execution.
+    nextcloud_maintenance_owner_helper: /home/wdc2/src/sanctum-maintenance/tools/backup-nextcloud-postgresql
+    nextcloud_database_export_argv:
+      - /usr/bin/python3
+      - "{{ nextcloud_maintenance_owner_helper }}"
+      - "{{ nextcloud_backup_dump }}"
   tasks:
     - name: Require exact source, distinct write approval, and owner-supplied DB contract
       ansible.builtin.assert:
@@ -30,16 +38,38 @@
           - nextcloud_database_export_contract_approved | default(false) | bool
           - nextcloud_database_export_argv is defined
           - (nextcloud_database_export_argv | default([]) | type_debug) == 'list'
-          - (nextcloud_database_export_argv | default([])) | length >= 2
-          - (nextcloud_database_export_argv | default(['']))[0] is match('^/')
-          - nextcloud_backup_dump in (nextcloud_database_export_argv | default([]))
+          - (nextcloud_database_export_argv | default([])) | length == 3
+          - nextcloud_database_export_argv[0] == '/usr/bin/python3'
+          - nextcloud_database_export_argv[1] == nextcloud_maintenance_owner_helper
+          - nextcloud_database_export_argv[2] == nextcloud_backup_dump
           - nextcloud_backup_stamp is match('^[0-9]{8}t[0-9]{6}$')
         fail_msg: >-
           Refusing live backup. This candidate requires the current exact Kvin
           target, explicit short Nextcloud write-quiescence approval, and a
-          separately owner-approved secret-free argv list for a synchronous
-          Nextcloud-only PostgreSQL custom-format export to the exact private
-          dump path. No invented PostgreSQL interface may be used.
+          exact Maintenance-owned Nextcloud PostgreSQL helper at
+          {{ nextcloud_maintenance_owner_helper }}, and a synchronous,
+          secret-free, single-database export into the new private work area.
+          No alternate PostgreSQL command or owner bypass is permitted.
+
+    - name: Inspect Maintenance-owned database exporter without executing it
+      ansible.builtin.stat:
+        path: "{{ nextcloud_maintenance_owner_helper }}"
+        follow: false
+        get_checksum: false
+      register: nextcloud_maintenance_helper_stat
+
+    - name: Require regular, owner-controlled Maintenance exporter source
+      ansible.builtin.assert:
+        that:
+          - nextcloud_maintenance_helper_stat.stat.isreg | default(false)
+          - not (nextcloud_maintenance_helper_stat.stat.islnk | default(false))
+          - nextcloud_maintenance_helper_stat.stat.pw_name == 'wdc2'
+          - (nextcloud_maintenance_helper_stat.stat.mode | int(base=8)) is not none
+          - ((nextcloud_maintenance_helper_stat.stat.mode | int(base=8)) % 32) < 8
+        fail_msg: >-
+          Required Maintenance Nextcloud-only backup helper is absent or not
+          an ordinary owner-controlled source file. Do not guess another
+          PostgreSQL command or operate on the database independently.
 
     - name: Confirm incumbent rootless Nextcloud user service is active
       ansible.builtin.command:
