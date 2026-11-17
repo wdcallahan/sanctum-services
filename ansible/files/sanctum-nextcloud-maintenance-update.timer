@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily Nextcloud supported 34.0 maintenance-update check
+
+[Timer]
+# Time-of-day avoids unexpected daytime app interruption after power outage.
+# A new image triggers a fresh, independently retained backup before restart.
+OnCalendar=*-*-* 04:15:00
+Persistent=false
+Unit=sanctum-nextcloud-maintenance-update.service
+
+[Install]
+WantedBy=timers.target
