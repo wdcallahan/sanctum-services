@@ -1,0 +1,23 @@
+# Current source-managed PRODUCTION Kvin LinkStack despite historical unit name.
+# Preserve rootless user, existing SQLite volume and YXORP loopback backend.
+# This file supersedes the initial-staging-only pinned Quadlet source.
+# No credentials in this file; LinkStack .env remains in its named volume.
+[Unit]
+Description=Sanctum LinkStack on Kvin (retained data, automatic image updates)
+
+[Container]
+Image=docker.io/linkstackorg/linkstack:latest
+AutoUpdate=registry
+ContainerName=sanctum-linkstack-kvin-candidate
+Volume=sanctum-linkstack-qualified-20261112t105926:/htdocs:Z
+PublishPort=127.0.0.1:18081:80/tcp
+Sysctl=net.ipv4.ip_unprivileged_port_start=80
+NoNewPrivileges=true
+Environment=HTTP_SERVER_NAME=localhost
+
+[Service]
+Restart=on-failure
+TimeoutStartSec=90
+
+[Install]
+WantedBy=default.target
