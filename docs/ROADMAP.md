@@ -1,5 +1,41 @@
 # Sanctum Services — Roadmap
 
+## November 17 — Weekly Nextcloud backup timer NATIVE ENABLED; supervised worker test prepared
+
+Nova ran the approved user timer installer on Kvin,
+`ansible/nextcloud-backup-schedule-install.yml`, with actual
+**`kvin.outer.sanctum ok=13 changed=3 unreachable=0 failed=0 skipped=0`**.
+Exact **`TASK [Report source-owned weekly Nextcloud backup schedule without claiming first occurrence]`**
+returned `installed_and_enabled=true`, rootless
+`sanctum-nextcloud-backup.timer`, **Sunday 03:30 local**,
+`current_nextcloud_not_restarted=true`,
+`immediate_backup_not_triggered=true`,
+`backups_auto_pruned=false`,
+`scheduled_first_run_not_yet_observed=true`.
+[Native evidence](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6958782891).
+**Do not rerun the installer.**
+
+**Separate native acceptance frontier:** One rootless timer-enabled state is
+not proof that the configured **user service** can complete an independent
+Kvin consistent backup and verified Peanut copy without an interactive
+shell. Source-only `ansible/nextcloud-backup-service-first-run.yml` now
+tests the actual installed one-shot with a **separately approved real
+backup window**, compares pre/post Kvin recovery points, demands exactly
+one new ID, verifies successful systemd exit, independently checks both
+complete bundles and matching manifests on Peanut, and requires live
+Nextcloud maintenance mode to be off. It does not reinstall the timer
+or update Nextcloud software. **A manually started one-shot is still not
+the first natural Sunday timer firing**; distinguish acceptance states.
+Its CI must pass before asking Nova to run it; this first-run test does
+produce another genuine current recovery point and short write-quiescence.
+
+**Other Services work continues:** Maintain the source-based, recovery-gated
+34.0.x update cycle; urgent owner dependency remains Maintenance #17's
+actual isolated Nextcloud-only PostgreSQL restore and durable test DB
+endpoint so Services can start real restored app/Calendar/files; retain
+banked Nov16 snapshot and native cached 34.0.6 without repeated probes.
+First actual automatic update and natural timer firing not yet accepted.
+
 ## November 17 — Nextcloud 34 candidate NATIVE; backup and maintenance orchestration SOURCE
 
 **Native user acceptance (do not rerun):** Nextcloud 34.0.5.1 remains
