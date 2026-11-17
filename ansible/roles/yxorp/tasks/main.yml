@@ -15,7 +15,7 @@
          inventory_hostname == 'kvin.outer.sanctum' and
          yxorp_kvin_stage_approved | default(false) | bool and
          not (yxorp_production_cutover_approved | bool) and
-         yxorp_image is match('^docker.io/library/nginx@sha256:[a-f0-9]{64}$') and
+         yxorp_image == 'docker.io/library/nginx:stable-alpine' and
          yxorp_config_dir == '/etc/sanctum-services/yxorp-kvin-stage' and
          yxorp_quadlet_file == '/etc/containers/systemd/sanctum-yxorp-kvin-stage.container' and
          yxorp_service_name == 'sanctum-yxorp-kvin-stage.service' and
@@ -23,7 +23,7 @@
         (yxorp_deployment_scope == 'kvin_production' and
          inventory_hostname == 'kvin.outer.sanctum' and
          yxorp_production_cutover_approved | bool and
-         yxorp_image is match('^docker.io/library/nginx@sha256:[a-f0-9]{64}$'))
+         yxorp_image == 'docker.io/library/nginx:stable-alpine')
       - yxorp_routes | length > 0
       - (yxorp_routes | map(attribute='hostname') | list | unique | length) == (yxorp_routes | length)
     fail_msg: >-
