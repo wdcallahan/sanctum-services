@@ -68,6 +68,51 @@ Nova ran the exact read-only inventory and reported:
 
 **Additional owner audit:** [Sanctum-wide exception issue #38](https://github.com/wdcallahan/sanctum-maintenance/issues/38) now tracks broader categories beyond SHA pins and /32 rules. [Joule #16](https://github.com/wdcallahan/joule/issues/16) conspicuously tracks the **rejected historical** Wicket 18096 single-client firewall helper. Actual November 2 Wicket Host restriction absence was already accepted, not contradicted.
 
+## Further YXORP source correction — the missing SYSTEM timer
+
+The accepted Kvin inventory showed the user's Podman updater active but the
+**system/rootful** updater disabled/inactive. Simply adding
+`AutoUpdate=registry` to a **rootful** YXORP Quadlet would not itself
+provide unattended updates. Services has now extended the production-only
+YXORP role to enable/start the **system**
+`podman-auto-update.timer` **after** the proxy is deployed and checked
+healthy, without touching the updater on staging/Peanut trials. Its
+contract test checks rootful/system scope and that stage play does not
+enable the timer. **Full source+Ansible CI passed**
+[run 44005725062](https://github.com/wdcallahan/sanctum-services/actions/runs/44005725062)
+at commit `3de917e6`. This is **source-only**, not a native apply; Kvin's
+currently installed Nginx Quadlet and disabled system timer are **still
+unchanged** as far as accepted native evidence establishes.
+
+### Retired Pi-hole and ordinary client-file operations
+
+Nova explicitly confirmed he **unplugged old Kvar**, chose **not to migrate
+Pi-hole as a wanted service**, and does not want historical Pi-hole backup
+retention as a recovery obligation. The remaining rootful Kvin Quadlet file
+is stale/undesired residue to classify and retire, **not** an update target.
+A rootless `podman ps` report is insufficient to prove whether that
+system service is currently enabled/running; do not present it as live
+without an appropriate bounded rootful observation. See supersession at
+the start of [SERVICE-ESTATE.md](../SERVICE-ESTATE.md).
+
+Nova's Nextcloud music WAV files were uploaded using his ordinary share/
+application interface and may be removed through **that same
+Nextcloud-managed client mechanism**. Do not propose raw backend Samba/NFS
+paths without evidence or issue broad warnings against standard file
+manager operations. Exact protocol has not been inspected; no deletion was
+performed by this audit.
+
+### Extended whole-fleet scope
+
+A cross-project [priority register in Maintenance #38](https://github.com/wdcallahan/sanctum-maintenance/issues/38#issuecomment-6936521235)
+now includes more than image pins and single-source firewall rules:
+Kvin's inactive **system** updater, old test/boot Quadlets, actual vs
+declared PG destination address, Mace scheduled update not yet installed
+as documented in owner inventory, Wicket Image Mode update policy
+undecided, Dragon's last-recorded unsupported Fedora 42, Kvin/Peanut HA
+not yet deployed, Nextcloud missing off-host recovery and historically
+rejected Wicket FPC-7 helper. Source records are **not** live confirmation.
+
 ## Actual next steps
 
 1. YXORP source CI [PASSED at 86702ff](https://github.com/wdcallahan/sanctum-services/actions/runs/44001338860); later run a reviewed, bounded native
