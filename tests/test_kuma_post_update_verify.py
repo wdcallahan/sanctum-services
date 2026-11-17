@@ -33,6 +33,27 @@ class KumaPostUpdateVerification(unittest.TestCase):
         self.assertTrue(any("AutoUpdate=registry" in x for x in policy))
         self.assertTrue(any("Volume=sanctum-kuma-data" in x for x in policy))
 
+    def test_assert_arguments_have_valid_ansible_task_level_vars(self):
+        # ansible-playbook --syntax-check does NOT validate action-module
+        # argument names. This caught a real native failure on November 17.
+        checked=0
+        for task in self.tasks:
+            if "ansible.builtin.assert" not in task:
+                continue
+            args=task["ansible.builtin.assert"]
+            self.assertIsInstance(args,dict)
+            self.assertTrue(set(args).issubset({
+                "that", "fail_msg", "success_msg", "quiet"
+            }), task["name"])
+            self.assertNotIn("vars",args,task["name"])
+            checked+=1
+        self.assertGreater(checked,0)
+        task=self.task(
+            "Require installed v2 registry update declaration and preserved volume"
+        )
+        self.assertIn("vars",task)
+        self.assertIn("kuma_verify_quadlet_lines",task["vars"])
+
     def test_login_and_monitor_are_authenticated_read_only(self):
         login=self.task("Authenticate the existing administrator WITHOUT creating a user")
         monitor=self.task("Observe existing Wicket monitor and saved heartbeat WITHOUT reconciliation")
