@@ -1,5 +1,84 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 17 — Native 34.0.6 image ready; updater and weekly backup SOURCE, not live
+
+**Native qualified image-only observation ACCEPTED:** On Kvin, Nova ran
+`ansible/nextcloud-qualify-maintenance-image.yml`, recap
+`ok=13 changed=1 failed=0`; task
+**`Report actual independent Nextcloud 34 maintenance image qualification`**
+proves actual 34.0.5.1 running on original image ID
+`dcdf0b20ac50bce33cb2585c96fc92968e7c2d7378aef185547f735c9058f7b2`,
+official Linux ARM64 34.0.6 cached as
+`docker.io/library/nextcloud:34.0-apache` at image ID
+`e72f1a9e448447bc170f7fb3993033ff21d233906542852afd10c1cc5ec37d60`.
+**Live version and user data are unchanged**; only the rootless image cache
+changed. Do not rerun the one-time image stage.
+
+**Coordinated maintenance update SOURCE:** 
+`ansible/nextcloud-maintenance-cycle.yml` orders its imported plays:
+
+1. `nextcloud-maintenance-preflight.yml`: check actual old/new image
+   identities and 34.0.x shipped version; if unchanged, no backup or restart.
+2. `nextcloud-consistent-backup.yml`: allocate a **NEW, same-run** recovery
+   point, quiesce only Nextcloud briefly, call Maintenance's Nextcloud-only
+   PostgreSQL exporter and archive the HTML/private state, then leave
+   maintenance mode.
+3. `nextcloud-retain-on-peanut.yml`: transfer and independently verify
+   the exact four-file current recovery point on Peanut.
+4. `nextcloud-maintenance-activate.yml`: refuse unless both same-run source
+   and Peanut proofs, explicitly accepted **complete isolated Nextcloud +
+   PostgreSQL restore**, and separate activation approval are all present.
+   Only then install the source-managed 34.0 tag Quadlet and restart
+   *only* Nextcloud; verify 34.0 version, app mode, original mounts,
+   HTTP200 and Calendar 6.6.2. No automatic image-only downgrade
+   (a new image can mutate the HTML bind and database).
+
+**Source reconciliation:** `ansible/group_vars/nextcloud.yml` now declares
+the desired moving **34.0-apache** channel, retaining the former digest only
+as historical migration identity. The ordinary `ansible/site.yml` role now
+**refuses** to change the installed old Quadlet's image behind the
+coordinated backup gate. Both managed and canonical Quadlet templates
+represent the same approved future state and deliberately **omit
+`AutoUpdate=registry`**, because the shared Podman timer would bypass
+the essential application+database backup. `Pull=never` means only the
+Services update preflight advances the local tag. **This source change does
+not imply native deployment; Kvin still runs 34.0.5.1.** The shared
+restore gate `nextcloud_complete_restore_qualified_in_source=false`
+remains closed. Finish actual Maintenance-owned isolated database restore,
+then start restored Nextcloud and accept login/files/Calendar before
+authorizing live 34.0.6.
+
+**Independent weekly backup SOURCE:** `ansible/nextcloud-scheduled-backup.yml`
+allocates a fresh unique identity and runs the already accepted Kvin
+snapshot and Peanut retention playbooks in sequence. The proposed
+rootless user `sanctum-nextcloud-backup.timer` schedules this every
+**Sunday at 03:30 Kvin local clock**, avoids an unscheduled daytime
+catch-up (`Persistent=false`), and uses a single-instance `flock`
+lock with private `UMask=0077`. It does not depend on an upstream release,
+does not upgrade Nextcloud, and **does not delete previous recovery points**;
+bounded retention and disk-capacity monitoring remain planned before
+indefinite operation. `ansible/nextcloud-backup-schedule-install.yml`
+only installs/enables the timer with explicit approval; it does not run
+a snapshot immediately. **Source existence is not installed timer acceptance,
+nor proof that a scheduled run completed.**
+
+**Operator outputs are always named exactly.** For a future timer-install
+acceptance, ask for
+**`TASK [Report source-owned weekly Nextcloud backup schedule without claiming first occurrence]`**
+and **`PLAY RECAP`** (or the failed task/error). For an actual separate
+backup run, ask for
+**`TASK [Report one locally assembled recovery point without disaster-recovery overclaim]`**,
+**`TASK [Report actual off-host retention without claiming application restore]`**
+and **`PLAY RECAP`**. Do not ask Nova to repeat the already accepted
+November 16 backup and isolated file extraction just to fill report fields.
+
+**Progress does not stop here:** Initial application-data restore is still an
+independent [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17)
+dependency; scheduled backup installation and first live update remain
+separate operator-authorized actions. Keep automatic maintenance releases
+timely; do not let the qualified backup requirement turn into indefinite
+version freezing.
+
 ## November 16 final native recovery acceptance — isolated files STAGED on Peanut
 
 Nova ran `ansible/nextcloud-isolated-files-restore.yml` from Kvin,
