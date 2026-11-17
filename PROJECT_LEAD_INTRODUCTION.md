@@ -1,5 +1,55 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — current next action and future-service scope
+
+**NATIVE YXORP unattended-update source reconciliation accepted:**
+Nova ran production `ansible/yxorp.yml`: `kvin.outer.sanctum
+ok=36 changed=4 unreachable=0 failed=0 skipped=0`.
+Final route report: seven wanted hostnames, Kuma HTTP302,
+LinkStack HTTP200, Yarn HTTP200; DNS/firewall/Kvar NPM unchanged.
+Source has `nginx:stable-alpine`, Quadlet `AutoUpdate=registry` and
+enables/starts **rootful** `podman-auto-update.timer`, in addition to
+the preexisting **user** timer. Actual future scheduled update
+execution has not yet been observed. [Services #6 accepted receipt](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6952289320).
+Older `next_gate: Real EyesOnly Search browser/theme/results acceptance`
+was WRONG because EyesOnly actual normal use was already accepted;
+source and test were corrected so no repeated browser task is assigned.
+
+**Future service list IS written** under
+[SERVICE-ESTATE.md — Future Services backlog](docs/SERVICE-ESTATE.md#future-services-backlog-not-deployed-by-this-register),
+also linked from README and Roadmap Stage 6. **Explicitly
+selected:** Home Assistant, Luanti and a proper Sanctum VPN.
+**Separate committed Nextcloud capability:** live collaboration
+between Nova and Joule as distinct user accounts; Collabora/CODE is
+only a candidate backend. Historical conversations additionally
+mentioned Syncthing, NetAlertX, BookStack, Kiwix, Jellyfin/Plex,
+Piwigo, qBittorrent and PicoShare. These are now labeled
+**UNCOMMITTED IDEAS**, not a queue, not owner-authorized installs,
+and not reason to expand project duration. Historical Dashy/AWX/
+Wiki.js/Homarr are not assumed wanted. Pi-hole/OpenWebUI/Endlessh
+remain retired.
+
+**IMMEDIATE existing Services next action:** Kuma v2 deployed image
+remains digest-pinned and lacks rootless `AutoUpdate=registry`.
+Kvin `sanctum-kuma-data` has a **previously validated, actually
+restored** SQLite backup `sanctum-kuma-20261111t144137.tar`,
+290816 bytes, SHA256
+`97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`.
+New Services `ansible/kuma-retain-on-peanut.yml` (not a new backup)
+copies this specific existing archive to Peanut with double SHA checks
+and no Kuma service pause. **Full source/Ansible CI passed
+[44113781527](https://github.com/wdcallahan/sanctum-services/actions/runs/44113781527)**.
+Single operator command on **wdc2@kvin**:
+`cd ~/src/sanctum-services && git pull --ff-only && ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-retain-on-peanut.yml -e kuma_retain_on_peanut_approved=true`.
+Archive copy **has not been executed**; do not claim Peanut has it yet.
+After this, correct Kuma to upstream recommended **`:2`** tag
+(**`:latest` is deprecated and refers to v1**) + source-managed
+`AutoUpdate=registry`; fix stale role/unit tests and ensure data
+retention/upgrade compatibility; no unsolicited major v3 update.
+No need to rerun the accepted November 11 Kuma offline restore test,
+and do not invent a new security stage.
+
+
 ## Current live recovery result — November 16, late
 
 **Nova has completed the FIRST THREE real Nextcloud recovery stages,
