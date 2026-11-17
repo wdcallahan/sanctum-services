@@ -55,6 +55,19 @@ digest identities; those are **not themselves deployed Quadlet policy**.
   do not rerun it. Postgres HBA's `192.168.0.0/16` is a full regional
   address range, **not** a single-client IP restriction.
 
+## Native Kvin evidence after source correction (November 16, evening)
+
+Nova ran the exact read-only inventory and reported:
+
+- `occ status --output=json`: **Nextcloud installed 34.0.5.1 / versionstring 34.0.5**, maintenance **false**, `needsDbUpgrade=false`. This confirms the **running** app still needs its neglected update pipeline; user has successfully logged in after password reset.
+- `podman ps` as **wdc2/rootless**: `sanctum-nextcloud`, `sanctum-postgresql`, `sanctum-kuma`, `sanctum-linkstack-kvin-candidate` all run fixed digests; `joule-prism` uses a local release identity; `search` runs `ghcr.io/searxng/searxng:latest`.
+- User `podman-auto-update.timer` is **enabled and active**. System **rootful** `podman-auto-update.timer` is **disabled and inactive**. Only the inspected Search Quadlet has `AutoUpdate=registry`. **Not all active user services are current just because the user timer works.**
+- The **actual installed system** YXORP Quadlet still specifies the historic frozen Nginx digest and lacks `AutoUpdate`. Services **source** correction to `nginx:stable-alpine` + `AutoUpdate=registry` **passed [CI 44001338860](https://github.com/wdcallahan/sanctum-services/actions/runs/44001338860)**; not applied. A future source deploy also needs enabling/qualifying the **rootful** timer, not just installing the revised Quadlet.
+- The Pi-hole **rootful Quadlet file** still exists under `/etc/containers/systemd/sanctum-pihole-kvin.container`, despite Nova's retirement decision. The supplied `podman ps` enumerates **rootless** containers only: it does **not** show whether rootful Pi-hole is running, enabled at boot or gone. **Do not list Pi-hole as a wanted service;** inspect system unit safely before scoped cleanup. An old `joule-presence-restore-...` user Quadlet also remains on disk, not listed among currently running rootless containers. No cleanup has happened.
+- The existing PostgreSQL user Quadlet declares `PublishPort=192.168.0.192:5432:5432/tcp`; prior native topology evidence describes Kvin as `192.168.1.192`. This is a **candidate fixed-destination-address drift**, **not** proof of an unreachable actual DB port. Maintenance owns confirming actual current host IP/interface and live `podman port` before modifying desired networking; source-address firewalls are a distinct question.
+
+**Additional owner audit:** [Sanctum-wide exception issue #38](https://github.com/wdcallahan/sanctum-maintenance/issues/38) now tracks broader categories beyond SHA pins and /32 rules. [Joule #16](https://github.com/wdcallahan/joule/issues/16) conspicuously tracks the **rejected historical** Wicket 18096 single-client firewall helper. Actual November 2 Wicket Host restriction absence was already accepted, not contradicted.
+
 ## Actual next steps
 
 1. YXORP source CI [PASSED at 86702ff](https://github.com/wdcallahan/sanctum-services/actions/runs/44001338860); later run a reviewed, bounded native
