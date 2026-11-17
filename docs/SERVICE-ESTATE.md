@@ -1,5 +1,48 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
+## November 17 — buny.us proposal SUPERSEDES old bare-domain VPN naming
+
+Nova recalled that he **originally purchased `buny.us` to run a
+personal YOURLS URL shortener**, independently useful for arbitrary
+links. He now proposes **`buny.us/<short>`** for owner-created
+public redirects, **`share.buny.us`** for a wholly home-hosted
+one-download file gateway, and **`vpn.buny.us`** for the future
+private VPN endpoint. This **supersedes the November 12 tentative
+proposal below to use bare `buny.us` as the VPN hostname**.
+YOURLS has not been installed, file service has not been chosen,
+no firewall, static-IP, public DNS or router rule has changed.
+This is still a **candidate design, not a trio of commissioned
+deployments**.
+
+Nova has **two ISP static public addresses**. Different web
+hostnames can share one public IP by HTTPS/SNI and the UDP VPN
+listener can use the same IP on a distinct transport/port, or
+an independently routed second IP. Public *shortener* and
+*download service* must be strongly separated from the
+trusted Sanctum LAN; using a separate IP alone is not a
+security boundary. The "no intended inbound public ports"
+statement in older phases now has a **proposed narrowly scoped
+exception** for a dedicated public download gateway; no open
+ingress is approved until network boundaries are decided.
+Admin/creation routes remain private even if redirects are public.
+
+**Download-token security:** the human-typeable public
+`buny.us/<short>` code is the **actual bearer capability**.
+Shortening a long unguessable file token does not preserve
+the original token entropy. Ordinary YOURLS sequential IDs
+are not sufficient for private one-shot file access;
+use separate cryptographically random human-readable
+file aliases, expiration and brute-force rate limiting.
+A final `302` non-cacheable redirect must lead to a
+genuinely one-shot share token, and its alias must be retired
+after transfer or timeout. One-time file token and privately
+retained file bytes (~24h for reissue) have separate lifecycles.
+[Feasibility/design record](reviews/2026-11-17-picoshare-public-sharing-options.md)
+contains the full user goal, fdrop alternative and trust constraints.
+Do NOT treat the older Nov12 DirectNIC dynamic-DNS/hostname
+proposal as an active deployment or current preference.
+
+
 ## November 17, 2026 — YXORP unattended update policy applied natively
 
 Nova ran the approved production Kvin YXORP playbook after its
