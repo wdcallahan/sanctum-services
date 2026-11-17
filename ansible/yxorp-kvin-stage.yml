@@ -19,6 +19,9 @@
           - yxorp_deployment_scope == 'kvin_stage'
           - yxorp_kvin_stage_approved | bool
           - not (yxorp_production_cutover_approved | bool)
+          # Pi-hole is permanently retired. Historical stage code must never
+          # turn its old Kvar route back on, even if a stale opt-in is passed.
+          - not (yxorp_stage_pihole_approved | default(false) | bool)
           - not ansible_check_mode
           - yxorp_bind_address == '0.0.0.0'
           - yxorp_host_port | int == 80
