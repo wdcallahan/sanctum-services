@@ -204,6 +204,17 @@
   until: yxorp_health.status | default(0) == 200 and 'yxorp-ready' in (yxorp_health.content | default(''))
   changed_when: false
 
+# This is a system/rootful Quadlet. The user/rootless auto-update timer
+# does NOT operate on this container. After an approved production YXORP
+# deployment, install the missing recurring system-level update schedule.
+# This never runs for the isolated Peanut or Kvin stage trials.
+- name: Enable rootful Podman automatic registry updates for production YXORP
+  ansible.builtin.systemd_service:
+    name: podman-auto-update.timer
+    enabled: true
+    state: started
+  when: yxorp_deployment_scope == 'kvin_production'
+
 - name: Report stage scope and unresolved application acceptance
   ansible.builtin.debug:
     msg: >-
