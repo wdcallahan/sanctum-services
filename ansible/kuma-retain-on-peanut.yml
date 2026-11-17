@@ -1,0 +1,118 @@
+---
+# Move the actual November 11 independently restored Kvin Kuma SQLite-volume
+# backup to separate Peanut storage. This does NOT make an application
+# restart/DB restore, transfer private Vault credentials, or upgrade Kuma.
+# The original archive was already SHA256/native-qualified on Kvin;
+# check that exact evidence again on BOTH ends of this copy.
+- name: Retain the accepted Kuma recovery archive off Kvin on Peanut
+  hosts: yxorp_test
+  gather_facts: true
+  become: false
+  vars:
+    kuma_retention_archive_name: sanctum-kuma-20261111t144137.tar
+    kuma_retention_archive_sha256: 97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648
+    kuma_retention_source_dir: /home/wdc2/.local/share/sanctum-services/backups/kuma
+    kuma_retention_destination_dir: /home/wdc2/.local/share/sanctum-services/backups/kuma
+    kuma_retention_source: "{{ kuma_retention_source_dir }}/{{ kuma_retention_archive_name }}"
+    kuma_retention_destination: "{{ kuma_retention_destination_dir }}/{{ kuma_retention_archive_name }}"
+  tasks:
+    - name: Require Peanut-only operation with explicit owner approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - not ansible_check_mode
+          - kuma_retain_on_peanut_approved | default(false) | bool
+        fail_msg: >-
+          This approved copy requires Peanut as the destination; run from
+          Kvin as wdc2 and make no changes to Kuma's live database.
+
+    - name: Identify controller before opening the local Kvin archive
+      ansible.builtin.command:
+        argv: [hostname, -f]
+      delegate_to: localhost
+      changed_when: false
+      register: kuma_retention_controller
+
+    - name: Require the expected Kvin controller
+      ansible.builtin.assert:
+        that:
+          - kuma_retention_controller.stdout | trim == 'kvin.outer.sanctum'
+          - lookup('env', 'HOME') == '/home/wdc2'
+
+    - name: Stat actual Kvin source archive and compute its SHA256
+      ansible.builtin.stat:
+        path: "{{ kuma_retention_source }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      delegate_to: localhost
+      register: kuma_retention_local_stat
+
+    - name: Require the exact previously accepted unmodified source archive
+      ansible.builtin.assert:
+        that:
+          - kuma_retention_local_stat.stat.isreg | default(false)
+          - not (kuma_retention_local_stat.stat.islnk | default(false))
+          - kuma_retention_local_stat.stat.checksum == kuma_retention_archive_sha256
+        fail_msg: Expected accepted Kuma archive is missing or its content changed.
+
+    - name: Observe private Peanut backup directory without following links
+      ansible.builtin.stat:
+        path: "{{ kuma_retention_destination_dir }}"
+        follow: false
+      register: kuma_retention_parent
+
+    - name: Refuse non-directory or symlink Peanut archive destination
+      ansible.builtin.assert:
+        that:
+          - not (kuma_retention_parent.stat.islnk | default(false))
+          - not (kuma_retention_parent.stat.exists | default(false))
+            or (kuma_retention_parent.stat.isdir | default(false))
+
+    - name: Create owner-private Kuma archive directory on Peanut
+      ansible.builtin.file:
+        path: "{{ kuma_retention_destination_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Copy one already-qualified Kuma volume archive to Peanut
+      ansible.builtin.copy:
+        src: "{{ kuma_retention_source }}"
+        dest: "{{ kuma_retention_destination }}"
+        mode: '0600'
+        force: false
+      diff: false
+
+    - name: Independently compute retained Peanut archive SHA256
+      ansible.builtin.stat:
+        path: "{{ kuma_retention_destination }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      register: kuma_retention_remote_stat
+
+    - name: Require actual independent archive bytes and private permissions
+      ansible.builtin.assert:
+        that:
+          - kuma_retention_remote_stat.stat.isreg | default(false)
+          - not (kuma_retention_remote_stat.stat.islnk | default(false))
+          - kuma_retention_remote_stat.stat.mode == '0600'
+          - kuma_retention_remote_stat.stat.checksum == kuma_retention_archive_sha256
+        fail_msg: Peanut archive content/permissions do not match accepted Kvin source.
+
+    - name: Report genuine Kuma off-host copy without overclaiming full recovery
+      ansible.builtin.debug:
+        msg:
+          source: kvin.outer.sanctum
+          destination: peanut.arcane.sanctum
+          archive: "{{ kuma_retention_archive_name }}"
+          sha256: "{{ kuma_retention_archive_sha256 }}"
+          copy_verified_on_peanut: true
+          existing_kvin_kuma_service_untouched: true
+          live_kuma_database_untouched: true
+          encrypted_admin_vault_custody_not_verified: true
+          complete_disaster_recovery_accepted: false
+          next_action: Qualify supported moving Kuma 2 image with separate updated-data backup and rollback
