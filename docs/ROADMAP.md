@@ -1,5 +1,80 @@
 # Sanctum Services — Roadmap
 
+## CURRENT — November 17: Services remains ACTIVE; multiple independent fronts
+
+**Operator correction:** Sanctum Services is **NOT finished** and is **NOT
+globally blocked by Maintenance**. Completing the real Nextcloud backup,
+off-host retention and isolated file extraction is major progress in one
+workstream, not project completion. This top section supersedes the many
+dated and now-stale "CURRENT" paragraphs below.
+
+**Native accepted, no reruns:**
+- Permanently **retired Pi-hole**: Kvin rootful service, Quadlet, exact
+  container/volumes/image and old private Pi-hole backups removed by Nova;
+  observed post-action systemd `LoadState=not-found ActiveState=inactive`.
+  Retired deploy/restore code also removed. Old Kvar remains unplugged.
+- Nextcloud real consistent Kvin snapshot, `nextcloud-20261116t233618`,
+  **ok=29 changed=9 failed=0**; normal maintenance mode and HTTP restored.
+- Independent four-file off-host **Peanut** copy, **ok=14 changed=3 failed=0**,
+  with Peanut-side hashes/archive verification passed.
+- Independent **Peanut isolated files/private-config extraction**,
+  **ok=14 changed=5 failed=0**. No database imported or restored Nextcloud
+  started. Full application disaster recovery is **not yet accepted**.
+- Normal client/browser function of seven-vhost Kvin YXORP, Kvin Kuma,
+  LinkStack, EyesOnly search and production Nextcloud+Calendar were
+  already accepted. No need for a gratuitous reinstallation or broad probe.
+
+**ACTIVE independent Services work (not waiting for DB owner):**
+1. **YXORP/Nginx automatic updates:** source now declares
+   `docker.io/library/nginx:stable-alpine`,
+   Quadlet `AutoUpdate=registry`, and production rootful
+   `podman-auto-update.timer` convergence; full source
+   [CI 44005725062](https://github.com/wdcallahan/sanctum-services/actions/runs/44005725062)
+   passed. **Kvin still has the old pinned installed Quadlet and disabled
+   rootful timer in the last native observation.** Prepare one reviewed
+   approved production apply, verify active timer and the existing seven
+   routes. This is Services-owned, not blocked on Maintenance restore.
+2. **Kuma update lifecycle:** deployed fixed image digest, no declared
+   registry auto-update. Qualify its own SQLite backup and isolated restore,
+   then correct the moving-image and source-owned recurring update path.
+   Do not conflate "not yet implemented" with an externally imposed
+   restriction.
+3. **LinkStack update lifecycle:** running Kvin restored candidate uses
+   original digest and `Pull=never`; reconcile wanted persistent state,
+   backup/restore ownership and move to sustained unattended update
+   lifecycle while retaining the accepted user-facing directory.
+4. **Nextcloud scheduled backups and update policy:** real owner-scoped
+   recoverable snapshot exists, but recurrence/failure notification and
+   supported automatic application maintenance updates do **not**.
+   Native Nextcloud version was **34.0.5** and frozen digest. Preserve
+   backup/restore and Calendar compatibility while fixing.
+5. **Host replacement and service recovery:** wanted Services applications
+   need repeatable successful fresh-host reconstruction and usable
+   independent data restore, beyond browser health tests or source CI.
+6. **VPN remote access:** separate Services client/outcome work remains,
+   subject to Bunny Factory WAN/router ownership and current ISP/static
+   address/domain decision; don't silently reinterpret outdated
+   November 12 DDNS proposals as latest approved deployment.
+
+**CURRENT Maintenance interface:** Maintenance [#17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6940147324)
+has the real Peanut-retained Nextcloud dump and **Peanut isolated file
+stage is accepted**. Its next owner task is networkless disposable
+Nextcloud-only PostgreSQL restore. That temporary test removes its
+database afterward and does not yet provide the persistent isolated
+PostgreSQL endpoint needed for an actual working restored Nextcloud.
+Services should prepare the app-recovery half independently, then
+complete login/files/Calendar checks when the DB owner interface is ready.
+
+**Operator intent:** Wanted services should update unattended; arbitrary
+single-source-IP restrictions are rejected unless genuinely approved and
+documented. Do **not** turn this into a NORAD-style security exercise or
+pause the full project just because one dependent task needs an owner.
+[Services update issue #6](https://github.com/wdcallahan/sanctum-services/issues/6),
+[Nextcloud update issue #5](https://github.com/wdcallahan/sanctum-services/issues/5),
+and [Maintenance broader audit #38](https://github.com/wdcallahan/sanctum-maintenance/issues/38)
+track the specific policy and fleet-wide findings.
+
+
 ## CURRENT — November 16: Services lead and Nextcloud recovery frontier
 
 **The active Sanctum Services lead task is complete-instance Nextcloud/Town Square backup and independent restoration**, advancing [issue #2](https://github.com/wdcallahan/sanctum-services/issues/2). The fresh, short [lead handoff](../PROJECT_LEAD_INTRODUCTION.md) supersedes contradictory older "CURRENT/NEXT" paragraphs below; the previous long handoff is archived under `docs/history/`. Kvar is already **powered off**, Tailscale removed, the seven-route Kvin YXORP/live Kuma/LinkStack/EyesOnly and Nextcloud Calendar 6.6.2 acceptance are retained. Do not redo Kvar shutdown, previous browser tests, or the Nov16 native Nextcloud input/actual data-path observations.
