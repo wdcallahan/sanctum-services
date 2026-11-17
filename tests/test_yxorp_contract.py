@@ -65,6 +65,20 @@ class YxorpContractTests(unittest.TestCase):
         self.assertFalse(by_name["yarn.inner.sanctum"]["enabled"])
         self.assertNotIn("yxorp.nexus.sanctum", by_name)
 
+    def test_system_not_user_auto_update_timer_is_owned_by_production_only(self):
+        timer = next(
+            task for task in self.tasks
+            if "Enable rootful Podman automatic registry updates" in task["name"]
+        )
+        self.assertEqual(timer["when"], "yxorp_deployment_scope == 'kvin_production'")
+        service = timer["ansible.builtin.systemd_service"]
+        self.assertEqual(service["name"], "podman-auto-update.timer")
+        self.assertIs(service["enabled"], True)
+        self.assertEqual(service["state"], "started")
+        self.assertEqual(
+            sum("podman-auto-update.timer" in str(t) for t in self.tasks), 1
+        )
+
     def test_production_nginx_uses_moving_registry_update_channel(self):
         quadlet = (ROOT / "ansible/roles/yxorp/templates/yxorp.container.j2").read_text()
         role = (ROOT / "ansible/roles/yxorp/tasks/main.yml").read_text()
