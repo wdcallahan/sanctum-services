@@ -1,0 +1,115 @@
+---
+# Source-only opt-in timer installation. Does NOT run a backup immediately,
+# restore a database, restart Nextcloud or install an update.
+- name: Install the Nextcloud weekly snapshot schedule on original Kvin user manager
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_schedule_unit_dir: /home/wdc2/.config/systemd/user
+    nextcloud_schedule_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
+    nextcloud_schedule_service: sanctum-nextcloud-backup.service
+    nextcloud_schedule_timer: sanctum-nextcloud-backup.timer
+  tasks:
+    - name: Require exact Kvin owner and explicit timer-install approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - nextcloud_backup_schedule_install_approved | default(false) | bool
+        fail_msg: Do not enable an unattended backup timer without explicit operator approval.
+
+    - name: Confirm original Nextcloud service is active before scheduling
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, sanctum-nextcloud.service]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_schedule_xdg }}"
+      register: nextcloud_schedule_current_service
+      changed_when: false
+      failed_when: nextcloud_schedule_current_service.rc != 0 or (nextcloud_schedule_current_service.stdout | trim) != 'active'
+
+    - name: Confirm native controller Ansible and flock executables without running backup
+      ansible.builtin.command:
+        argv: "{{ item }}"
+      loop:
+        - [/usr/bin/env, ansible-playbook, --version]
+        - [/usr/bin/flock, --version]
+      environment:
+        PATH: /home/wdc2/.local/bin:/usr/local/bin:/usr/bin:/bin
+      register: nextcloud_schedule_tools
+      changed_when: false
+
+    - name: Check established private backup parent and source checkout
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - /home/wdc2/.local/share/sanctum-services/backups/nextcloud
+        - /home/wdc2/src/sanctum-services/ansible/nextcloud-scheduled-backup.yml
+      register: nextcloud_schedule_existing_paths
+
+    - name: Require private backup target and the current source controller playbook
+      ansible.builtin.assert:
+        that:
+          - nextcloud_schedule_existing_paths.results[0].stat.isdir | default(false)
+          - nextcloud_schedule_existing_paths.results[0].stat.mode == '0700'
+          - nextcloud_schedule_existing_paths.results[1].stat.isreg | default(false)
+          - not (nextcloud_schedule_existing_paths.results[1].stat.islnk | default(false))
+        fail_msg: Refusing timer without original private backup destination and readable current playbook.
+
+    - name: Create user-systemd directory without touching system manager
+      ansible.builtin.file:
+        path: "{{ nextcloud_schedule_unit_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Install source-owned weekly backup service and timer without starting a backup
+      ansible.builtin.copy:
+        src: "files/{{ item }}"
+        dest: "{{ nextcloud_schedule_unit_dir }}/{{ item }}"
+        mode: '0644'
+      loop:
+        - "{{ nextcloud_schedule_service }}"
+        - "{{ nextcloud_schedule_timer }}"
+      register: nextcloud_schedule_units
+
+    - name: Enable only the weekly user timer without invoking the backup service
+      ansible.builtin.systemd_service:
+        name: "{{ nextcloud_schedule_timer }}"
+        scope: user
+        daemon_reload: "{{ nextcloud_schedule_units.changed }}"
+        enabled: true
+        state: started
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_schedule_xdg }}"
+
+    - name: Read installed weekly user timer state
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-enabled, "{{ nextcloud_schedule_timer }}"]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_schedule_xdg }}"
+      register: nextcloud_schedule_enabled
+      changed_when: false
+
+    - name: Require timer was enabled without starting protected backup immediately
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_schedule_enabled.stdout | trim) == 'enabled'
+        fail_msg: Installed timer was not enabled as intended.
+
+    - name: Report source-owned weekly Nextcloud backup schedule without claiming first occurrence
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          timer: "{{ nextcloud_schedule_timer }}"
+          installed_and_enabled: true
+          cadence: Sunday 03:30 local system clock, no delayed catch-up
+          current_nextcloud_not_restarted: true
+          immediate_backup_not_triggered: true
+          backup_job_uses_existing_kvin_and_peanut_playbooks: true
+          scheduled_first_run_not_yet_observed: true
+          backups_auto_pruned: false
+          next_action: Observe scheduled execution, journal result and independently verified Peanut custody after first window
