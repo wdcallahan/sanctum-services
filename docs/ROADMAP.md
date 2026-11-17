@@ -62,22 +62,37 @@ dated and now-stale "CURRENT" paragraphs below.
    extracted SQLite integrity and config checked on Peanut. Original
    LinkStack running service untouched. **Independent complete
    application restore has NOT been rerun from this fresh archive**.
-   **Source-prepared next:** `ansible/linkstack-kvin-auto-update.yml`
-   keeps the existing Kvin rootless unit/container and volume,
-   replaces only source Quadlet to official moving
-   `docker.io/linkstackorg/linkstack:latest` plus
-   `AutoUpdate=registry`, pulls a verified ARM64 image then
-   restarts only LinkStack with HTTP/port/volume confirmation.
-   It attempts restoring the original pinned Quadlet/unit on
-   failed migration but **does not silently revert a database schema**.
-   **Native moving-image deployment NOT YET RUN**;
-   require source CI green first. Prior Nov12 Kvar archive remains
-   historical rather than a fresh live Kvin backup.
-4. **Nextcloud scheduled backups and update policy:** real owner-scoped
-   recoverable snapshot exists, but recurrence/failure notification and
-   supported automatic application maintenance updates do **not**.
-   Native Nextcloud version was **34.0.5** and frozen digest. Preserve
-   backup/restore and Calendar compatibility while fixing.
+   **NATIVE Kvin LinkStack moving-image deployment PASSED Nov17:**
+   `ansible/linkstack-kvin-auto-update.yml`, `ok=21 changed=3
+   failed=0 skipped=0`; actual running
+   `docker.io/linkstackorg/linkstack:latest`, Quadlet
+   `AutoUpdate=registry`, original named SQLite volume and
+   `127.0.0.1:18081` retained. LinkStack restarted and HTTP200;
+   DNS/YXORP/firewall/other services untouched. Native user
+   Podman update timer had previously been accepted. Admin
+   authentication was not repeated after the image update, and a
+   first future scheduled registry refresh has not yet occurred.
+   **This immediate image-policy migration is accepted and should
+   not be rerun.** Older November12 Kvar archive is historical.
+   [Native receipt](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6955900732).
+4. **Nextcloud scheduled backups and update policy — CURRENT:**
+   Real owner-scoped consistent backup, independent four-file Peanut
+   retention and isolated filesystem extraction are accepted. Full
+   live Nextcloud + Maintenance-owned PostgreSQL restore is not yet
+   qualified; scheduled repeat backups, monitoring and unattended
+   supported maintenance image updates do not exist. Source
+   `ansible/group_vars/nextcloud.yml` still pins a historical
+   Nextcloud 34.0.5-apache digest, but its *current running
+   application version* has not been natively checked.
+   **New first step:** guarded read-only
+   `ansible/nextcloud-update-readiness.yml` asks the actual running
+   Nextcloud container for `php occ status --output=json` and compares
+   the installed/running Quadlet image to source, maintenance state
+   and upgrade-needed indicator, without changing application,
+   database, routes or backup state. Source-only CI must pass before
+   operator invocation. Do NOT jump to `:latest`/major 35
+   automatically or claim a live update before recoverable
+   database+app restore is accepted. Preserve Calendar compatibility.
 5. **Host replacement and service recovery:** wanted Services applications
    need repeatable successful fresh-host reconstruction and usable
    independent data restore, beyond browser health tests or source CI.
