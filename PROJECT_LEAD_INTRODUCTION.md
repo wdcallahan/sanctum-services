@@ -1,5 +1,54 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — native Kuma update success, actual user-facing next step
+
+Nova executed `ansible/kuma.yml -e kuma_stage_approved=true` on
+`wdc2@kvin` after Services adopted the upstream supported moving major
+version image `docker.io/louislam/uptime-kuma:2` with user Quadlet
+`AutoUpdate=registry` (**not `:latest`, still v1**). **Native
+`ok=10 changed=3 failed=0 skipped=1`**, retained existing
+`sanctum-kuma-data` SQLite volume, HTTP302 at loopback
+`127.0.0.1:13001`. This confirms applied source+HTTP, NOT
+post-upgrade authenticated login or saved Wicket heartbeat. Earlier user
+`podman-auto-update.timer` was active/enabled.
+
+**CRITICAL REPORT CORRECTION:** Old source role's final report had
+`administrator_and_monitor_state_accepted=false` and
+`backup_restore_and_recovery_accepted=false`, and obsolete
+`next_gate: qualify ... before upstream cutover`. These were
+HARDCODED placeholders from original November11 staging, not measured
+post-upgrade failures. Admin login, Wicket monitor Up, WebSocket and
+backup+independent restore/Peanut retention were separately previously
+accepted; don't reinterpret these as never accepted. Source role and
+contract test now replaced with truthful "this run checked HTTP only".
+
+**NEW NEXT OPERATOR ACTION prepared by Services:** guarded **read-only**
+`ansible/kuma-post-update-verify.yml`: on exact Kvin,
+uses existing vaulted administrator credentials via stdin to
+run existing Kuma Socket.IO `verify` and monitor `observe`.
+No account, monitor, SQLite, user service, volume or proxy writes;
+prints current monitor condition without demanding it be Up
+at every instant. Source admin bootstrap, monitor owner and
+diagnosis entrypoints updated to supported `:2` image identity,
+removing old accidental digest-enforcement source traps. Tests and
+CI run [44121324665](https://github.com/wdcallahan/sanctum-services/actions/runs/44121324665)
+pending at handoff update. **Only after CI green**, run on
+`wdc2@kvin`:
+`cd ~/src/sanctum-services && git pull --ff-only && ANSIBLE_VAULT_PASSWORD_FILE="$HOME/.config/sanctum-services/secrets/vault.key" ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-post-update-verify.yml -e kuma_post_update_verify_approved=true`.
+The Vault password file and encrypted Kuma admin vars file already exist
+on Kvin per earlier accepted owner actions. This is not a live service
+change and requires no sudo or login UI. Request exact final report and
+recap or failed task/error, no secrets.
+
+**Do not add invented tasks.** After Kuma post-update acceptance, return
+to existing LinkStack and Nextcloud update lifecycle, and real complete
+Nextcloud/DB recovery when Maintenance provides supported isolated
+owner interface; future services only when Nova chooses. Palo Alto-level
+security for internal home tasks was explicitly rejected; Nova
+**does** want high isolation only for a possible publicly reachable
+PicoShare (separate uncommitted feasibility review).
+
+
 ## November 17 — Kuma native off-host copy and public PicoShare discussion
 
 **User's exact actual Kvin→Peanut Kuma result is ACCEPTED:**
