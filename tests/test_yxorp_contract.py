@@ -65,6 +65,19 @@ class YxorpContractTests(unittest.TestCase):
         self.assertFalse(by_name["yarn.inner.sanctum"]["enabled"])
         self.assertNotIn("yxorp.nexus.sanctum", by_name)
 
+    def test_production_nginx_uses_moving_registry_update_channel(self):
+        quadlet = (ROOT / "ansible/roles/yxorp/templates/yxorp.container.j2").read_text()
+        role = (ROOT / "ansible/roles/yxorp/tasks/main.yml").read_text()
+        production = (ROOT / "ansible/yxorp.yml").read_text()
+        self.assertEqual(self.defaults["yxorp_image"],
+                         "docker.io/library/nginx:stable-alpine")
+        self.assertIn("Image={{ yxorp_image }}", quadlet)
+        self.assertIn("AutoUpdate=registry", quadlet)
+        self.assertNotIn("Pull=never", quadlet)
+        self.assertIn("yxorp_image == 'docker.io/library/nginx:stable-alpine'", role)
+        self.assertIn("yxorp_image == 'docker.io/library/nginx:stable-alpine'", production)
+        self.assertNotIn("nginx@sha256:", role + production + quadlet)
+
     def test_separate_real_http_80_peanut_and_production_contract(self):
         self.assertEqual(self.defaults["yxorp_bind_address"], "0.0.0.0")
         self.assertEqual(self.defaults["yxorp_host_port"], 80)
