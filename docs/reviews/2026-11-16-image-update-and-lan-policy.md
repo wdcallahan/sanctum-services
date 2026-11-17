@@ -40,9 +40,11 @@ digest identities; those are **not themselves deployed Quadlet policy**.
 - Maintenance's owner [Quadlet inventory issue #5](https://github.com/wdcallahan/sanctum-maintenance/issues/5#issuecomment-6935782334)
   has the request for actual host/service image, mutable channel, system/user
   `podman-auto-update.timer` state and a finite active/retired classification.
-  Shared PostgreSQL 18 still has exact image identity in old deployment
-  source **and in new Nextcloud-only backup helper**; the backup helper
-  must not become unusable after a valid future PostgreSQL patch refresh.
+  Shared PostgreSQL 18 **deployed Quadlet** still has a fixed image
+  digest. **Correction:** the current Nextcloud owner backup helper checks
+  the approved PostgreSQL image family and server major 18, not equality to
+  the old SHA constant; see [explicit owner correction](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6939054034).
+  The helper was not the active freeze; the runtime deployment is.
 - Joule [network issue #9](https://github.com/wdcallahan/joule/issues/9#issuecomment-6935786809)
   has the **known obsolete** source-only Wicket Host 18096 single-Kvin
   `192.168.1.192/32` rich-rule helper, and the current Ollama Quadlet
@@ -112,6 +114,28 @@ as documented in owner inventory, Wicket Image Mode update policy
 undecided, Dragon's last-recorded unsupported Fedora 42, Kvin/Peanut HA
 not yet deployed, Nextcloud missing off-host recovery and historically
 rejected Wicket FPC-7 helper. Source records are **not** live confirmation.
+
+## November 16 later — Pi-hole actual rootful service and confirmed source-removal
+
+**NATIVE** `systemctl show sanctum-pihole-kvin.service` now confirms
+`LoadState=loaded,ActiveState=active,SubState=running`. This is the
+separate Kvin **rootful** Pi-hole, not the unplugged Kvar legacy service;
+the earlier user/rootless container list naturally omitted it. Nova's
+intent is irrevocably to **remove Pi-hole**, its private data volumes and
+its retained Pi-hole backups, then reinstall afresh only if he later
+chooses to. Do **not** run another status/enablement probe or stage Pi-hole
+again. Services removed the runnable Pi-hole deploy/restore/backup
+playbooks and image template from active Git; the source-controlled
+`tools/retire-pihole-kvin.sh` is the one Kvin rootful stop/remove
+operation, with strict ownership guards. The legacy YXORP stage now
+**refuses** even an explicitly enabled Pi-hole opt-in. Source tests
+[passed in CI 44022082421](https://github.com/wdcallahan/sanctum-services/actions/runs/44022082421).
+**The actual Kvin removal is not yet executed.**
+
+**Recovered user file cleanup:** Nova already removed the unwanted WAV
+album copies through the application-managed share. There is no further
+WAV cleanup task for Services, and no reason to hypothesize a raw
+backend share bypass. Do not instruct him to repeat it.
 
 ## Actual next steps
 
