@@ -1,5 +1,83 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 17 — Real installed backup-service run accepted; isolated full recovery staged in source
+
+**NATIVE FIRST SYSTEMD ONE-SHOT PASSED:** Nova ran the supervised
+`ansible/nextcloud-backup-service-first-run.yml` with exact
+**`kvin.outer.sanctum ok=20 changed=1 unreachable=0 failed=0`**.
+The **already enabled** weekly user service executed and returned
+systemd `Result=success`, creating **NEW recovery point
+`nextcloud-20261117t134454`**, identical SHA256 manifests and
+independently full-bundle-verified Kvin + Peanut copies. Nextcloud
+returned to normal and the weekly timer remains enabled.
+No update or automatic prune; natural Sunday timer firing has NOT
+been observed. [Native receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6960759294).
+**Do not repeat** the installer or first worker execution.
+
+**New database restore path under owner Maintenance #17:** The current
+`/home/wdc2/src/sanctum-maintenance/tools/restore-nextcloud-postgresql`
+supports optional durable isolated owner handoff (the helper is the
+ONLY SQL implementation). Given Nov16 Peanut bundle
+`nextcloud-20261116t233618` and its **already extracted HTML/private
+Peanut trial**, Services source
+`ansible/nextcloud-isolated-db-trial-on-peanut.yml` will validate the
+real retained dump against its manifest and use ONLY that Maintenance
+helper to produce a new networkless PostgreSQL18 trial with private
+password/receipt handoff at:
+```text
+/home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials/nextcloud-20261116t233618/postgresql-trial/
+```
+No shared DB, DNS, proxy or live Kvin changes. The play demands separate
+explicit isolated DB/owner contract approval. If the exact
+Maintenance-pinned image is not already cached, an **additional
+explicit cache-only approval** allows fetching that exact digest
+into Peanut's rootless Podman cache, checking CPU architecture and
+PostgreSQL server major 18 before any DB container starts. A
+successful owner handoff intentionally leaves the isolated test
+database running for the subsequent Services app trial. It must later
+be removed through the Maintenance owner cleanup contract.
+
+**Follow-up restored app CLI source:** `tools/nextcloud-isolated-config.py`
+writes a one-time private `zzzz-sanctum-isolated.config.php` ONLY inside
+the extracted trial HTML/config. It reads Maintenance's private
+password, restricts DB host/role/database to `127.0.0.1` and
+`nextcloud_restore`, preserves the original copied `config.php`,
+and makes the override owner `www-data` mode 0600 using
+`podman unshare`. Nextcloud documents
+[additional configuration files](https://docs.nextcloud.com/server/stable/admin_manual/configuration_server/config_sample_php_parameters.html).
+`ansible/nextcloud-isolated-app-cli-trial-on-peanut.yml` requires
+original immutable **34.0.5** image cached on Peanut and runs
+`occ status` + Calendar `occ app:list` in exactly the separate
+database's `--network=none` namespace, without a public HTTP port.
+Even bad copied settings cannot connect to production. This CLI
+result DOES NOT prove authenticated HTTP login/user-file or calendar
+client functionality, nor does it authorize the live 34.0.6 patch;
+that full-application acceptance is a later separate stage.
+
+**NEXT AUTHORISED OPERATOR RUN AFTER SOURCE CI GREEN, from `wdc2@kvin`:**
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-isolated-db-trial-on-peanut.yml \
+  -e nextcloud_isolated_recovery_id=nextcloud-20261116t233618 \
+  -e nextcloud_isolated_db_trial_approved=true \
+  -e nextcloud_maintenance_restore_contract_approved=true \
+  -e nextcloud_isolated_db_image_cache_approved=true
+```
+**Read first:** This downloads an exact pinned image to Peanut rootless
+cache **only if absent**, and performs a real **new isolated database
+restore on Peanut**, consumes disk and leaves a private networkless
+PostgreSQL trial running for subsequent app validation; it does
+not run Nextcloud in production, change live DB or take another
+Kvin backup. It checks the owner helper is on Peanut and fails closed
+if missing. Exact output requested:
+**`TASK [Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application]`**
+and **`PLAY RECAP`**, or failed task with its error. The next app
+CLI playbook must not be executed until this DB trial's native receipt
+is accepted. Keep the original Nov16 restored HTML/private tree and
+the Nov17 protected Kvin/Peanut backup intact.
+
 ## November 17 — Weekly user backup timer installed; first one-shot qualification
 
 Nova completed the actual Kvin schedule installer:
