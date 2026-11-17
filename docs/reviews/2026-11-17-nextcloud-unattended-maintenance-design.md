@@ -5,6 +5,14 @@
 **Status:** DESIGN ONLY, not a deployed updater, running automation, approved image change or proof of restore.  
 **Issues:** [Services #5](https://github.com/wdcallahan/sanctum-services/issues/5), [Services #6](https://github.com/wdcallahan/sanctum-services/issues/6), [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17).
 
+## Why update cadence matters (Nova, November 17)
+
+Nova explicitly requires **reasonably frequent unattended maintenance updates**, including timely review of supported major upgrades: staying frozen for months increases the eventual upgrade distance, compatibility exposure and operational cost. Do not reinterpret a protected backup prerequisite as permission to postpone all updates indefinitely. Maintain a functioning, repeatable patch/update cadence, and plan major version hops proactively while each supported migration path remains manageable. For Nextcloud, automatic **within-34** release progression and a separate planned **34→35** upgrade are distinct paths, not a reason to choose `:latest` or skip PostgreSQL consistency. A verified backup lowers risk; an actual restore rehearsal must remain a finite concurrent objective rather than a perpetual theoretical veto. The initial production promotion remains gated by the expressly accepted restore contract until it can be safely qualified.
+
+### Newly implemented source-only candidate gate
+
+`ansible/nextcloud-qualify-maintenance-image.yml` now preflights the exact running Kvin Nextcloud, confirms it still has the frozen original image, pulls **only** the official `34.0-apache` image into Kvin's rootless image cache, checks actual ARM64 metadata and uses a short **networkless, read-only, ephemeral** PHP container to read the shipped Nextcloud version. It verifies that the candidate stays in major 34, minor 0 and doesn't regress below the actual running patch. It does **not** touch the live Quadlet, app, database, proxy, ports, timer, or backup. It is source-only until Nova runs it; its registry/cache/image probe is distinct from the already accepted read-only production baseline.
+
 ## Accepted actual baseline — do not repeat observation
 
 Nova executed `ansible/nextcloud-update-readiness.yml` on Kvin on Nov17. Exact TASK `Report actual Nextcloud update baseline without starting an upgrade`; `PLAY RECAP: ok=8 changed=0 failed=0 unreachable=0 skipped=0`. Nextcloud installed **34.0.5** (internal **34.0.5.1**), maintenance=false, needsDbUpgrade=false. Installed rootless Quadlet, running image and Git agree on immutable `nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145`; no `AutoUpdate=registry`. This was a read-only observation; nothing was upgraded.
