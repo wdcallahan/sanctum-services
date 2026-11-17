@@ -60,16 +60,22 @@ class KumaRoleContract(unittest.TestCase):
         self.assertEqual(systemd["scope"], "user")
         self.assertIn("WantedBy=default.target", self.quadlet)
 
-    def test_stage_reports_only_bounded_http_not_monitor_or_recovery_acceptance(self):
+    def test_report_does_not_revoke_previously_accepted_production_state(self):
+        self.assertEqual(self.tasks[-1]["name"],
+                         "Report actual Kuma service deployment and bounded HTTP readiness")
         report = self.tasks[-1]["ansible.builtin.debug"]["msg"]
-        self.assertIs(report["stage_approved"], True)
-        self.assertIs(report["initial_http_only"], True)
-        self.assertIs(report["database_and_admin_setup_accepted"], False)
         self.assertEqual(report["desired_database_backend"], "{{ kuma_db_type }}")
+        self.assertTrue(report["registry_auto_update_declared"])
+        self.assertIn("banked", report["note"])
+        for key in ("app_login_checked_by_this_play",
+                    "saved_monitors_checked_by_this_play",
+                    "recovery_checked_by_this_play"):
+            self.assertIs(report[key], False)
         for key in ("administrator_and_monitor_state_accepted",
                     "backup_restore_and_recovery_accepted",
-                    "named_lan_or_production_route_accepted"):
-            self.assertIs(report[key], False)
+                    "named_lan_or_production_route_accepted",
+                    "next_gate"):
+            self.assertNotIn(key, report)
 
 
 if __name__ == "__main__":
