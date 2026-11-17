@@ -1,5 +1,45 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — REAL current Kvin LinkStack backup ACCEPTED; next Peanut copy ready
+
+**NATIVE just completed on Kvin:** Nova ran
+`ansible/linkstack-kvin-consistent-backup.yml`, actual
+`ok=25 changed=5 unreachable=0 failed=0 skipped=0`.
+Captured current live rootless Kvin LinkStack SQLite consistently,
+`sqlite_integrity=ok`, restarted original service, HTTP200 and
+DNS/YXORP unmodified. Owner-private archive:
+`/home/wdc2/.local/share/sanctum-services/backups/linkstack/linkstack-kvin-20261117t105833.tar`,
+size **93849600** bytes and SHA256
+`301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05`.
+**NOT YET copied off-host** at this handoff. No need to repeat the
+LinkStack source backup.
+
+**NEXT single operator action is READY**: new
+`ansible/linkstack-kvin-retain-on-peanut.yml` (with
+`tests/test_linkstack_kvin_retention_peanut.py` and full source+syntax
+**[CI 44132268595 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44132268595)**)
+copies exactly that file from Kvin to independent Peanut and
+independently verifies full SHA256/bytes plus tar/SQLite/config
+integrity using existing safe archive validator. NO service restart,
+SQLite/volume write, DNS, proxy, firewall or image update.
+Run as `wdc2@kvin`:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/linkstack-kvin-retain-on-peanut.yml \
+  -e sanctum_linkstack_kvin_retain_on_peanut_approved=true
+```
+Request exact `Report real LinkStack off-Kvin retention on Peanut`
+and play recap or failure, not prior backup output.
+The source-only passing CI is NOT proof of Peanut runtime transfer.
+After native acceptance, continue LinkStack from frozen image
+digest/`Pull=never` to moving upstream `linkstackorg/linkstack:latest`
+and rootless `AutoUpdate=registry`, with current data preserved;
+do not reopen already accepted Kuma or broad browser tests.
+[Services #6 status](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6955025311).
+
+
 ## November 17 — next real Services operator action now source-qualified
 
 **Kuma: native COMPLETE this round.** Latest user actual
