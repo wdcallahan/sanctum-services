@@ -1,5 +1,20 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
+## November 17, 2026 — YXORP unattended update policy applied natively
+
+Nova ran the approved production Kvin YXORP playbook after its
+source had switched to `nginx:stable-alpine`, the Quadlet declared
+`AutoUpdate=registry` and the production role enabled and started
+the **system/rootful** `podman-auto-update.timer` (the existing
+user/rootless timer was already active). **NATIVE `ok=36 changed=4
+failed=0 skipped=0`.** Seven wanted routes rendered; Kuma HTTP302,
+LinkStack HTTP200 and Yarn HTTP200; DNS, firewall and Kvar NPM
+unchanged. [Services #6 native receipt](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6952289320).
+This accepts installed source convergence and the systemd timer task,
+not a fabricated first future scheduled update result. Don't rerun
+older route/browser acceptance gates merely because older sections below
+still describe the pre-November-17 source state.
+
 ## November 16, 2026 — operator supersession: Pi-hole and retired Kvar
 
 **Most recent explicit Nova directive:** Pi-hole is **not wanted**. He unplugged
@@ -205,6 +220,43 @@ Status below combines the November 8 Maintenance [Kvar inventory](https://github
 - **Luanti:** new managed application, requiring ordinary Services install/backup/restore/update/uninstall contract.
 - **Home Assistant:** new managed application, requiring the same contract and explicit hardware/network integration design.
 - **Other future applications:** add to this register and roadmap as Nova selects them; no implicit approvals.
+
+### Earlier service ideas recovered from planning conversations — NOT approved installations
+
+The 2026 March and October Sanctum planning discussions named more software
+than the three explicitly planned future Services. This is a **parking lot
+of ideas**, not a plan to implement each item, not a ranked queue and **not**
+authorization to deploy, investigate or create issues. When Nova chooses
+a candidate, move it to the explicitly planned list with the actual purpose
+and owner. Avoid treating a former service or alternative product as a
+new job without renewed selection.
+
+| Candidate mentioned | Earlier rough idea | Decision status |
+| --- | --- | --- |
+| **Syncthing** | Direct device-to-device synchronization beyond ordinary Nextcloud file access | Prior candidate; not selected for new deployment |
+| **NetAlertX** | Network device presence/discovery/alerts | Prior candidate; not selected |
+| **BookStack** | Self-hosted documentation/wiki | Prior candidate; not selected |
+| **Kiwix** | Local/offline reference-material interface | Prior candidate; not selected; coordinate with separately owned offline knowledge work |
+| **Jellyfin / Plex** | A personal video/media library server; alternatives, not a commitment to deploy both | Prior candidate; not selected |
+| **Piwigo** | Photo/gallery service | Earlier explicitly conditional suggestion; not selected |
+| **qBittorrent** | Download management | Prior candidate; not selected |
+| **PicoShare** | Small/simple temporary file sharing | Earlier optional/removable idea; not selected |
+
+**Distinct committed Nextcloud feature, not yet a selected independent
+service:** Nova's [live coediting requirement](ROADMAP.md#planned-next-user-feature--first-class-joule-collaboration-clarified-october-19)
+calls for Nova and Joule to edit *the same* document concurrently using
+separate authenticated accounts. **Collabora Online/CODE** is a possible
+backend, not a decision to deploy it. Do not substitute periodic whole-file
+upload/download for live collaborative editing.
+
+**Exclude already-fulfilled, rejected or historical candidates from
+future-install commitments:** Nextcloud, YXORP, Kuma, LinkStack, EyesOnly,
+Prism and shared PostgreSQL are already service estate entries with
+their own owners; Pi-hole, OpenWebUI and Endlessh are retired; Dashy,
+AWX, Wiki.js and Homarr appear in historical/failed inventories but
+Nova has not selected them anew. A former planning mention alone does
+not promote them to future services.
+
 
 ## What a reconstructible service requires
 
