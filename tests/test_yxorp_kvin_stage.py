@@ -25,7 +25,7 @@ class KvinStageContract(unittest.TestCase):
         cls.remove = read_yaml(STAGE_REMOVE)[0]
         cls.role = read_yaml(ROLE)
 
-    def test_stage_is_a_distinct_full_port_image_pinned_instance(self):
+    def test_stage_is_a_distinct_full_port_image_channel_instance(self):
         var = self.vars
         self.assertEqual(var["yxorp_deployment_scope"], "kvin_stage")
         self.assertFalse(var["yxorp_kvin_stage_approved"])
