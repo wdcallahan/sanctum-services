@@ -1,5 +1,33 @@
 # Sanctum service estate — ownership, disposition, and reconstruction
 
+## November 16, 2026 — operator supersession: Pi-hole and retired Kvar
+
+**Most recent explicit Nova directive:** Pi-hole is **not wanted**. He unplugged
+the old server **Kvar** after intentionally excluding Pi-hole from the
+migration; he does **not** want old Pi-hole backups retained as an ongoing
+recovery obligation. If someday desired, install a fresh Pi-hole instance.
+This supersedes any historical "keep Pi-hole" or "restore its old data"
+suggestion in this estate or the November 8 Maintenance inventory.
+**Do not restart Kvar, rediscover its Pi-hole, recreate Pi-hole as a
+dependency or keep its backup lifecycle alive.**
+
+One **orphaned-looking rootful Quadlet** was found in Kvin's actual filesystem:
+`/etc/containers/systemd/sanctum-pihole-kvin.container`; it still
+contains original Pi-hole image/ports/`Pull=never`. A source file is not
+evidence of an authorized wanted service. The supplied `wdc2` rootless
+`podman ps` list does not establish rootful systemd service/Podman state.
+**The remaining implementation task is a scoped rootful read-only
+unit/container/boot observation followed by separately approved removal**
+of the obsolete unit and associated old restore source. Do not delete
+named volumes, private settings or any other service until exact owning
+resources are observed and cleanup approved; do not infer a current
+rootful process just from the stale Quadlet file.
+
+[Whole-Sanctum owner audit](https://github.com/wdcallahan/sanctum-maintenance/issues/38)
+tracks similar retired-resource resurrection hazards. This is an explicit
+operator disposition, not a newly installed service.
+
+
 ## November 12 evening — Public WireGuard hostname: buny.us through DirectNIC DDNS
 
 **Nova selected `buny.us` as the public VPN endpoint hostname.** He owns/previously used the DirectNIC dynamic-DNS technique at this home on this ISP, where the public address normally lasts a month or longer. DirectNIC currently offers dynamic A-record updates using a unique HTTPS gateway URL. **Nova is currently unable to log into DirectNIC**, so neither the record nor its update URL has been obtained or modified; no public DNS or VPN service was deployed. The update URL is a bearer credential: never put it or a generated token in Git, issues, logs or general chat. No need to infer a new domain or ask for an account password.
