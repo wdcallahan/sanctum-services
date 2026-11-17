@@ -1,0 +1,92 @@
+---
+# READ-ONLY: observe the actual running Kvin Nextcloud, not a future
+# authorization to upgrade from major version 34 to 35.
+# No account, file, config, PG, Quadlet, container, route or firewall changes.
+- name: Observe real production Nextcloud version and update readiness
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_readiness_container: sanctum-nextcloud
+    nextcloud_readiness_quadlet: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container
+  tasks:
+    - name: Require exact source-owned Kvin service and read-only observation approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_user == 'wdc2'
+          - nextcloud_update_readiness_approved | default(false) | bool
+          - nextcloud_readiness_container == 'sanctum-nextcloud'
+          - nextcloud_host_port | int == 8085
+        fail_msg: Only a read-only observation of Kvin's existing Nextcloud is permitted.
+
+    - name: Read existing rootless Nextcloud Quadlet without disclosing private paths
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_readiness_quadlet }}"
+      register: nextcloud_readiness_quadlet_source
+      no_log: true
+
+    - name: Observe actual running Nextcloud container identity without revealing env
+      ansible.builtin.command:
+        argv: [podman, inspect, --type, container, "{{ nextcloud_readiness_container }}"]
+      register: nextcloud_readiness_container_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require actual original Nextcloud container identity before executing occ
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_readiness_container_inspect.stdout | from_json | length) == 1
+          - (nextcloud_readiness_container_inspect.stdout | from_json)[0].Name == 'sanctum-nextcloud'
+          - (nextcloud_readiness_container_inspect.stdout | from_json)[0].State.Running | bool
+        fail_msg: Original Nextcloud container is absent or not running; no changes attempted.
+
+    - name: Read actual Nextcloud application status through its own CLI as www-data
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --user
+          - www-data
+          - --workdir
+          - /var/www/html
+          - "{{ nextcloud_readiness_container }}"
+          - php
+          - occ
+          - status
+          - --output=json
+      register: nextcloud_readiness_occ
+      changed_when: false
+      no_log: true
+
+    - name: Require genuine machine-readable application version and installed status
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_readiness_occ.stdout | from_json) is mapping
+          - (nextcloud_readiness_occ.stdout | from_json).installed is defined
+          - (nextcloud_readiness_occ.stdout | from_json).version is defined
+          - (nextcloud_readiness_occ.stdout | from_json).maintenance is defined
+        fail_msg: Nextcloud occ status returned unexpected JSON; application not altered.
+
+    - name: Report actual Nextcloud update baseline without starting an upgrade
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          running_container: "{{ nextcloud_readiness_container }}"
+          source_image_reference: "{{ nextcloud_image }}"
+          running_image_reference: "{{ (nextcloud_readiness_container_inspect.stdout | from_json)[0].ImageName | default('unavailable') }}"
+          running_image_equals_source: "{{ (nextcloud_readiness_container_inspect.stdout | from_json)[0].ImageName | default('') == nextcloud_image }}"
+          installed_quadlet_image_equals_source: "{{ ('Image=' ~ nextcloud_image) in (nextcloud_readiness_quadlet_source.content | b64decode).splitlines() }}"
+          quadlet_registry_auto_update_declared: "{{ 'AutoUpdate=registry' in (nextcloud_readiness_quadlet_source.content | b64decode).splitlines() }}"
+          actual_version: "{{ (nextcloud_readiness_occ.stdout | from_json).versionstring | default((nextcloud_readiness_occ.stdout | from_json).version) }}"
+          actual_internal_version: "{{ (nextcloud_readiness_occ.stdout | from_json).version }}"
+          actual_installed: "{{ (nextcloud_readiness_occ.stdout | from_json).installed | bool }}"
+          actual_maintenance_mode: "{{ (nextcloud_readiness_occ.stdout | from_json).maintenance | bool }}"
+          actual_needs_db_upgrade: "{{ (nextcloud_readiness_occ.stdout | from_json).needsDbUpgrade | default('not_reported') }}"
+          database_export_not_run: true
+          nextcloud_or_database_not_modified: true
+          live_update_not_authorized: true
+          next_action: Choose supported within-major maintenance release policy and only then integrate already accepted backup/retention before an automatic upgrade
