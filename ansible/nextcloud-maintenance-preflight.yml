@@ -1,0 +1,146 @@
+---
+# Source-only cycle entry. This is not a second request for the accepted
+# November 17 frozen-image baseline or one-time ARM64 image qualification.
+# A later recurring run refreshes only the 34.0-apache rootless image cache,
+# compares the candidate image ID and checks the shipped PHP version.
+- name: Determine whether Nextcloud 34 has an actual supported patch update
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_cycle_candidate: docker.io/library/nextcloud:34.0-apache
+    nextcloud_cycle_quadlet: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container
+    nextcloud_cycle_container: sanctum-nextcloud
+  tasks:
+    - name: Require exact Kvin nextcloud update-cycle scope and approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - not ansible_check_mode
+          - nextcloud_maintenance_cycle_approved | default(false) | bool
+          - nextcloud_cycle_candidate == 'docker.io/library/nextcloud:34.0-apache'
+        fail_msg: Only wdc2 on real Kvin may start a Nextcloud 34 update cycle.
+
+    - name: Read installed Nextcloud Quadlet without publishing environment or secrets
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_cycle_quadlet }}"
+      register: nextcloud_cycle_installed_quadlet
+      no_log: true
+
+    - name: Observe original running Nextcloud identity privately
+      ansible.builtin.command:
+        argv: [podman, container, inspect, "{{ nextcloud_cycle_container }}"]
+      register: nextcloud_cycle_before
+      changed_when: false
+      no_log: true
+
+    - name: Require a single healthy existing container and matching installed Quadlet
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_cycle_before.stdout | from_json | length) == 1
+          - (nextcloud_cycle_before.stdout | from_json)[0].Name == nextcloud_cycle_container
+          - (nextcloud_cycle_before.stdout | from_json)[0].State.Running | bool
+          - "('Image=' ~ (nextcloud_cycle_before.stdout | from_json)[0].ImageName) in (nextcloud_cycle_installed_quadlet.content | b64decode).splitlines()"
+          - "'AutoUpdate=registry' not in (nextcloud_cycle_installed_quadlet.content | b64decode).splitlines()"
+          - "((nextcloud_cycle_installed_quadlet.content | b64decode).splitlines() | select('match','^Image=') | list | length) == 1"
+          - (nextcloud_cycle_before.stdout | from_json)[0].Image is match('^[a-f0-9]{64}$')
+          - "(nextcloud_cycle_before.stdout | from_json)[0].ImageName == nextcloud_image or (nextcloud_cycle_before.stdout | from_json)[0].ImageName == nextcloud_cycle_candidate"
+        fail_msg: Image, installed source or running Nextcloud unexpectedly changed; no update attempted.
+
+    - name: Read original Nextcloud application status read-only
+      ansible.builtin.command:
+        argv: [podman, exec, --user, www-data, "{{ nextcloud_cycle_container }}", php, occ, status, --output=json]
+      register: nextcloud_cycle_original_occ
+      changed_when: false
+      no_log: true
+
+    - name: Require Nextcloud 34 installed and outside maintenance mode
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_cycle_original_occ.stdout | from_json).installed | bool
+          - not ((nextcloud_cycle_original_occ.stdout | from_json).maintenance | bool)
+          - not ((nextcloud_cycle_original_occ.stdout | from_json).needsDbUpgrade | default(false) | bool)
+          - "((nextcloud_cycle_original_occ.stdout | from_json).version | string) is match('^34[.]0[.][0-9]+([.][0-9]+)?$')"
+        fail_msg: Nextcloud is not in a supported healthy 34.0.x state; update refused.
+
+    - name: Refresh only official Nextcloud 34 maintenance image in rootless cache
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ nextcloud_cycle_candidate }}"]
+      register: nextcloud_cycle_pull
+      changed_when: nextcloud_cycle_pull.rc == 0
+      no_log: true
+
+    - name: Inspect newly resolved official Linux ARM64 image
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ nextcloud_cycle_candidate }}"]
+      register: nextcloud_cycle_candidate_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require native Linux ARM64 image before any backup or update
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_cycle_candidate_inspect.stdout | from_json | length) == 1
+          - (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Architecture == 'arm64'
+          - (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Os == 'linux'
+          - (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
+        fail_msg: Candidate is missing or is not a verified Linux ARM64 image.
+
+    - name: Read candidate version through disposable networkless PHP only
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --pull=never
+          - --network=none
+          - --read-only
+          - --security-opt=no-new-privileges
+          - --entrypoint
+          - php
+          - "{{ nextcloud_cycle_candidate }}"
+          - -r
+          - >-
+            require '/usr/src/nextcloud/version.php';
+            echo json_encode(array('major'=>(int)$OC_Version[0],
+            'minor'=>(int)$OC_Version[1],
+            'patch'=>(int)$OC_Version[2],
+            'version'=>implode('.',array_slice($OC_Version,0,3))));
+      register: nextcloud_cycle_candidate_php
+      changed_when: false
+      no_log: true
+
+    - name: Refuse candidate from another branch or below running patch level
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_cycle_candidate_php.stdout | from_json).major | int == 34
+          - (nextcloud_cycle_candidate_php.stdout | from_json).minor | int == 0
+          - (nextcloud_cycle_candidate_php.stdout | from_json).patch | int >= ((nextcloud_cycle_original_occ.stdout | from_json).version.split('.')[2] | int)
+        fail_msg: Official candidate did not remain on the nonregressing 34.0.x maintenance line.
+
+    - name: Preserve update decision and unique recovery identifier for same-run playbooks
+      ansible.builtin.set_fact:
+        nextcloud_cycle_update_needed: "{{ (nextcloud_cycle_before.stdout | from_json)[0].Image != (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Id }}"
+        nextcloud_cycle_old_image_id: "{{ (nextcloud_cycle_before.stdout | from_json)[0].Image }}"
+        nextcloud_cycle_candidate_image_id: "{{ (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Id }}"
+        nextcloud_cycle_prior_version: "{{ (nextcloud_cycle_original_occ.stdout | from_json).version }}"
+        nextcloud_cycle_expected_version: "{{ (nextcloud_cycle_candidate_php.stdout | from_json).version }}"
+        nextcloud_cycle_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+        nextcloud_cycle_recovery_id: "nextcloud-{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+      changed_when: false
+
+    - name: Report actual Nextcloud maintenance-update decision before backup
+      ansible.builtin.debug:
+        msg:
+          current_version: "{{ nextcloud_cycle_prior_version }}"
+          candidate_version: "{{ nextcloud_cycle_expected_version }}"
+          current_image_id: "{{ nextcloud_cycle_old_image_id }}"
+          candidate_image_id: "{{ nextcloud_cycle_candidate_image_id }}"
+          update_needed: "{{ nextcloud_cycle_update_needed | bool }}"
+          next_recovery_point_if_update: "{{ nextcloud_cycle_recovery_id if (nextcloud_cycle_update_needed | bool) else 'no_backup_needed' }}"
+          production_changed: false
+          next_action: If changed, take a new consistent backup, verify its Peanut copy, then decide whether recovery-qualified live activation is permitted
