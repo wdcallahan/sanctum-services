@@ -42,6 +42,32 @@
       register: nextcloud_schedule_tools
       changed_when: false
 
+    - name: Verify unattended user-manager SSH to original Kvin and Peanut without running backup
+      ansible.builtin.command:
+        argv:
+          - systemd-run
+          - --user
+          - --wait
+          - --pipe
+          - --collect
+          - --working-directory=/home/wdc2/src/sanctum-services
+          - --setenv=PATH=/home/wdc2/.local/bin:/usr/local/bin:/usr/bin:/bin
+          - --unit=sanctum-nextcloud-backup-ssh-preflight
+          - /usr/bin/env
+          - ansible
+          - -i
+          - ansible/inventory/hosts.yml
+          - nextcloud:yxorp_test
+          - -m
+          - ansible.builtin.ping
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_schedule_xdg }}"
+      register: nextcloud_schedule_unattended_ssh
+      changed_when: false
+      failed_when: nextcloud_schedule_unattended_ssh.rc != 0
+      # The temporary user service can only run a read-only Ansible ping.
+      # It is not the recurring backup unit and runs no database/app tasks.
+
     - name: Check established private backup parent and source checkout
       ansible.builtin.stat:
         path: "{{ item }}"
