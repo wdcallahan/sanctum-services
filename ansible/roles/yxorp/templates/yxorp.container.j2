@@ -5,6 +5,8 @@ Wants=network-online.target
 
 [Container]
 Image={{ yxorp_image }}
+# Mutable image channel; requires the owning host's podman-auto-update.timer.
+AutoUpdate=registry
 ContainerName={{ yxorp_container_name }}
 # Host networking deliberately shares the host resolver and listener
 # path on both Peanut and Kvin. Nginx's "listen 80" publishes normal HTTP
