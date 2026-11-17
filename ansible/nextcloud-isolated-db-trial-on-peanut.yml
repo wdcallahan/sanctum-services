@@ -110,14 +110,172 @@
       changed_when: false
       failed_when: false
 
-    - name: Refuse unqualified image or implicit registry download
+    - name: Cache only Maintenance's pinned PostgreSQL image when separately approved and absent
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ nextcloud_db_trial_pg_image }}"]
+      register: nextcloud_db_trial_image_stage
+      changed_when: nextcloud_db_trial_image_stage.rc == 0
+      when:
+        - nextcloud_db_trial_image_exists.rc != 0
+        - nextcloud_isolated_db_image_cache_approved | default(false) | bool
+      no_log: true
+
+    - name: Require cached pinned image, not an unreviewed registry fallback
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ nextcloud_db_trial_pg_image }}"]
+      register: nextcloud_db_trial_platform
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: Refuse unknown or incompatible PostgreSQL image before touching private handoff
       ansible.builtin.assert:
         that:
-          - nextcloud_db_trial_image_exists.rc == 0
+          - nextcloud_db_trial_platform.rc == 0
+          - (nextcloud_db_trial_platform.stdout | from_json | length) == 1
+          - (nextcloud_db_trial_platform.stdout | from_json)[0].Os == 'linux'
+          - (nextcloud_db_trial_platform.stdout | from_json)[0].Architecture == ({'aarch64':'arm64','x86_64':'amd64'}[ansible_facts['architecture']])
+          - (nextcloud_db_trial_platform.stdout | from_json)[0].Id is match('^[a-f0-9]{64}    - name: Read only the expected database-member SHA256 from verified private manifest
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ nextcloud_db_trial_expected_sha_script }}"
+          - "{{ nextcloud_db_trial_bundle }}/manifest.json"
+      register: nextcloud_db_trial_expected_sha
+      changed_when: false
+      no_log: true
+
+    - name: Require properly formed private archive digest before owner helper
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_db_trial_expected_sha.stdout | trim) is match('^[a-f0-9]{64}$')
+        fail_msg: The retained recovery manifest lacks its verified DB SHA256.
+
+    - name: Create only a fresh private handoff directory under previously staged files
+      ansible.builtin.file:
+        path: "{{ nextcloud_db_trial_private_handoff }}"
+        state: directory
+        mode: '0700'
+
+    - name: Invoke ONLY the Maintenance-owned isolated Nextcloud PostgreSQL restore helper
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "{{ nextcloud_db_trial_owner_helper }}"
+          - "{{ nextcloud_db_trial_bundle }}/nextcloud-postgresql.dump"
+          - "{{ nextcloud_db_trial_expected_sha.stdout | trim }}"
+          - "{{ nextcloud_db_trial_password_file }}"
+      register: nextcloud_db_trial_owner_result
+      async: 2400
+      poll: 15
+      changed_when: nextcloud_db_trial_owner_result.rc == 0
+      no_log: true
+
+    - name: Require owner helper reports retained networkless test database, not app restore
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_db_trial_owner_result.stdout | from_json).status == 'isolated_database_ready_for_application'
+          - (nextcloud_db_trial_owner_result.stdout | from_json).database == 'nextcloud_restore'
+          - (nextcloud_db_trial_owner_result.stdout | from_json).username == 'nextcloud_restore'
+          - (nextcloud_db_trial_owner_result.stdout | from_json).host == '127.0.0.1'
+          - (nextcloud_db_trial_owner_result.stdout | from_json).port | int == 5432
+          - (nextcloud_db_trial_owner_result.stdout | from_json).container_id is match('^[a-f0-9]{64}$')
+          - (nextcloud_db_trial_owner_result.stdout | from_json).password_file == nextcloud_db_trial_password_file
+          - (nextcloud_db_trial_owner_result.stdout | from_json).network == ('container:' ~ (nextcloud_db_trial_owner_result.stdout | from_json).container_id)
+          - not ((nextcloud_db_trial_owner_result.stdout | from_json).application_started | bool)
+          - not ((nextcloud_db_trial_owner_result.stdout | from_json).production_database_contacted | bool)
+          - (nextcloud_db_trial_owner_result.stdout | from_json).restored_application_tables | int > 0
+        fail_msg: Owner restore helper did not return the required networkless, private DB-only receipt.
+
+    - name: Inspect new isolated database container without exposing its environment
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - inspect
+          - "{{ (nextcloud_db_trial_owner_result.stdout | from_json).container_id }}"
+      register: nextcloud_db_trial_runtime
+      changed_when: false
+      no_log: true
+
+    - name: Require actually running rootless networkless owner-labelled PostgreSQL trial
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_db_trial_runtime.stdout | from_json | length) == 1
+          - (nextcloud_db_trial_runtime.stdout | from_json)[0].State.Running | bool
+          - (nextcloud_db_trial_runtime.stdout | from_json)[0].HostConfig.NetworkMode == 'none'
+          - (nextcloud_db_trial_runtime.stdout | from_json)[0].Config.Labels['io.sanctum.nextcloud-restore'] == 'peanut'
+        fail_msg: Isolated database container does not meet the owner networkless isolation contract.
+
+    - name: Check owner's private credential and handoff receipt without revealing bytes
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+        get_checksum: false
+      loop:
+        - "{{ nextcloud_db_trial_password_file }}"
+        - "{{ nextcloud_db_trial_receipt_file }}"
+      register: nextcloud_db_trial_handoff_files
+      no_log: true
+
+    - name: Require both handoff files are normal owner-private files
+      ansible.builtin.assert:
+        that:
+          - nextcloud_db_trial_handoff_files.results | length == 2
+          - nextcloud_db_trial_handoff_files.results | map(attribute='stat.isreg') | select('equalto', true) | list | length == 2
+          - nextcloud_db_trial_handoff_files.results | map(attribute='stat.mode') | select('equalto', '0600') | list | length == 2
+          - not (nextcloud_db_trial_handoff_files.results[0].stat.islnk | default(false))
+          - not (nextcloud_db_trial_handoff_files.results[1].stat.islnk | default(false))
+        fail_msg: The isolated database owner did not produce private handoff files.
+
+    - name: Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application
+      ansible.builtin.debug:
+        msg:
+          host: peanut.arcane.sanctum
+          source_recovery_id: "{{ nextcloud_db_trial_recovery_id }}"
+          owner: sanctum-maintenance
+          restored_application_tables: "{{ (nextcloud_db_trial_owner_result.stdout | from_json).restored_application_tables }}"
+          isolated_db_container: "{{ (nextcloud_db_trial_owner_result.stdout | from_json).container_id }}"
+          isolated_postgresql_ready: true
+          owner_handoff_private: true
+          app_files_previously_restored_and_untouched: true
+          isolated_network: none
+          shared_production_database_unmodified: true
+          production_kvin_not_contacted: true
+          restored_nextcloud_application_not_started: true
+          full_app_restore_not_yet_accepted: true
+          next_action: Services start recovered 34.0.5 Nextcloud against the isolated DB namespace and validate files, Calendar and login
+)
         fail_msg: >-
-          Maintenance's pinned PostgreSQL image is not cached on Peanut.
-          Coordinate owner-qualified cache staging; this play does not pull
-          an unrelated image or fall back to production PostgreSQL.
+          The exact Maintenance-pinned PostgreSQL image is absent or
+          not native on Peanut. Pass the separately authorized image-cache
+          option if absent, or coordinate an owner-compatible image;
+          NEVER use production PostgreSQL.
+
+    - name: Inspect actual cached PostgreSQL server version without a database or network
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --pull=never
+          - --network=none
+          - --read-only
+          - --cap-drop=all
+          - --security-opt=no-new-privileges
+          - --entrypoint=postgres
+          - "{{ nextcloud_db_trial_pg_image }}"
+          - --version
+      register: nextcloud_db_trial_image_version
+      changed_when: false
+      no_log: true
+
+    - name: Require PostgreSQL 18 isolated trial binary matches owner exporter major
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_db_trial_image_version.stdout | trim) is match('^postgres [(]PostgreSQL[)] 18[.][0-9]+')
+        fail_msg: Isolated restore must use Maintenance's compatible PostgreSQL 18 version.
 
     - name: Read only the expected database-member SHA256 from verified private manifest
       ansible.builtin.command:
