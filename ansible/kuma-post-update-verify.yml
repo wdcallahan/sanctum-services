@@ -52,9 +52,9 @@
           - "'Volume=sanctum-kuma-data:/app/data' in kuma_verify_quadlet_lines"
           - "'PublishPort=127.0.0.1:13001:3001/tcp' in kuma_verify_quadlet_lines"
           - "'Environment=UPTIME_KUMA_DB_TYPE=sqlite' in kuma_verify_quadlet_lines"
-        vars:
-          kuma_verify_quadlet_lines: "{{ (kuma_verify_quadlet_source.content | b64decode).splitlines() }}"
         fail_msg: Installed Kuma Quadlet is not the newly approved v2 source policy.
+      vars:
+        kuma_verify_quadlet_lines: "{{ (kuma_verify_quadlet_source.content | b64decode).splitlines() }}"
 
     - name: Observe existing running user Kuma without making changes
       ansible.builtin.command:
