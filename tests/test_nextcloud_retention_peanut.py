@@ -50,7 +50,10 @@ class NextcloudRetainToPeanut(unittest.TestCase):
         c=self.task("Copy exactly the four")["ansible.builtin.copy"]
         self.assertEqual(c["mode"],"0600")
         self.assertIs(c["force"],False)
-        self.assertTrue(self.task("Copy exactly the four")["no_log"])
+        task=self.task("Copy exactly the four")
+        self.assertFalse(task.get("no_log",False))
+        self.assertIs(task["diff"],False)
+        self.assertEqual(task["loop_control"]["label"],"{{ item }}")
 
     def test_no_database_writes_or_service_restart(self):
         raw=PLAY.read_text()
