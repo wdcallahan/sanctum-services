@@ -103,8 +103,12 @@
         mode: '0600'
         force: false
       loop: "{{ nextcloud_retention_files }}"
+      loop_control:
+        label: "{{ item }}"
       register: nextcloud_retention_copied
-      no_log: true
+      # The artifact names and transfer metadata are fine to display.
+      # Even with --diff, do not print private archive or manifest contents.
+      diff: false
 
     - name: Verify independent actual bytes directly on Peanut using the same source verifier
       ansible.builtin.command:
