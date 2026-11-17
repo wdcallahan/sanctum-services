@@ -27,7 +27,7 @@ to excuse an unmaintained production service.
 | --- | --- | --- | --- |
 | Nextcloud | `group_vars/nextcloud.yml` fixed 34.0.5 image digest; Quadlet lacks `AutoUpdate` | User authenticated and saw notice for 35.0.2; **actual running version not yet rechecked** | **Open** [#5](https://github.com/wdcallahan/sanctum-services/issues/5): complete app+DB recovery first, then moving-image and unattended maintenance path |
 | Uptime Kuma | `group_vars/kuma.yml` fixed 2.5.9 image digest; Quadlet lacks `AutoUpdate` | Normal Kvin usage previously accepted; **actual running image/timer not inspected here** | **Open** [#6](https://github.com/wdcallahan/sanctum-services/issues/6): protect SQLite and restore before upgrade |
-| YXORP / Nginx | Was fixed SHA without `AutoUpdate`; source changed to `nginx:stable-alpine` + `AutoUpdate=registry` for source-managed production/stage | Previous 7-route Nginx acceptance; **new source not applied to Kvin and no rootful auto-update timer acceptance** | Source correction **pending CI + eventual native activation**; no automatic updates proven live |
+| YXORP / Nginx | Was fixed SHA without `AutoUpdate`; source changed to `nginx:stable-alpine` + `AutoUpdate=registry` for source-managed production/stage | Previous 7-route Nginx acceptance; **new source not applied to Kvin and no rootful auto-update timer acceptance** | **Source CI PASSED**, eventual native activation pending; no automatic updates proven live |
 | LinkStack | Recovered candidate Quadlet fixes old Kvar image digest and `Pull=never` | Restored content and current directory UI accepted; **which installed live source owns the update cadence is not verified** | **Open**: distinguish fixed-identity recovery candidate from production lifecycle; retain user data |
 | Pi-hole | Old Kvin restore template fixed original digest and `Pull=never` | Nova explicitly retired it from wanted services | Exclude from update work; do not resurrect |
 | EyesOnly Search (adjacent owner) | `ghcr.io/searxng/searxng:latest` + `AutoUpdate=registry` in owner Quadlet | Browser/search accepted, **timer/update history not checked by this audit** | Correct *declared* image policy; monitor owner runtime separately |
@@ -57,7 +57,7 @@ digest identities; those are **not themselves deployed Quadlet policy**.
 
 ## Actual next steps
 
-1. Finish current YXORP source CI and later run a reviewed, bounded native
+1. YXORP source CI [PASSED at 86702ff](https://github.com/wdcallahan/sanctum-services/actions/runs/44001338860); later run a reviewed, bounded native
    rootful Quadlet/timer activation; never claim installed just from a commit.
 2. One read-only Kvin actual-container/Quadlet/timer census; enumerate rootless
    and rootful update timers and source image fields without exposing secrets.
