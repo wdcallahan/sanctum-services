@@ -1,5 +1,41 @@
 # Sanctum Services — Roadmap
 
+## November 17 — Nov16 whole-Sanctum audit #38 corrected restore-helper image regression
+
+**User explicitly challenged a new request to download a frozen PostgreSQL
+SHA for a Nextcloud recovery trial. That instruction is WITHDRAWN.**
+Audit [Maintenance #38](https://github.com/wdcallahan/sanctum-maintenance/issues/38)
+is the whole-Sanctum investigation across lifecycle updates, network/auth,
+desired-vs-installed drift, retired services, backup/restore, PG HA,
+obsolete source tests, and monitoring. Live wanted services must be
+able to advance automatically without obsolete hardcoded digest
+constraints; historical release/fixture identities remain legitimate
+when specifically justified, not as perpetual production update policy.
+The audit register is source-first, NOT a completed native whole-fleet
+acceptance.
+
+**Concrete newly discovered defect:** Maintenance's current scoped
+Nextcloud PostgreSQL dump helper tolerates compatible PostgreSQL18
+updates, but its restore helper imports the older immutable
+`IMAGE` constant and requires that digest for trial DB/peer login.
+Services had propagated this into a proposed new rootless **download**.
+The last command was withdrawn; no Peanut host action authorized.
+Maintenance #17 owns the restore-helper image policy change;
+[exact owner request](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6961470716),
+[audit defect](https://github.com/wdcallahan/sanctum-maintenance/issues/38#issuecomment-6961477321).
+
+**Services source correction:** Peanut recovery uses supported
+`docker.io/library/postgres:18` moving major channel, checks the
+actual Maintenance helper image selection and **REFUSES before pull/DB
+creation** until owner code agrees; rootless native architecture,
+PostgreSQL 18 and networkless trial constraints remain. Tests reject
+the newly introduced stale digest. Source CI must pass before any
+newly corrected native command. The current next action is an
+**owner-source dependency**, not another user shell command.
+Existing weekly timer, real successful installed backup one-shot,
+November17 Kvin/Peanut recovery and cached Nextcloud 34.0.6 remain
+banked and unchanged.
+
 ## November 17 — Weekly backup worker NATIVE ACCEPTED; separate database+application restore path SOURCE
 
 Nova natively exercised the **already installed weekly rootless backup service**
