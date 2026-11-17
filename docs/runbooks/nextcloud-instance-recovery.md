@@ -1,5 +1,60 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 16, late — NATIVE first complete off-Kvin backup ACCEPTED
+
+**This section supersedes historical below statements that no real backup
+or Peanut copy exists.** Nova completed the two actual Services playbooks
+from Kvin, without any runtime or database service restarts.
+
+1. `ansible/nextcloud-consistent-backup.yml`:
+   Kvin `ok=29 changed=9 unreachable=0 failed=0`. Nextcloud
+   entered maintenance mode, Maintenance's scoped PostgreSQL exporter
+   returned the accepted `nextcloud` database custom-format receipt,
+   full actual HTML/data tree and four private inputs were included in
+   the authenticated bundle, manifest/hash/archive checks passed,
+   Nextcloud **left maintenance mode** and passed HTTP readiness.
+   It returned `bundle_hashes_match_manifest=true` and
+   `original_nextcloud_maintenance_state_restored=true`.
+2. `ansible/nextcloud-retain-on-peanut.yml`:
+   Peanut `ok=14 changed=3 unreachable=0 failed=0`.
+   Exactly the four expected files (`manifest.json`,
+   `nextcloud-html.tar`, `nextcloud-private.tar`,
+   `nextcloud-postgresql.dump`) transferred over ordinary Ansible
+   SSH to a **new private directory** on Peanut. Peanut directly
+   verified their SHA256 and archive structure;
+   `hashes_and_archive_structures_verified_on_peanut=true`.
+   **No database or service was modified on Peanut**.
+
+**Authoritative recovery ID:** `nextcloud-20261116t233618`.
+
+**Same private directory on both hosts:**
+`/home/wdc2/.local/share/sanctum-services/backups/nextcloud/nextcloud-20261116t233618`.
+
+**Status:** An actual **application-consistent, off-Kvin, integrity-verified
+recovery point** exists. An isolated **database restore**, isolated
+**application file extraction**, and a **running isolated Nextcloud**
+with real account/Calendar/file checks have NOT yet been accepted.
+Do not confuse backup validity with completed disaster recovery.
+
+Services sent the exact retained path and native acceptance to
+[Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6940073248)
+for owner-led disposable networkless PostgreSQL Nextcloud-only restore
+on Peanut, using its existing `tools/restore-nextcloud-postgresql`.
+Services' next independent native operation is the source-qualified
+`ansible/nextcloud-isolated-files-restore.yml` on Peanut with
+`nextcloud_isolated_recovery_id=nextcloud-20261116t233618`,
+`nextcloud_retained_bundle` as above and explicit
+`nextcloud_isolated_file_restore_approved=true`.
+This extracts only fresh isolated HTML and private data; no database is
+imported, no Nextcloud container is started, and neither Kvin nor its
+live service is changed. Only after both halves pass should Services and
+Maintenance integrate a genuinely usable isolated application startup.
+
+**Operator policy:** Treat these successful native tasks as completed;
+don't request more SSD size checks, repeat backing scans, rerun the
+backup or recopy the snapshot merely to "confirm" it. No need to
+reinstate blanket `no_log` on ordinary four-file transfers.
+
 **Status:** The existing Kvin Nextcloud installation and Calendar 6.6.2
 bidirectional use are accepted. The installation/app-manifest roles are
 source-managed, but **full-instance backup, independent storage, and an
