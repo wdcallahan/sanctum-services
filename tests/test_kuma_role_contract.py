@@ -21,10 +21,7 @@ class KumaRoleContract(unittest.TestCase):
 
     def test_source_requires_explicit_approval_and_image(self):
         self.assertIs(self.vars["kuma_stage_approved"], False)
-        self.assertEqual(self.vars["kuma_image"], (
-            "docker.io/louislam/uptime-kuma@sha256:"
-            "302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
-        ))
+        self.assertEqual(self.vars["kuma_image"], "docker.io/louislam/uptime-kuma:2")
         self.assertEqual(self.vars["kuma_host_port"], 13001)
         self.assertEqual(self.vars["kuma_bind_address"], "127.0.0.1")
         self.assertEqual(self.vars["kuma_data_volume"], "sanctum-kuma-data")
@@ -35,7 +32,7 @@ class KumaRoleContract(unittest.TestCase):
                       self.tasks[0]["ansible.builtin.assert"]["that"])
         self.assertIn("kuma_db_type == 'sqlite'",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
-        self.assertIn("kuma_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')",
+        self.assertIn("kuma_image == 'docker.io/louislam/uptime-kuma:2'",
                       self.tasks[0]["ansible.builtin.assert"]["that"])
 
     def test_volume_and_quadlet_are_idempotent_by_design(self):
@@ -43,8 +40,10 @@ class KumaRoleContract(unittest.TestCase):
         self.assertLess(names.index("Observe whether the named rootless Kuma data volume exists"),
                         names.index("Create the durable Kuma data volume when absent"))
         self.assertLess(names.index("Observe whether the exact Kuma image exists"),
-                        names.index("Pull the exact pinned image if absent"))
+                        names.index("Pull the supported Kuma 2 image channel if absent"))
         self.assertIn("Volume={{ kuma_data_volume }}:/app/data", self.quadlet)
+        self.assertIn("AutoUpdate=registry", self.quadlet)
+        self.assertIn("Image={{ kuma_image }}", self.quadlet)
         self.assertIn(
             "Environment=UPTIME_KUMA_DB_TYPE={{ kuma_db_type }}", self.quadlet
         )
