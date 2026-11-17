@@ -1,0 +1,235 @@
+---
+# Migrate only the already accepted PRODUCTION rootless LinkStack Quadlet
+# to the upstream-supported moving image and Podman registry auto-update.
+# The existing Kvin SQLite snapshot was independently verified on Peanut:
+# linkstack-kvin-20261117t105833.tar, SHA
+# 301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05.
+# This play never touches DNS, firewall, rootful YXORP, Kvar, or database files.
+- name: Migrate retained Kvin LinkStack to supported registry auto-updates
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars:
+    linkstack_update_service: sanctum-linkstack-kvin-candidate.service
+    linkstack_update_container: sanctum-linkstack-kvin-candidate
+    linkstack_update_quadlet: /home/wdc2/.config/containers/systemd/sanctum-linkstack-kvin-candidate.container
+    linkstack_update_old_image: docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1
+    linkstack_update_old_image_id: 53b38579d3768c94c9904593b759aa8c1864cf88ebc435ee264290bd59676c65
+    linkstack_update_new_image: docker.io/linkstackorg/linkstack:latest
+    linkstack_update_volume: sanctum-linkstack-qualified-20261112t105926
+    linkstack_update_old_source: files/sanctum-linkstack-kvin-candidate.container
+    linkstack_update_new_source: files/sanctum-linkstack-kvin-managed.container
+    linkstack_update_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
+  tasks:
+    - name: Require exact production Kvin LinkStack and explicit image-update approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_kvin_auto_update_approved | default(false) | bool
+          - linkstack_update_new_image == 'docker.io/linkstackorg/linkstack:latest'
+          - linkstack_update_volume == 'sanctum-linkstack-qualified-20261112t105926'
+        fail_msg: Only existing Kvin LinkStack may receive an explicitly approved image-update migration.
+
+    - name: Read the currently installed LinkStack Quadlet privately
+      ansible.builtin.slurp:
+        src: "{{ linkstack_update_quadlet }}"
+      register: linkstack_update_current_source
+      no_log: true
+
+    - name: Require original immutable installed LinkStack Quadlet before update
+      ansible.builtin.assert:
+        that:
+          - "('Image=' ~ linkstack_update_old_image) in linkstack_old_lines"
+          - "'Pull=never' in linkstack_old_lines"
+          - "'AutoUpdate=registry' not in linkstack_old_lines"
+          - "('Volume=' ~ linkstack_update_volume ~ ':/htdocs:Z') in linkstack_old_lines"
+          - "'PublishPort=127.0.0.1:18081:80/tcp' in linkstack_old_lines"
+          - "('ContainerName=' ~ linkstack_update_container) in linkstack_old_lines"
+          - linkstack_old_lines | select('match','^Image=') | list | length == 1
+          - linkstack_old_lines | select('match','^Volume=') | list | length == 1
+          - linkstack_old_lines | select('match','^PublishPort=') | list | length == 1
+        vars:
+          linkstack_old_lines: "{{ (linkstack_update_current_source.content | b64decode).splitlines() }}"
+        fail_msg: Existing LinkStack Quadlet differs from original accepted source; no update attempted.
+
+    - name: Confirm original LinkStack rootless user service is active
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, "{{ linkstack_update_service }}"]
+      environment:
+        XDG_RUNTIME_DIR: "{{ linkstack_update_xdg }}"
+      register: linkstack_update_before_service
+      changed_when: false
+
+    - name: Inspect current LinkStack container identity privately
+      ansible.builtin.command:
+        argv: [podman, container, inspect, "{{ linkstack_update_container }}"]
+      changed_when: false
+      register: linkstack_update_before_container
+      no_log: true
+
+    - name: Require original running container image and same persistent volume
+      ansible.builtin.assert:
+        that:
+          - (linkstack_update_before_container.stdout | from_json | length) == 1
+          - (linkstack_update_before_container.stdout | from_json)[0].Image == linkstack_update_old_image_id
+          - (linkstack_update_before_container.stdout | from_json)[0].State.Running | bool
+          - ((linkstack_update_before_container.stdout | from_json)[0].Mounts | selectattr('Name','equalto',linkstack_update_volume) | selectattr('Destination','equalto','/htdocs') | list | length) == 1
+
+    - name: Require original loopback port publishing before update
+      ansible.builtin.command:
+        argv: [podman, port, "{{ linkstack_update_container }}", 80/tcp]
+      changed_when: false
+      register: linkstack_update_before_port
+      failed_when: >-
+        linkstack_update_before_port.rc != 0 or
+        (linkstack_update_before_port.stdout | trim) != '127.0.0.1:18081'
+
+    - name: Pull supported moving LinkStack image without touching running instance
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ linkstack_update_new_image }}"]
+      register: linkstack_update_pulled
+      changed_when: true
+      no_log: true
+
+    - name: Inspect newly pulled image platform before live restart
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ linkstack_update_new_image }}"]
+      register: linkstack_update_new_image_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require supported Linux ARM64 image content is actually cached
+      ansible.builtin.assert:
+        that:
+          - (linkstack_update_new_image_inspect.stdout | from_json | length) == 1
+          - (linkstack_update_new_image_inspect.stdout | from_json)[0].Os == 'linux'
+          - (linkstack_update_new_image_inspect.stdout | from_json)[0].Architecture == 'arm64'
+
+    - name: Replace only existing LinkStack Quadlet and restart its single rootless service
+      block:
+        - name: Install moving image and registry auto-update LinkStack Quadlet
+          ansible.builtin.copy:
+            src: "{{ linkstack_update_new_source }}"
+            dest: "{{ linkstack_update_quadlet }}"
+            owner: wdc2
+            mode: '0644'
+          register: linkstack_update_quadlet_written
+
+        - name: Require actual change from old pinned image policy
+          ansible.builtin.assert:
+            that:
+              - linkstack_update_quadlet_written.changed | bool
+
+        - name: Restart only LinkStack with the new moving image source
+          ansible.builtin.systemd_service:
+            name: "{{ linkstack_update_service }}"
+            scope: user
+            daemon_reload: true
+            state: restarted
+          environment:
+            XDG_RUNTIME_DIR: "{{ linkstack_update_xdg }}"
+
+        - name: Wait for existing LinkStack loopback application after update
+          ansible.builtin.uri:
+            url: http://127.0.0.1:18081/
+            method: GET
+            headers:
+              Host: dir.nexus.sanctum
+            use_proxy: false
+            follow_redirects: none
+            status_code: [200]
+            return_content: false
+            timeout: 6
+          retries: 15
+          delay: 2
+          register: linkstack_update_http
+          until: linkstack_update_http.status | default(0) | int == 200
+          changed_when: false
+
+        - name: Inspect restarted LinkStack container identity privately
+          ansible.builtin.command:
+            argv: [podman, container, inspect, "{{ linkstack_update_container }}"]
+          register: linkstack_update_after_container
+          changed_when: false
+          no_log: true
+
+        - name: Require new image reference and original persistent data volume
+          ansible.builtin.assert:
+            that:
+              - (linkstack_update_after_container.stdout | from_json | length) == 1
+              - (linkstack_update_after_container.stdout | from_json)[0].State.Running | bool
+              - (linkstack_update_after_container.stdout | from_json)[0].ImageName == linkstack_update_new_image
+              - ((linkstack_update_after_container.stdout | from_json)[0].Mounts | selectattr('Name','equalto',linkstack_update_volume) | selectattr('Destination','equalto','/htdocs') | list | length) == 1
+
+        - name: Confirm original rootless loopback listener remains private
+          ansible.builtin.command:
+            argv: [podman, port, "{{ linkstack_update_container }}", 80/tcp]
+          register: linkstack_update_after_port
+          changed_when: false
+          failed_when: >-
+            linkstack_update_after_port.rc != 0 or
+            (linkstack_update_after_port.stdout | trim) != '127.0.0.1:18081'
+
+      rescue:
+        - name: Restore only the original pinned LinkStack Quadlet after failed migration
+          ansible.builtin.copy:
+            src: "{{ linkstack_update_old_source }}"
+            dest: "{{ linkstack_update_quadlet }}"
+            owner: wdc2
+            mode: '0644'
+
+        - name: Attempt to restart only original pinned LinkStack service
+          ansible.builtin.systemd_service:
+            name: "{{ linkstack_update_service }}"
+            scope: user
+            daemon_reload: true
+            state: restarted
+          environment:
+            XDG_RUNTIME_DIR: "{{ linkstack_update_xdg }}"
+
+        - name: Refuse successful deployment claim after automatic Quadlet rollback
+          ansible.builtin.fail:
+            msg: >-
+              New image failed a live acceptance step. The original source
+              Quadlet was restored and its service restart attempted.
+              The prior Kvin/Peanut SQLite snapshot is retained but in-place
+              database migrations are NOT automatically rolled back.
+              Inspect LinkStack before another image change.
+
+    - name: Read installed new Quadlet without logging private host state
+      ansible.builtin.slurp:
+        src: "{{ linkstack_update_quadlet }}"
+      register: linkstack_update_installed_source
+      no_log: true
+
+    - name: Require installed moving registry policy and no changed mounts
+      ansible.builtin.assert:
+        that:
+          - "'Image=docker.io/linkstackorg/linkstack:latest' in linkstack_new_lines"
+          - "'AutoUpdate=registry' in linkstack_new_lines"
+          - "('Volume=' ~ linkstack_update_volume ~ ':/htdocs:Z') in linkstack_new_lines"
+          - "'PublishPort=127.0.0.1:18081:80/tcp' in linkstack_new_lines"
+          - "'Pull=never' not in linkstack_new_lines"
+        vars:
+          linkstack_new_lines: "{{ (linkstack_update_installed_source.content | b64decode).splitlines() }}"
+
+    - name: Report actual Kvin LinkStack moving registry update deployment
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          running_image: "{{ (linkstack_update_after_container.stdout | from_json)[0].ImageName }}"
+          image_update_policy: registry
+          original_rootless_volume_preserved: "{{ linkstack_update_volume }}"
+          original_loopback_listener: "{{ linkstack_update_after_port.stdout | trim }}"
+          current_http_status: "{{ linkstack_update_http.status | int }}"
+          owner_user_timer_previously_accepted: true
+          local_sqlite_backup_and_peanut_retention_accepted: true
+          production_linkstack_service_restarted: true
+          no_dns_proxy_firewall_or_other_services_changed: true
+          authenticated_directory_admin_not_tested_in_this_play: true
+          future_scheduled_registry_refresh_not_yet_observed: true
