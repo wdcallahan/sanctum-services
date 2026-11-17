@@ -141,3 +141,12 @@
           nextcloud_application_restore_accepted: false
           production_database_or_services_changed_on_peanut: false
           next_action: Run isolated application+Maintenance database restoration trial from this retained copy
+    - name: Expose independently verified Peanut custody only to same-run update cycle
+      ansible.builtin.set_fact:
+        nextcloud_cycle_peanut_verified: true
+      changed_when: false
+      when:
+        - hostvars['kvin.outer.sanctum'].nextcloud_cycle_update_needed | default(false) | bool
+        - nextcloud_recovery_id == hostvars['kvin.outer.sanctum'].nextcloud_cycle_recovery_id
+        - (nextcloud_retention_remote_check.stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+
