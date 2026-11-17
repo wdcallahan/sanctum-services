@@ -25,6 +25,7 @@ on:
       - "data/yxorp-routes.yml"
       - "data/kuma-monitors.yml"
       - "ansible/kuma.yml"
+      - "tools/retire-pihole-kvin.sh"
       - "ansible/kuma-stage-remove.yml"
       - "ansible/kuma-admin-bootstrap.yml"
       - "ansible/kuma-monitors.yml"
@@ -74,12 +75,6 @@ on:
       - "ansible/linkstack-image-runtime-diagnose.yml"
       - "tools/diagnose-linkstack-image-runtime.py"
       - "tests/test_linkstack_image_runtime_diagnose.py"
-      - "ansible/pihole-consistent-backup.yml"
-      - "ansible/files/sanctum-pihole-kvin.container"
-      - "ansible/pihole-kvin-deploy.yml"
-      - "tests/test_pihole_kvin_deploy.py"
-      - "tools/pihole-archive-verify.py"
-      - "tests/test_pihole_consistent_backup.py"
       - "ansible/linkstack-port80-bind-diagnose.yml"
       - "tools/diagnose-linkstack-port80-bind.py"
       - "tests/test_linkstack_port80_bind_diagnose.py"
@@ -269,9 +264,6 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-qualify-isolated-application.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-offline-startup-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-image-runtime-diagnose.yml --syntax-check
-          ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-consistent-backup.yml --syntax-check
-          ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-kvin-restore.yml --syntax-check
-          ansible-playbook -i ansible/inventory/hosts.yml ansible/pihole-kvin-deploy.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-port80-bind-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-volume-mount-diagnose.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-owned-restored-candidate.yml --syntax-check
