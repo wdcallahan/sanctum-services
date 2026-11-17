@@ -53,9 +53,9 @@
           - linkstack_old_lines | select('match','^Image=') | list | length == 1
           - linkstack_old_lines | select('match','^Volume=') | list | length == 1
           - linkstack_old_lines | select('match','^PublishPort=') | list | length == 1
-        vars:
-          linkstack_old_lines: "{{ (linkstack_update_current_source.content | b64decode).splitlines() }}"
         fail_msg: Existing LinkStack Quadlet differs from original accepted source; no update attempted.
+      vars:
+        linkstack_old_lines: "{{ (linkstack_update_current_source.content | b64decode).splitlines() }}"
 
     - name: Confirm original LinkStack rootless user service is active
       ansible.builtin.command:
@@ -215,8 +215,8 @@
           - "('Volume=' ~ linkstack_update_volume ~ ':/htdocs:Z') in linkstack_new_lines"
           - "'PublishPort=127.0.0.1:18081:80/tcp' in linkstack_new_lines"
           - "'Pull=never' not in linkstack_new_lines"
-        vars:
-          linkstack_new_lines: "{{ (linkstack_update_installed_source.content | b64decode).splitlines() }}"
+      vars:
+        linkstack_new_lines: "{{ (linkstack_update_installed_source.content | b64decode).splitlines() }}"
 
     - name: Report actual Kvin LinkStack moving registry update deployment
       ansible.builtin.debug:
