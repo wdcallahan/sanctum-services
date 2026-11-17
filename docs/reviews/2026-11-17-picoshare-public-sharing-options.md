@@ -1,5 +1,81 @@
 # Candidate review — occasional externally reachable file shares
 
+## November 17 — NOVA RECALLED `buny.us`'s ORIGINAL PURPOSE: YOURLS URL SHORTENER
+
+Nova registered `buny.us` specifically to host **YOURLS** (Your
+Own URL Shortener). The project retains the **YOURLS** name in
+November 2026, currently maintained at
+https://github.com/YOURLS/YOURLS (release 1.10.6), with owner-only
+link creation, custom keywords and API integration.
+This is a user-owned, historical goal worth recovering, **not**
+a new invented service. Nova now proposes:
+
+- **`https://buny.us/<typeable-short-code>`** — the original apex
+  YOURLS redirect service, publicly following links but
+  **owner-only creation/admin**. Also useful for nonfile shortened
+  links, independent of the future file-sharing service.
+- **`https://share.buny.us/<strong-one-time-token>`** — home-hosted,
+  sharply isolated public file download service (maybe fdrop modified,
+  maybe a minimal own download handler); actual file transfer, token
+  lifetime, in-flight claim and success/expiry logic LIVE HERE.
+- **`vpn.buny.us`** — proposed new dedicated hostname for eventual
+  WireGuard/Sanctum private remote-access endpoint, replacing the
+  historical `buny.us` bare VPN hostname from the Nov12 register.
+  VPN remains separately owned; no router/firewall/DNS approved.
+- TWO ISP static public IPs are reportedly available. Multiple
+  hostnames/web services can share one IP using HTTPS/SNI; the VPN
+  can share an IP with TCP/443 web via its distinct UDP WireGuard port,
+  or use the other address. True DMZ/segment firewall isolation
+  matters; **second IP is not itself isolation**. Determine actual
+  ISP routing/assignment with Bunny Factory before changing network.
+  The shortener should be isolated from the private network as well,
+  not simply connected to trusted Sanctum PostgreSQL services.
+
+**Key security property: short code is now the PUBLIC BEARER TOKEN.**
+A strong 128-bit file token hidden behind a public five-character
+alias does **NOT** impart 128-bit unguessability to the public link:
+an attacker only has to guess the shorter code.
+Normal YOURLS sequential/default keywords are inappropriate for
+sensitive file links. Use unambiguous, cryptographically random,
+human-typeable codes with a separately chosen minimum length,
+for example 12 chars from a 34-character alphabet
+(~61 bits before rate limiting, limited lifetime),
+or 14 chars (~71 bits); hyphen grouping is a UI option.
+Shorter non-sensitive redirects may use different alias rules.
+Time-based expiry, 404-throttle, and prompt alias disable/revoke
+after successful transfer are necessary practical controls.
+
+**Redirect behavior:** avoid permanent cached YOURLS `301`
+redirects for one-time files; use **`302`/temporary** and
+`Cache-Control: no-store` for their alias route, no logs that
+reveal hidden share tokens or URLs. Public YOURLS may otherwise
+create stable redirects; deleting the public alias later is not
+sufficient if a browser caches a permanent redirect. Expiry/
+completion **must be enforced at download target regardless of
+YOURLS redirect state**, and the alias should expire/revoke too.
+Ordinary link previews may request the short alias, but the actual
+download service must distinguish non-consuming HEAD/prefetch from
+real transfer and prevent overlapping once-only GETs.
+
+**Integration:** owner-side upload from phone creates share's long
+token and file data; owner-only service-to-service YOURLS API
+shortens it and returns the short link + local QR display. Recipient
+just types/scans and downloads in browser—zero extra clicks,
+passwords, guest accounts or software. After full practical
+server-side transfer completion, target invalidates its token;
+disable/delete the redirect alias too, but retain owner-private
+file bytes ~24h so Nova can issue a new link without reupload.
+YOURLS's default PHP/DB stack should not be installed on existing
+production Kvin alongside shared Nextcloud data if a public
+DMZ/service boundary is chosen.
+
+**Source status:** this is a design refinement / feasibility
+decision, NOT public ingress approval or request to install
+YOURLS and file gateway now. Review/qualify before deployment.
+Earlier tentative external VPS or mandatory passphrase
+suggestions are REJECTED by user.
+
+
 ## November 17 later — short enough to TYPE in remote Firefox is a hard usability requirement
 
 Nova additionally requires a full link **short enough to type by hand**
