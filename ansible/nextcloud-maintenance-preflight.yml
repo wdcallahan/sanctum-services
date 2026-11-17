@@ -48,7 +48,7 @@
           - "'AutoUpdate=registry' not in (nextcloud_cycle_installed_quadlet.content | b64decode).splitlines()"
           - "((nextcloud_cycle_installed_quadlet.content | b64decode).splitlines() | select('match','^Image=') | list | length) == 1"
           - (nextcloud_cycle_before.stdout | from_json)[0].Image is match('^[a-f0-9]{64}$')
-          - "(nextcloud_cycle_before.stdout | from_json)[0].ImageName == nextcloud_image or (nextcloud_cycle_before.stdout | from_json)[0].ImageName == nextcloud_cycle_candidate"
+          - "(nextcloud_cycle_before.stdout | from_json)[0].ImageName == nextcloud_original_frozen_image or (nextcloud_cycle_before.stdout | from_json)[0].ImageName == nextcloud_cycle_candidate"
         fail_msg: Image, installed source or running Nextcloud unexpectedly changed; no update attempted.
 
     - name: Read original Nextcloud application status read-only
@@ -132,6 +132,17 @@
         nextcloud_cycle_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
         nextcloud_cycle_recovery_id: "nextcloud-{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
       changed_when: false
+
+    - name: Refuse starting a disruptive cycle before full app and database recovery is qualified
+      ansible.builtin.assert:
+        that:
+          - nextcloud_complete_restore_qualified_in_source | bool
+        fail_msg: >-
+          An official image is cached, but full isolated Nextcloud and
+          PostgreSQL restore acceptance has not been banked. No new backup,
+          downtime or image restart attempted. Complete the owner recovery
+          contract rather than silently treating a backup as a restore.
+      when: nextcloud_cycle_update_needed | bool
 
     - name: Report actual Nextcloud maintenance-update decision before backup
       ansible.builtin.debug:
