@@ -11,10 +11,45 @@
       - nextcloud_postgres_host | length > 0
       - nextcloud_postgres_host is search('[A-Za-z]')
       - "'.' in nextcloud_postgres_host"
-      - nextcloud_image is match('^.+@sha256:[0-9a-f]{64}$')
+      - nextcloud_image == 'docker.io/library/nextcloud:34.0-apache'
     fail_msg: >-
       Choose the intended service hostname, scheme, database DNS name,
-      and an immutable image digest before applying this playbook.
+      and supported Nextcloud 34.0 maintenance channel before applying this playbook.
+
+# A routine application reconcile must never convert the old live frozen
+# Nextcloud into a newer image behind the pre-update Kvin+Peanut recovery gate.
+# Also prevents the role from replacing an already managed moving-channel
+# Quadlet that does not have the required Pull=never orchestration policy.
+# A fresh host with no installed Quadlet is a separate initial deployment.
+- name: Read whether Nextcloud already has an installed Quadlet
+  ansible.builtin.stat:
+    path: "{{ nextcloud_quadlet_dir }}/sanctum-nextcloud.container"
+    follow: false
+  register: nextcloud_role_existing_quadlet
+
+- name: Inspect existing Nextcloud Quadlet privately if present
+  ansible.builtin.slurp:
+    src: "{{ nextcloud_quadlet_dir }}/sanctum-nextcloud.container"
+  register: nextcloud_role_quadlet_source
+  when: nextcloud_role_existing_quadlet.stat.exists | default(false)
+  no_log: true
+
+- name: Refuse ordinary site deployment that would bypass backup-gated image update
+  ansible.builtin.assert:
+    that:
+      - not (nextcloud_role_existing_quadlet.stat.exists | default(false))
+        or (nextcloud_role_existing_quadlet.stat.isreg | default(false))
+      - not (nextcloud_role_existing_quadlet.stat.exists | default(false))
+        or ('Image=' ~ nextcloud_image) in (nextcloud_role_quadlet_source.content | b64decode).splitlines()
+      - not (nextcloud_role_existing_quadlet.stat.exists | default(false))
+        or 'Pull=never' in (nextcloud_role_quadlet_source.content | b64decode).splitlines()
+      - not (nextcloud_role_existing_quadlet.stat.exists | default(false))
+        or 'AutoUpdate=registry' not in (nextcloud_role_quadlet_source.content | b64decode).splitlines()
+    fail_msg: >-
+      Existing Nextcloud is not yet on the source-managed maintenance image
+      policy. Do not run a generic site reconcile to upgrade or downgrade it.
+      Use the coordinated backup, verified Peanut custody and qualified
+      maintenance-cycle playbook; this role will accept the resulting state.
 
 # Host firewall publication is owned by Sanctum Maintenance. These are
 # observations, not permission for Services to modify runtime/permanent state.
