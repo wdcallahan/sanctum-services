@@ -1,5 +1,62 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — Kvin LinkStack offhost retention NATIVE PASSED; auto-update rollout NEXT
+
+Nova executed `ansible/linkstack-kvin-retain-on-peanut.yml`
+Kvin→Peanut. **NATIVE `peanut.arcane.sanctum ok=15 changed=2
+unreachable=0 failed=0 skipped=0`.** Actual independent
+SHA256 + SQLite/config verification on Peanut passed for
+`linkstack-kvin-20261117t105833.tar`, **93849600 bytes**,
+SHA256 `301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05`.
+Original LinkStack untouched, no proxy/DNS/firewall change.
+No separate full application restore from THIS new archive has
+been run; do not overclaim it.
+
+**Next real Services action/source CI GREEN:** official LinkStack
+Docker uses moving `docker.io/linkstackorg/linkstack:latest`, and
+Podman registry updates need a fully qualified movable tag.
+New current managed Quadlet at
+`ansible/files/sanctum-linkstack-kvin-managed.container` has
+`AutoUpdate=registry` with identical old rootless
+`sanctum-linkstack-kvin-candidate` container/service, existing
+volume `sanctum-linkstack-qualified-20261112t105926` and
+loopback `127.0.0.1:18081`. Source-only
+`ansible/linkstack-kvin-auto-update.yml` strictly checks
+old live image/container/Quadlet/volume/port before touching,
+pulls moving image, validates Linux ARM64, updates only
+LinkStack user Quadlet, restarts only LinkStack, confirms
+HTTP200, mount, runtime image, port, with best-effort original
+source/service rollback on health failure. **The old staging
+file remains in source as historical fallback only.** New
+tests caught two mistakenly nested `vars` in `assert`
+actions before any native execution; corrected. **FULL
+SOURCE+SYNTAX CI PASSED
+[44137175030](https://github.com/wdcallahan/sanctum-services/actions/runs/44137175030)**.
+**Native production LinkStack update has NOT run**.
+
+**Next operator invocation on `wdc2@kvin`:**
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/linkstack-kvin-auto-update.yml \
+  -e sanctum_linkstack_kvin_auto_update_approved=true
+```
+**WARNING PRIOR TO PASTE:** actual production directory
+restart, pull latest ARM64 image and potential in-place
+application SQLite migration; short downtime possible.
+Fallback Quadlet doesn't undo a migrated SQLite database.
+The verified off-Kvin snapshot is the pre-upgrade recovery
+point. No sudo/firewall/DNS/YXORP/other-service changes.
+Request `Report actual Kvin LinkStack moving registry update
+deployment` + recap or actual failed task. After native
+acceptance continue already defined Nextcloud recurring
+backup/Calendar-safe update and meaningful isolated
+DB-dependent application restore, not new invented discovery.
+
+[Services #6 native record and source](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6955712124).
+
+
 ## November 17 — REAL current Kvin LinkStack backup ACCEPTED; next Peanut copy ready
 
 **NATIVE just completed on Kvin:** Nova ran
