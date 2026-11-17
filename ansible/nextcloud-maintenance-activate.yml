@@ -14,10 +14,6 @@
     nextcloud_cycle_target_image: docker.io/library/nextcloud:34.0-apache
     nextcloud_cycle_unit: sanctum-nextcloud.service
     nextcloud_cycle_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
-    # Not an operator shortcut: change only when the independent
-    # PostgreSQL + full application restore has actually been proven.
-    # A restored filesystem without restored DB/working app is NOT enough.
-    nextcloud_complete_restore_qualified_in_source: false
   tasks:
     - name: Require exact live-service scope, complete recovery qualification and separate activation approval
       ansible.builtin.assert:
