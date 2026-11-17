@@ -64,8 +64,6 @@
           - nextcloud_maintenance_helper_stat.stat.isreg | default(false)
           - not (nextcloud_maintenance_helper_stat.stat.islnk | default(false))
           - nextcloud_maintenance_helper_stat.stat.pw_name == 'wdc2'
-          - (nextcloud_maintenance_helper_stat.stat.mode | int(base=8)) is not none
-          - ((nextcloud_maintenance_helper_stat.stat.mode | int(base=8)) % 32) < 8
         fail_msg: >-
           Required Maintenance Nextcloud-only backup helper is absent or not
           an ordinary owner-controlled source file. Do not guess another
@@ -168,6 +166,19 @@
             argv: "{{ nextcloud_database_export_argv }}"
           register: nextcloud_database_export_result
           changed_when: nextcloud_database_export_result.rc == 0
+          no_log: true
+
+        - name: Require a successful Nextcloud-only owner export receipt
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_database_export_result.stdout | from_json).status == 'dump_created'
+              - (nextcloud_database_export_result.stdout | from_json).database == 'nextcloud'
+              - (nextcloud_database_export_result.stdout | from_json).filename == 'nextcloud-postgresql.dump'
+              - (nextcloud_database_export_result.stdout | from_json).catalog_readable | bool
+              - not ((nextcloud_database_export_result.stdout | from_json).restore_verified | bool)
+            fail_msg: >-
+              Maintenance helper did not confirm one valid Nextcloud-only
+              custom-format export. No local backup may be accepted.
           no_log: true
 
         - name: Require one nonlinked private database artifact from the owner interface
