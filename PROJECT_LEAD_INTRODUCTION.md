@@ -1,5 +1,13 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — Nextcloud weekly backup TIMER NATIVE INSTALLED AND ENABLED; first execution pending
+
+**LATEST EXACT USER NATIVE RECEIPT:** On `wdc2@kvin`, Nova ran `ansible/nextcloud-backup-schedule-install.yml -e nextcloud_backup_schedule_install_approved=true`. Exact task **`Report source-owned weekly Nextcloud backup schedule without claiming first occurrence`** and `PLAY RECAP` showed **`kvin.outer.sanctum ok=13 changed=3 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0`**. Actual: `installed_and_enabled=true`, rootless user `sanctum-nextcloud-backup.timer`, **Sunday 03:30 Kvin local, no delayed catch-up**, uses existing verified Kvin consistent snapshot + independently SHA-verified Peanut retention, `immediate_backup_not_triggered=true`, `current_nextcloud_not_restarted=true`, `backups_auto_pruned=false`, **`scheduled_first_run_not_yet_observed=true`**. Installation included source-defined temporary user-manager Kvin and Peanut Ansible SSH test. [Services #2 native report](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6958782891).
+
+**Accept native installation; never repeat the installer merely to reassure ourselves.** The scheduled one-shot's *real end-to-end backup execution and independently retained current recovery point* are still separate acceptance. Services lead next independent work is a **source-only specific post-execution verification/first-job acceptance** before asking Nova for a supervised run or waiting for the first Sunday. No immediate backup, cron, database or service operation is authorized solely by the source report. Do not erroneously state the job has ever fired; do not block other Services source work waiting for November 22.
+
+**Still unresolved:** isolated full app+Maintenance-owned PostgreSQL test restore for Nextcloud on Peanut, first guarded production 34.0.6 patch, daily patch timer activation, retained backup capacity/retention planning, future automated actual first-run evidence. The Nov16 real consistent backup+Peanut and isolated files and Nov17 ARM64 cached image stages remain accepted; do not rerun. Continuous engineering rule applies.
+
 ## November 17 — Nextcloud 34.0.6 native image accepted; coordinated patch and weekly backups SOURCE
 
 **LATEST NATIVE RECEIPT:** Nova ran the previously green
