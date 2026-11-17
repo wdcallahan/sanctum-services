@@ -25,20 +25,29 @@ dated and now-stale "CURRENT" paragraphs below.
   already accepted. No need for a gratuitous reinstallation or broad probe.
 
 **ACTIVE independent Services work (not waiting for DB owner):**
-1. **YXORP/Nginx automatic updates:** source now declares
-   `docker.io/library/nginx:stable-alpine`,
-   Quadlet `AutoUpdate=registry`, and production rootful
-   `podman-auto-update.timer` convergence; full source
-   [CI 44005725062](https://github.com/wdcallahan/sanctum-services/actions/runs/44005725062)
-   passed. **Kvin still has the old pinned installed Quadlet and disabled
-   rootful timer in the last native observation.** Prepare one reviewed
-   approved production apply, verify active timer and the existing seven
-   routes. This is Services-owned, not blocked on Maintenance restore.
+1. **YXORP/Nginx automatic updates — NATIVE APPLIED November 17:**
+   Kvin production Ansible `ok=36 changed=4 failed=0 skipped=0`;
+   the source deployed `docker.io/library/nginx:stable-alpine`,
+   Quadlet `AutoUpdate=registry`, and enabled/started the
+   **system/rootful** `podman-auto-update.timer`.
+   Seven vhosts accepted; Kuma 302, LinkStack 200, Yarn 200, no
+   DNS/firewall changes. [Native evidence](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6952289320).
+   The mechanism is deployed; the *first future scheduled image refresh*
+   has not yet been observed. Do not rerun normal route tests by default.
 2. **Kuma update lifecycle:** deployed fixed image digest, no declared
    registry auto-update. Qualify its own SQLite backup and isolated restore,
    then correct the moving-image and source-owned recurring update path.
    Do not conflate "not yet implemented" with an externally imposed
    restriction.
+   **Current source progress:** existing native Kvin offline SQLite
+   backup/isolated restore was accepted November 11; a separate
+   `ansible/kuma-retain-on-peanut.yml` transfers that **same**
+   SHA-verified 290816-byte archive to Peanut without touching live Kuma.
+   Its source CI must pass before operator execution. The upstream
+   Uptime Kuma 2 image channel is **`:2`**, not `:latest`;
+   [upstream marks `:latest` deprecated for v1](https://github.com/louislam/uptime-kuma/wiki/Docker-Tags).
+   Move to a supported update channel only after preserving the
+   known-good data and reconciling old fixed-digest tests.
 3. **LinkStack update lifecycle:** running Kvin restored candidate uses
    original digest and `Pull=never`; reconcile wanted persistent state,
    backup/restore ownership and move to sustained unattended update
