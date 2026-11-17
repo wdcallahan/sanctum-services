@@ -32,6 +32,8 @@ on:
       - "ansible/kuma-stage-remove.yml"
       - "ansible/kuma-admin-bootstrap.yml"
       - "ansible/kuma-monitors.yml"
+      - "ansible/kuma-post-update-verify.yml"
+      - "tests/test_kuma_post_update_verify.py"
       - "ansible/kuma-backup-restore-trial.yml"
       - "ansible/kuma-retain-on-peanut.yml"
       - "tests/test_kuma_offhost_retention.py"
@@ -248,6 +250,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_kuma_stage_removal.py'
           python3 -m unittest discover -s tests -p 'test_kuma_admin_bootstrap.py'
           python3 -m unittest discover -s tests -p 'test_kuma_monitors.py'
+          python3 -m unittest discover -s tests -p 'test_kuma_post_update_verify.py'
           python3 -m unittest discover -s tests -p 'test_kuma_backup_verify.py'
           python3 -m unittest discover -s tests -p 'test_kuma_backup_trial.py'
           python3 -m unittest discover -s tests -p 'test_kuma_offhost_retention.py'
@@ -346,6 +349,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-stage-remove.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-admin-bootstrap.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-monitors.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-post-update-verify.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-backup-restore-trial.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma-retain-on-peanut.yml --syntax-check
           node --check tools/kuma-reconcile-monitors.js
