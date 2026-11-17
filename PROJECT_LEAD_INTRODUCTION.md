@@ -1,5 +1,57 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — immediate Kuma Ansible source failure RETRIED AFTER FIX
+
+Nova ran `ansible/kuma-post-update-verify.yml` on Kvin as `wdc2`,
+with existing Vault. **NATIVE** `ok=4 changed=0 failed=1`:
+the fourth task checked the Kuma Quadlet and then the `assert`
+action rejected the nested `vars` argument. **THIS IS OUR
+Ansible SOURCE CODING ERROR**, not an actual regression in Kuma.
+There was **no state change** and neither the admin login nor monitor
+read-only stage ran, so their current post-upgrade status remains
+unverified. Do not suggest reinstallation or new backup.
+
+Services moved `vars` to the **task level** on
+`Require installed v2 registry update declaration and preserved volume`
+and added `tests/test_kuma_post_update_verify.py` acceptance that
+iterates every `assert` task and rejects invalid module argument keys;
+regular Ansible syntax-check alone does not catch them. **Full CI
+[44122245307 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44122245307)**.
+**NEXT EXACT OPERATOR ACTION:** from `wdc2@kvin`:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ANSIBLE_VAULT_PASSWORD_FILE="$HOME/.config/sanctum-services/secrets/vault.key" \
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/kuma-post-update-verify.yml \
+  -e kuma_post_update_verify_approved=true
+```
+This is an **identical read-only retry after correction**, with no
+sudo, downtime, DB writes or monitor mutations. Return the actual
+`Report bounded post-update original administrator and monitor
+acceptance` and `PLAY RECAP`, or the exact failed task.
+Do not conflate syntax-check source CI with native success.
+
+**PicoShare intent fully corrected:** Nova rejected offsite
+VPS/object storage, recipient-side password, app, registration, manual
+decryption, separate secret or any extra download steps. The one
+wanted behavior is **from own home infrastructure**, upload file from
+phone, hand out easy HTTPS URL or QR, recipient downloads using
+normal browser with zero extra interaction, then link invalidates
+after **one download**. Wants exceptional **server-side/DMZ
+network isolation** for this public service, not militarized
+internal LAN access. Inspecting upstream
+[download handler](https://github.com/mtlynch/picoshare/blob/master/handlers/download.go)
+showed it logs successful fetch **after**
+`http.ServeContent`, not atomic one-shot token invalidation.
+**Do not promise PicoShare already supports one-time links**;
+future feasible work is one-shot gateway/patch or alternative,
+QR and server-only controls and exception handling for
+prefetch/HEAD/range/resume. This is an **uncommitted future
+candidate**, not permission to deploy or add a blocking issue.
+See [corrected concept review](docs/reviews/2026-11-17-picoshare-public-sharing-options.md).
+
+
 ## November 17 — native Kuma update success, actual user-facing next step
 
 Nova executed `ansible/kuma.yml -e kuma_stage_approved=true` on
