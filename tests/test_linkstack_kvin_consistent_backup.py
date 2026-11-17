@@ -35,7 +35,7 @@ class CurrentKvinLinkStackBackup(unittest.TestCase):
         self.assertEqual(stop["name"],"{{ linkstack_live_service }}")
         self.assertEqual(stop["state"],"stopped")
         self.assertEqual(stop["scope"],"user")
-        export=next(t for t in action["block"] if "volume export" in t["name"])
+        export=next(t for t in action["block"] if t["name"].startswith("Export only stopped LinkStack"))
         self.assertIn("{{ linkstack_live_volume }}",export["ansible.builtin.command"]["argv"])
         self.assertIn("{{ linkstack_backup_partial }}",export["ansible.builtin.command"]["argv"])
         restart=action["always"][0]["ansible.builtin.systemd_service"]
