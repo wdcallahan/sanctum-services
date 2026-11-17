@@ -1,8 +1,8 @@
 ---
-# Native-qualified on Kvin, November 11, 2026: Podman inspect linux/arm64
-# and disposable offline Node runtime passed (ok=8 changed=0 failed=0).
-# Exact digest is desired state; upgrades require deliberate source update.
-kuma_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+# The old November 11 digest is historical qualification evidence, NOT
+# permanent production policy. Supported Kuma 2 moving registry tag (upstream
+# uses :latest for v1); user Podman auto-update timer is already enabled.
+kuma_image: "docker.io/louislam/uptime-kuma:2"
 # Explicit operator decision is required even for the isolated staged copy.
 kuma_stage_approved: false
 kuma_bind_address: "127.0.0.1"
