@@ -10,7 +10,7 @@
   become: false
   vars:
     nextcloud_backup_root: "{{ ansible_facts['env']['HOME'] }}/.local/share/sanctum-services/backups/nextcloud"
-    nextcloud_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+    nextcloud_backup_stamp: "{{ nextcloud_cycle_backup_stamp | default(ansible_facts['date_time']['iso8601_basic_short'] | lower) }}"
     nextcloud_backup_work: "{{ nextcloud_backup_root }}/nextcloud-{{ nextcloud_backup_stamp }}.work"
     nextcloud_backup_bundle: "{{ nextcloud_backup_root }}/nextcloud-{{ nextcloud_backup_stamp }}"
     nextcloud_backup_dump: "{{ nextcloud_backup_work }}/nextcloud-postgresql.dump"
