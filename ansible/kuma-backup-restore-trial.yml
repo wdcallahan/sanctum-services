@@ -10,7 +10,7 @@
   vars_files:
     - /home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml
   vars:
-    kuma_recovery_expected_image: "docker.io/louislam/uptime-kuma@sha256:302aceeca2db79617f195a7549f7c8dfb05375a274b1092c59d81c1fb61a9ab9"
+    kuma_recovery_expected_image: "docker.io/louislam/uptime-kuma:2"
     kuma_recovery_backup_dir: /home/wdc2/.local/share/sanctum-services/backups/kuma
     kuma_recovery_stamp: "{{ ansible_date_time.iso8601_basic_short | lower }}"
     kuma_recovery_partial: "{{ kuma_recovery_backup_dir }}/sanctum-kuma-{{ kuma_recovery_stamp }}.tar.partial"
