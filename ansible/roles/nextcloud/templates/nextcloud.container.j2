@@ -2,12 +2,13 @@
 Description=Sanctum Nextcloud (Apache, rootless Podman)
 
 [Container]
+# Only the Services backup-gated maintenance workflow may refresh this image.
+# Do not add AutoUpdate=registry: the shared user timer cannot guarantee a
+# consistent app + Maintenance-owned PostgreSQL backup and Peanut custody.
 Image={{ nextcloud_image }}
+Pull=never
 ContainerName=sanctum-nextcloud
-# Actual Nextcloud-image TCP to db.nexus.sanctum succeeded using rootless
-# slirp4netns; the default pasta network hairpinned to its own source IP.
-# Maintenance verified the production PostgreSQL receiver's
-# source-preserving slirp4netns mode and authenticated Nextcloud-image test.
+# Preserve the accepted working rootless PostgreSQL transport.
 Network=slirp4netns
 PublishPort=0.0.0.0:{{ nextcloud_host_port }}:80/tcp
 Volume={{ nextcloud_html_dir }}:/var/www/html
