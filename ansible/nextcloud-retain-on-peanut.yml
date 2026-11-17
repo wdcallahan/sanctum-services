@@ -1,0 +1,139 @@
+---
+# Source-only follow-on to nextcloud-consistent-backup.yml.
+# Run on Kvin as wdc2 once a verified local recovery point has been produced.
+# Ansible transfers exactly the four protected bundle files to an isolated
+# private directory on Peanut. No Nextcloud/PG service runs on Peanut.
+- name: Retain one Nextcloud recovery snapshot off Kvin on independent Peanut
+  hosts: yxorp_test
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_retention_root_local: /home/wdc2/.local/share/sanctum-services/backups/nextcloud
+    nextcloud_retention_root_remote: /home/wdc2/.local/share/sanctum-services/backups/nextcloud
+    nextcloud_retention_local: "{{ nextcloud_retention_root_local }}/{{ nextcloud_recovery_id | default('UNSET') }}"
+    nextcloud_retention_remote: "{{ nextcloud_retention_root_remote }}/{{ nextcloud_recovery_id | default('UNSET') }}"
+    nextcloud_retention_files:
+      - manifest.json
+      - nextcloud-html.tar
+      - nextcloud-private.tar
+      - nextcloud-postgresql.dump
+  tasks:
+    - name: Require exact Peanut destination and explicit private-copy authorization
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - nextcloud_recovery_id is defined
+          - (nextcloud_recovery_id | default('')) is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
+          - nextcloud_retain_to_peanut_approved | default(false) | bool
+          - not ansible_check_mode
+        fail_msg: >-
+          Refusing retention: select an actual completed Nextcloud recovery
+          point and separately approve an independent private Peanut copy.
+
+    - name: Identify the Ansible controller before reading local source material
+      ansible.builtin.command:
+        argv: [hostname, -f]
+      delegate_to: localhost
+      register: nextcloud_retention_controller_host
+      changed_when: false
+
+    - name: Require controller is Kvin
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_retention_controller_host.stdout | trim) == 'kvin.outer.sanctum'
+          - lookup('env', 'HOME') == '/home/wdc2'
+        fail_msg: Run the retention playbook on Kvin as wdc2; no other source host is approved.
+
+    - name: Check complete local application recovery bundle
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "{{ playbook_dir }}/../tools/nextcloud-recovery-bundle.py"
+          - "{{ nextcloud_retention_local }}"
+      delegate_to: localhost
+      register: nextcloud_retention_source_check
+      changed_when: false
+
+    - name: Require actual locally verifiable whole recovery point
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_retention_source_check.stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+          - (nextcloud_retention_source_check.stdout | from_json).nextcloud_required_paths_present_in_archive | bool
+          - (nextcloud_retention_source_check.stdout | from_json).postgresql_custom_dump_header_recognized | bool
+        fail_msg: Local recovery point failed archive/dump integrity checks; copy refused.
+
+    - name: Observe independent destination without dereferencing symlinks
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ nextcloud_retention_root_remote }}"
+        - "{{ nextcloud_retention_remote }}"
+      register: nextcloud_retention_destination_status
+
+    - name: Require independent empty destination and ordinary parent
+      ansible.builtin.assert:
+        that:
+          - not (nextcloud_retention_destination_status.results[1].stat.exists | default(false))
+          - not (nextcloud_retention_destination_status.results[1].stat.islnk | default(false))
+          - not (nextcloud_retention_destination_status.results[0].stat.islnk | default(false))
+          - not (nextcloud_retention_destination_status.results[0].stat.exists | default(false))
+            or (nextcloud_retention_destination_status.results[0].stat.isdir | default(false))
+        fail_msg: This recovery point already exists on Peanut or a destination is not a normal directory.
+
+    - name: Create isolated owner-private Peanut backup parent
+      ansible.builtin.file:
+        path: "{{ nextcloud_retention_root_remote }}"
+        state: directory
+        mode: '0700'
+
+    - name: Create a new unique owner-private recovery point on Peanut
+      ansible.builtin.file:
+        path: "{{ nextcloud_retention_remote }}"
+        state: directory
+        mode: '0700'
+
+    - name: Copy exactly the four recovery artifacts over managed SSH
+      ansible.builtin.copy:
+        src: "{{ nextcloud_retention_local }}/{{ item }}"
+        dest: "{{ nextcloud_retention_remote }}/{{ item }}"
+        mode: '0600'
+        force: false
+      loop: "{{ nextcloud_retention_files }}"
+      register: nextcloud_retention_copied
+      no_log: true
+
+    - name: Verify independent actual bytes directly on Peanut using the same source verifier
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-recovery-bundle.py') }}"
+          - "{{ nextcloud_retention_remote }}"
+      register: nextcloud_retention_remote_check
+      changed_when: false
+
+    - name: Require independent snapshot hashes and archive structure match
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_retention_remote_check.stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+          - (nextcloud_retention_remote_check.stdout | from_json).nextcloud_required_paths_present_in_archive | bool
+          - (nextcloud_retention_remote_check.stdout | from_json).postgresql_custom_dump_header_recognized | bool
+        fail_msg: Peanut copy is not verified; do not declare an independent backup.
+
+    - name: Report actual off-host retention without claiming application restore
+      ansible.builtin.debug:
+        msg:
+          source: kvin.outer.sanctum
+          destination: peanut.arcane.sanctum
+          retained_recovery_id: "{{ nextcloud_recovery_id }}"
+          remote_private_snapshot: "{{ nextcloud_retention_remote }}"
+          artifacts: "{{ nextcloud_retention_files }}"
+          hashes_and_archive_structures_verified_on_peanut: true
+          database_restore_verified: false
+          nextcloud_application_restore_accepted: false
+          production_database_or_services_changed_on_peanut: false
+          next_action: Run isolated application+Maintenance database restoration trial from this retained copy
