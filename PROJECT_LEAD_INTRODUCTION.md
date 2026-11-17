@@ -1,5 +1,60 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — Kuma native off-host copy and public PicoShare discussion
+
+**User's exact actual Kvin→Peanut Kuma result is ACCEPTED:**
+`ansible/kuma-retain-on-peanut.yml` on Peanut
+`ok=13 changed=2 unreachable=0 failed=0 skipped=0`.
+`copy_verified_on_peanut=true`; SHA256
+`97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`
+for `sanctum-kuma-20261111t144137.tar`; live SQLite and
+Kuma user service untouched. `encrypted_admin_vault_custody_not_verified=true`,
+`complete_disaster_recovery_accepted=false`. Don't repeat transfer
+or existing November 11 restored-login/monitor tests.
+
+**Now Kuma SOURCE updated and CI PASSED:**
+`ansible/group_vars/kuma.yml` now selects
+`docker.io/louislam/uptime-kuma:2` (not SHA, not `:latest` for v1).
+Rootless `ansible/roles/kuma/templates/kuma.container.j2` has
+`AutoUpdate=registry`; role preflight and fixed-image backup trial
+updated, old SHA enforcement removed from currently executable desired state
+but historical qualification fixture still represents prior observation.
+**[Full CI 44116110856 success](https://github.com/wdcallahan/sanctum-services/actions/runs/44116110856)**.
+Kvin installed Kuma container has NOT been updated yet.
+**NEXT OPERATOR STEP on `wdc2@kvin`:**
+`cd ~/src/sanctum-services && git pull --ff-only && ansible-playbook -i ansible/inventory/hosts.yml ansible/kuma.yml -e kuma_stage_approved=true`.
+Conspicuously warn that this is a **production Kuma restart, pulls
+latest major-v2 image and may migrate the live SQLite schema**, causing
+temporary monitoring outage. This uses original `sanctum-kuma-data`
+volume and config, touches no DB outside Kuma/DNS/firewall.
+Return actual final role report and play recap/failed task. The existing
+Kvin user auto-update timer was already active. Continue after native
+result, no artificial extra task.
+
+**NEW USER CONCEPT (not yet approved for deployment):**
+Nova has **real static ISP IP** and wants to send a one-off PUBLIC
+file link to selected external recipients. Unusually for this project,
+he explicitly wants **maximum isolation and strong public-endpoint
+security**, in contrast to his dislike of milspec restrictions on
+ordinary internal Sanctum services. PicoShare was an uncommitted
+2025/2026 idea; prior October suggestion that Nextcloud public links
+may make it redundant is **under reconsideration** due the desired
+dedicated and isolated Internet-facing boundary. Official upstream
+latest **v1.5.5 released 2026-11-16** adds download passphrases and two
+guest-upload security fixes; do not use old v1.5.4 as latest.
+[Feasibility note](docs/reviews/2026-11-17-picoshare-public-sharing-options.md)
+compares isolated OUTSIDE VPS/static-gateway vs dedicated home DMZ;
+public download only, private-only owner upload/admin, TLS, short-lived
+unguessable tokens/password, no path into `.sanctum`, resource limits.
+The most isolated choice is independent external VPS/object storage
+with files pushed outward, **no home WAN ingress** even though static
+IP exists; a separately routed/static-IP home DMZ is an alternative
+only with true denied LAN connectivity. **No PicoShare install, NAT,
+WAN port, DNS, certificate or container creation is approved yet.**
+Current exploratory request does NOT create a new compulsory service
+workstream.
+
+
 ## November 17 — current next action and future-service scope
 
 **NATIVE YXORP unattended-update source reconciliation accepted:**
