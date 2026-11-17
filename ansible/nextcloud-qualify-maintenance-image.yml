@@ -1,0 +1,141 @@
+---
+# Source-qualified image cache stage only. This play does not start/update
+# the live Nextcloud application or call any database/backup/restore helper.
+# A fresh 34.0-apache ARM64 image is needed to decide whether a safe within-34
+# maintenance update is actually available. Do not use :latest or 35.
+- name: Qualify an official Nextcloud 34 maintenance image independently of production
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_maintenance_candidate: docker.io/library/nextcloud:34.0-apache
+    nextcloud_maintenance_original_container: sanctum-nextcloud
+    nextcloud_maintenance_quadlet: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container
+  tasks:
+    - name: Require exact Kvin host and image-cache-only qualification approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - nextcloud_maintenance_candidate == 'docker.io/library/nextcloud:34.0-apache'
+          - nextcloud_image is match('^docker.io/library/nextcloud@sha256:[a-f0-9]{64}$')
+          - nextcloud_candidate_stage_approved | default(false) | bool
+        fail_msg: Only an explicit rootless Kvin image-cache qualification is permitted.
+
+    - name: Privately read the installed original Nextcloud Quadlet
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_maintenance_quadlet }}"
+      register: nextcloud_stage_quadlet
+      no_log: true
+
+    - name: Inspect the original running Nextcloud container without exposing its environment
+      ansible.builtin.command:
+        argv: [podman, container, inspect, "{{ nextcloud_maintenance_original_container }}"]
+      register: nextcloud_stage_original
+      changed_when: false
+      no_log: true
+
+    - name: Require live image identity matches original frozen Git before image-cache change
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_stage_original.stdout | from_json | length) == 1
+          - (nextcloud_stage_original.stdout | from_json)[0].State.Running | bool
+          - (nextcloud_stage_original.stdout | from_json)[0].ImageName == nextcloud_image
+          - ('Image=' ~ nextcloud_image) in (nextcloud_stage_quadlet.content | b64decode).splitlines()
+          - 'AutoUpdate=registry' not in (nextcloud_stage_quadlet.content | b64decode).splitlines()
+        fail_msg: Current application differs from observed baseline; refuse even candidate staging.
+
+    - name: Observe original application status read-only before staging
+      ansible.builtin.command:
+        argv: [podman, exec, --user, www-data, "{{ nextcloud_maintenance_original_container }}", php, occ, status, --output=json]
+      register: nextcloud_stage_original_status
+      changed_when: false
+      no_log: true
+
+    - name: Refuse candidate work while original is uninstalled or in maintenance
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_stage_original_status.stdout | from_json).installed | bool
+          - not ((nextcloud_stage_original_status.stdout | from_json).maintenance | bool)
+          - not ((nextcloud_stage_original_status.stdout | from_json).needsDbUpgrade | default(false) | bool)
+          - ((nextcloud_stage_original_status.stdout | from_json).version | string) is match('^34[.]0[.][0-9]+([.][0-9]+)?$')
+        fail_msg: Original Nextcloud is not healthy within major 34 minor 0.
+
+    - name: Pull only official moving Nextcloud 34 maintenance image into rootless cache
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ nextcloud_maintenance_candidate }}"]
+      register: nextcloud_stage_pulled
+      changed_when: nextcloud_stage_pulled.rc == 0
+      no_log: true
+
+    - name: Inspect cached candidate platform without exposing configuration
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ nextcloud_maintenance_candidate }}"]
+      register: nextcloud_stage_candidate_info
+      changed_when: false
+      no_log: true
+
+    - name: Require an actual Linux ARM64 image and image ID
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_stage_candidate_info.stdout | from_json | length) == 1
+          - (nextcloud_stage_candidate_info.stdout | from_json)[0].Os == 'linux'
+          - (nextcloud_stage_candidate_info.stdout | from_json)[0].Architecture == 'arm64'
+          - (nextcloud_stage_candidate_info.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
+          - (nextcloud_stage_original.stdout | from_json)[0].Image is match('^[a-f0-9]{64}$')
+        fail_msg: Candidate image is not a verified ARM64 Linux image.
+
+    - name: Read shipped candidate application version in a disposable networkless runtime
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --rm
+          - --pull=never
+          - --network=none
+          - --read-only
+          - --security-opt=no-new-privileges
+          - --entrypoint
+          - php
+          - "{{ nextcloud_maintenance_candidate }}"
+          - -r
+          - >-
+            require '/usr/src/nextcloud/version.php';
+            echo json_encode(array('major'=>(int)$OC_Version[0],
+            'minor'=>(int)$OC_Version[1],
+            'patch'=>(int)$OC_Version[2],
+            'version'=>implode('.',array_slice($OC_Version,0,3))));
+      register: nextcloud_stage_candidate_version
+      changed_when: false
+      no_log: true
+
+    - name: Require candidate remains on the same maintenance release family
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_stage_candidate_version.stdout | from_json).major | int == 34
+          - (nextcloud_stage_candidate_version.stdout | from_json).minor | int == 0
+          - (nextcloud_stage_candidate_version.stdout | from_json).patch | int >= ((nextcloud_stage_original_status.stdout | from_json).version.split('.')[2] | int)
+        fail_msg: Candidate did not report a non-regressing official Nextcloud 34.0.x version.
+
+    - name: Report actual independent Nextcloud 34 maintenance image qualification
+      ansible.builtin.debug:
+        msg:
+          observer: "{{ inventory_hostname }}"
+          current_version: "{{ (nextcloud_stage_original_status.stdout | from_json).version }}"
+          candidate_version: "{{ (nextcloud_stage_candidate_version.stdout | from_json).version }}"
+          candidate_image: "{{ nextcloud_maintenance_candidate }}"
+          current_running_image_id: "{{ (nextcloud_stage_original.stdout | from_json)[0].Image }}"
+          candidate_cached_image_id: "{{ (nextcloud_stage_candidate_info.stdout | from_json)[0].Id }}"
+          different_image_available: "{{ (nextcloud_stage_original.stdout | from_json)[0].Image != (nextcloud_stage_candidate_info.stdout | from_json)[0].Id }}"
+          native_platform_verified: linux/arm64
+          application_version_family_verified: "34.0.x"
+          cached_image_staged_only: true
+          original_nextcloud_not_restarted: true
+          original_nextcloud_files_or_database_not_modified: true
+          nextcloud_update_timer_not_changed: true
+          live_upgrade_not_authorized: true
+          next_action: Integrate consistent pre-update Kvin backup and independent Peanut verification before any guarded image activation
