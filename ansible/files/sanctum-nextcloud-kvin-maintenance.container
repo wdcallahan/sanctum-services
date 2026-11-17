@@ -1,0 +1,25 @@
+[Unit]
+Description=Sanctum Nextcloud (Apache, rootless Podman)
+
+[Container]
+# Only the Services backup-gated maintenance workflow may refresh this image.
+# Do not add AutoUpdate=registry: the shared user timer cannot guarantee a
+# consistent app + Maintenance-owned PostgreSQL backup and Peanut custody.
+Image=docker.io/library/nextcloud:34.0-apache
+Pull=never
+ContainerName=sanctum-nextcloud
+# Preserve the accepted working rootless PostgreSQL transport.
+Network=slirp4netns
+PublishPort=0.0.0.0:8085:80/tcp
+Volume=/home/wdc2/srv/sanctum-services/nextcloud/html:/var/www/html
+Volume=/home/wdc2/.config/sanctum-services/nextcloud/postgresql-password:/run/secrets/nextcloud-postgresql-password:ro
+Volume=/home/wdc2/.config/sanctum-services/nextcloud/postgresql-database:/run/secrets/nextcloud-postgresql-database:ro
+Volume=/home/wdc2/.config/sanctum-services/nextcloud/postgresql-username:/run/secrets/nextcloud-postgresql-username:ro
+EnvironmentFile=/home/wdc2/.config/sanctum-services/nextcloud/nextcloud.env
+
+[Service]
+Restart=always
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
