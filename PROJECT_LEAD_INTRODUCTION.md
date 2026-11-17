@@ -1,5 +1,61 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — Kuma post-image-upgrade native accepted; future sharing candidate
+
+**KUMA POST-UPDATE NOW NATIVE COMPLETE:** Nova ran the corrected
+`ansible/kuma-post-update-verify.yml` with its existing Vault,
+`kvin.outer.sanctum ok=12 changed=0 failed=0 skipped=0`.
+`original_admin_login_verified=true`,
+`existing_wicket_monitor_config_verified=true`,
+`monitor_id=1`, `latest_wicket_status=Up`,
+`heartbeat_age_seconds=40`, `currently_up_and_recent=true`,
+running image `docker.io/louislam/uptime-kuma:2`,
+`installed_auto_update=registry`, `service_active=active`.
+No database/service/monitor changes from the verification. This closes
+Kuma's immediate moving-image migration and saved-state compatibility
+acceptance. **Do NOT ask for another Kuma setup, monitor reconcile,
+backup/transfer, or WebSocket screenshot.** Offhost November11
+archive is accepted but predates the v2 moving-tag update; no future
+timer-driven update occurrence has been measured.
+[Services #6 native update acceptance](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6953841654).
+
+**PICOS HARE / FDROP EXPLORATION (UNCOMMITTED):** User wants
+on-premises-only small-sharing service, with high public ingress
+isolation from Sanctum: owner selects/uploads a file on phone,
+receives easy **human-typeable** short HTTPS URL and QR; external
+recipient opens in ordinary browser with zero extra password/app/click;
+URL invalid after one practically completed transfer or expiration,
+but blob retained privately ~one day for new-link reissue without
+reupload. **No offsite VPS**, no recipient decryption steps. Found
+existing [fdrop](https://github.com/polimo-dev/fdrop) Aug2026 Go
+project explicitly built for typed one-download direct URLs, time/count
+limits, ARM64 and manageable link length. It needs source hardening:
+default 5-character token is only ~25 bits; use longer 14–16
+human-readable characters with rate limiting; current
+`GET /{id}` checks before `io.Copy` and calls `Consume` after,
+so **two concurrent GETs can both receive entire file** before
+post-stream SQLite count. Need atomic in-flight token ownership.
+Current immediate blob deletion after link consumption is
+incompatible with wanted 24-hour owner-private blob retention;
+change token vs payload lifecycle. QR UI may need adding.
+TCP/HTTP server can generally detect stream completion but not
+**prove recipient's browser saved to disk**; proxied buffering can
+obscure detection. A focused public-facing security review and DMZ
+ownership are needed **only if** user chooses to implement; the
+idea remains uncommitted. Current design note is
+[docs/reviews/2026-11-17-picoshare-public-sharing-options.md](docs/reviews/2026-11-17-picoshare-public-sharing-options.md).
+
+**Work allowance:** weekly Work quota was exhausted November17
+and expected to replenish ~2.5 days later (~November19/20);
+Nova has expiring 'Senzu Beans' December 1 and 12, and time off
+work from Thursday November19 evening through November30.
+This is scheduling context, NOT a technical blocker; do not
+manufacture project tasks just to use purchased credits. Current
+active Services next independent work is LinkStack image lifecycle
+and Nextcloud recurring backup/update/owner DB recovery, none of
+which should be labeled "done" yet.
+
+
 ## November 17 — immediate Kuma Ansible source failure RETRIED AFTER FIX
 
 Nova ran `ansible/kuma-post-update-verify.yml` on Kvin as `wdc2`,
