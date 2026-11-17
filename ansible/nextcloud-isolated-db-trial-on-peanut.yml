@@ -11,7 +11,9 @@
   gather_facts: true
   vars:
     nextcloud_db_trial_owner_helper: /home/wdc2/src/sanctum-maintenance/tools/restore-nextcloud-postgresql
-    nextcloud_db_trial_pg_image: docker.io/library/postgres@sha256:1961f96e6029a02c3812d7cb329a3b03a3ac2bb067058dec17b0f5596aca9296
+    # Restore trials follow supported major 18, not yesterday's rejected
+    # permanently frozen runtime digest. This does NOT update shared PG.
+    nextcloud_db_trial_pg_image: docker.io/library/postgres:18
     nextcloud_db_trial_recovery_id: "{{ nextcloud_isolated_recovery_id | default('UNSET') }}"
     nextcloud_db_trial_base: /home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials
     nextcloud_db_trial_bundle: "/home/wdc2/.local/share/sanctum-services/backups/nextcloud/{{ nextcloud_db_trial_recovery_id }}"
@@ -40,7 +42,7 @@
           - nextcloud_maintenance_restore_contract_approved | default(false) | bool
           - nextcloud_db_trial_recovery_id is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
           - nextcloud_db_trial_owner_helper == '/home/wdc2/src/sanctum-maintenance/tools/restore-nextcloud-postgresql'
-          - nextcloud_db_trial_pg_image is match('^docker.io/library/postgres@sha256:[a-f0-9]{64}$')
+          - nextcloud_db_trial_pg_image == 'docker.io/library/postgres:18'
         fail_msg: >-
           Cannot run a DB restore on a shared server or without explicit
           approval of the isolated Maintenance-owned handoff contract.
@@ -103,14 +105,35 @@
           - (nextcloud_db_trial_verified_bundle.stdout | from_json).postgresql_custom_dump_header_recognized | bool
         fail_msg: Incomplete or changed Peanut bundle; refused to create a database container.
 
-    - name: Require Maintenance-pinned PostgreSQL restore image already cached on Peanut
+    - name: Observe compatible PostgreSQL 18 restore-image contract in Maintenance source
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import runpy,sys; print(runpy.run_path(sys.argv[1])['IMAGE'])"
+          - "{{ nextcloud_db_trial_owner_helper }}"
+      register: nextcloud_db_trial_owner_image_contract
+      changed_when: false
+      no_log: true
+
+    - name: Refuse restore unless Maintenance's actual helper uses the moving PostgreSQL major channel
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_db_trial_owner_image_contract.stdout | trim) == nextcloud_db_trial_pg_image
+        fail_msg: >-
+          Maintenance's restore helper still selects a frozen image digest.
+          This is a known November 16 Sanctum-wide audit regression.
+          Do not pull that digest or create a trial DB; the Maintenance owner
+          must reconcile its restore helper to docker.io/library/postgres:18.
+
+    - name: Check whether supported PostgreSQL 18 image is already cached on Peanut
       ansible.builtin.command:
         argv: [podman, image, exists, "{{ nextcloud_db_trial_pg_image }}"]
       register: nextcloud_db_trial_image_exists
       changed_when: false
       failed_when: false
 
-    - name: Cache only Maintenance's pinned PostgreSQL image when separately approved and absent
+    - name: Cache only supported PostgreSQL 18 major channel when separately approved and absent
       ansible.builtin.command:
         argv: [podman, pull, "{{ nextcloud_db_trial_pg_image }}"]
       register: nextcloud_db_trial_image_stage
@@ -120,7 +143,7 @@
         - nextcloud_isolated_db_image_cache_approved | default(false) | bool
       no_log: true
 
-    - name: Require cached pinned image, not an unreviewed registry fallback
+    - name: Inspect supported PostgreSQL 18 image, not a frozen runtime digest
       ansible.builtin.command:
         argv: [podman, image, inspect, "{{ nextcloud_db_trial_pg_image }}"]
       register: nextcloud_db_trial_platform
@@ -137,7 +160,7 @@
           - (nextcloud_db_trial_platform.stdout | from_json)[0].Architecture == ({'aarch64':'arm64','x86_64':'amd64'}[ansible_facts['architecture']])
           - (nextcloud_db_trial_platform.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
         fail_msg: >-
-          The exact Maintenance-pinned PostgreSQL image is absent or
+          The Maintenance-aligned PostgreSQL 18 image is absent or
           not native on Peanut. Pass the separately authorized image-cache
           option if absent, or coordinate an owner-compatible image;
           NEVER use production PostgreSQL.
