@@ -1,4 +1,4 @@
-"""Source contract: an owner database export must be injected before any Nextcloud write."""
+"""Source contract: only Maintenance-owned Nextcloud export before app-file capture."""
 from pathlib import Path
 import unittest
 
@@ -27,6 +27,35 @@ class NextcloudConsistentBackupContract(unittest.TestCase):
         self.assertIn("nextcloud_database_export_contract_approved", self.raw)
         self.assertIn("nextcloud_database_export_argv is defined", self.raw)
         self.assertIn("not ansible_check_mode", self.raw)
+
+    def test_only_owner_published_helper_and_scoped_receipt(self):
+        variables = self.play["vars"]
+        self.assertEqual(
+            variables["nextcloud_maintenance_owner_helper"],
+            "/home/wdc2/src/sanctum-maintenance/tools/backup-nextcloud-postgresql",
+        )
+        self.assertEqual(
+            variables["nextcloud_database_export_argv"],
+            ["/usr/bin/python3", "{{ nextcloud_maintenance_owner_helper }}",
+             "{{ nextcloud_backup_dump }}"],
+        )
+        guard = self.find("Require exact source")["ansible.builtin.assert"]["that"]
+        for expected in (
+            "nextcloud_database_export_argv[0] == '/usr/bin/python3'",
+            "nextcloud_database_export_argv[1] == nextcloud_maintenance_owner_helper",
+            "nextcloud_database_export_argv[2] == nextcloud_backup_dump",
+        ):
+            self.assertIn(expected, guard)
+        helper = self.find("Inspect Maintenance-owned database exporter")
+        self.assertFalse(helper["ansible.builtin.stat"]["follow"])
+        self.assertTrue(helper["ansible.builtin.stat"]["path"].startswith("{{ nextcloud_maintenance_owner_helper"))
+        tasks = self.find("Quiesce Nextcloud and collect")["block"]
+        receipt = next(t for t in tasks if "successful Nextcloud-only owner export receipt" in t["name"])
+        checks = str(receipt["ansible.builtin.assert"]["that"])
+        for token in ("dump_created", "nextcloud-postgresql.dump", "catalog_readable",
+                      "database == 'nextcloud'"):
+            self.assertIn(token, checks)
+        self.assertTrue(receipt["no_log"])
 
     def test_write_freeze_contains_only_owner_export_then_assembly(self):
         block = self.find("Quiesce Nextcloud and collect")
