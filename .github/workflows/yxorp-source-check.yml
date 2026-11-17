@@ -70,6 +70,8 @@ on:
       - "tools/observe-survivor-backup-readiness.py"
       - "tests/test_kvar_survivor_backup_readiness.py"
       - "ansible/linkstack-consistent-backup.yml"
+      - "ansible/linkstack-kvin-consistent-backup.yml"
+      - "tests/test_linkstack_kvin_consistent_backup.py"
       - "tools/linkstack-archive-verify.py"
       - "tests/test_linkstack_consistent_backup.py"
       - "ansible/linkstack-transfer-isolated-data-restore.yml"
@@ -204,6 +206,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_kvar_survivor_volumes.py'
           python3 -m unittest discover -s tests -p 'test_kvar_survivor_backup_readiness.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_consistent_backup.py'
+          python3 -m unittest discover -s tests -p 'test_linkstack_kvin_consistent_backup.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_transfer_isolated_restore.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_qualify_isolated_application.py'
           python3 -m unittest discover -s tests -p 'test_linkstack_offline_startup_diagnose.py'
@@ -269,6 +272,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kvar-survivors-source.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/kvar-survivor-backup-readiness.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-consistent-backup.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-kvin-consistent-backup.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-transfer-isolated-data-restore.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-qualify-isolated-application.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/linkstack-offline-startup-diagnose.yml --syntax-check
