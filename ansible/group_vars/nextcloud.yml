@@ -10,10 +10,18 @@ nextcloud_public_scheme: "http"
 # db1 names Kvin; db follows the chosen writable primary (no HA assumed yet).
 nextcloud_postgres_host: "db.nexus.sanctum"
 
-# Kvin pull/inspect on October 18 confirmed linux/arm64 for Nextcloud 34.0.5-apache.
-# Pin the observed registry manifest digest rather than a mutable tag.
-# Image availability and application startup still require deployment qualification.
-nextcloud_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145"
+# Original native-qualified frozen image, retained ONLY for the first
+# guarded image-policy migration and source drift checks. Never silently revert
+# working Nextcloud data from a newer image by changing back to this digest.
+nextcloud_original_frozen_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145"
+# Desired official within-34 maintenance channel. This is source intent only;
+# production still runs the original frozen image until a protected promotion.
+# No uncoordinated Podman registry auto-update: the Services cycle must back up
+# current HTML + Nextcloud-only PG and verify Peanut custody FIRST.
+nextcloud_image: "docker.io/library/nextcloud:34.0-apache"
+# Flip ONLY after real isolated PostgreSQL and running Nextcloud application
+# restore (login, Calendar and files) is accepted. Source-only intent is not proof.
+nextcloud_complete_restore_qualified_in_source: false
 
 nextcloud_host_port: 8085
 # Read-only prerequisite expectations, matching the Maintenance-owned Kvin
