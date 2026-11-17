@@ -1,5 +1,73 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — next real Services operator action now source-qualified
+
+**Kuma: native COMPLETE this round.** Latest user actual
+`ansible/kuma-post-update-verify.yml` `ok=12 changed=0 failed=0`,
+old vaulted admin login passed, original Wicket monitor ID 1 remains
+configured and `Up` at 40-second heartbeat age, running current
+`docker.io/louislam/uptime-kuma:2`, registry label in installed
+Quadlet, user Podman update timer previously accepted. Stop reopening
+completed Kuma source/monitor/backup tasks.
+
+**LINKSTACK next:** current production Kvin
+`sanctum-linkstack-kvin-candidate.service` serves existing
+accepted `dir.nexus.sanctum`, but image still frozen at old
+digest, `Pull=never`; upstream officially supplies moving
+`linkstackorg/linkstack:latest`. Before changing rolling
+image policy, source `ansible/linkstack-kvin-consistent-backup.yml`
+has been built and **[FULL CI 44128204144 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44128204144)**.
+It requires explicit approval, briefly stops ONLY current Kvin
+LinkStack SQLite writer, exports current named volume
+`sanctum-linkstack-qualified-20261112t105926`, ALWAYS starts
+original unit again, verifies original HTTP, archive SQLite
+integrity/manifest and private sha. New unique Kvin-only recovery
+artifact is created; no proxy/DNS/firewall changes or other
+service changes. **Real native execution NOT YET DONE.**
+Operator command on `wdc2@kvin`:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/linkstack-kvin-consistent-backup.yml \
+  -e sanctum_linkstack_kvin_backup_approved=true
+```
+**WARN FIRST** that production LinkStack directory will briefly
+be unavailable during SQLite export. Ask for
+`Report actual consistent current Kvin LinkStack backup`
+and `PLAY RECAP` or failure. Archive on Kvin is NOT yet
+off-host retained. Next work after real result is an independent
+Peanut copy and verified hash; then adopt supported rolling
+LinkStack tag + rootless `AutoUpdate=registry`, preserve existing
+data and accepted route. [Services #6 source handoff](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6954460445).
+
+**Expiring Work quota decision:** two Senzu Beans expire
+Dec 1 and Dec 12, weekly allowance resets ~Nov19/20.
+Nova vacation starts Thu Nov19 evening through Nov30.
+Advice: save bean NOW unless planning significant Work
+before imminent automatic reset; during vacation spend earliest
+expiring one **after** consuming a free allowance and no later
+than Nov30, lest it expire Dec1. Previous bean redemption
+restored both weekly and shorter meters to 100%.
+Avoid wasting a bean immediately before reset.
+
+**Short-links future user spec:** YOURLS did NOT rename;
+Piwik became Matomo in January 2018. All aliases must be
+cryptographically random **full case-sensitive base62**
+including `0/O`, `1/I/l`, never sequential. YOURLS
+`YOURLS_URL_CONVERT=62` enables charset but not CSPRNG;
+its keyword column uses case-sensitive `utf8mb4_bin`.
+Separate `buny.us` shortener (original domain intent),
+`share.buny.us` home-only isolated one-download endpoint
+with URL/QR and zero recipient extra actions, and proposed
+`vpn.buny.us`. The public alias is the bearer secret:
+suggest ~8-char ordinary and ~12-char one-time file codes,
+not approved fixed parameters. Parent data retained ~24h
+for new-link issue; one-time token dies after practical
+completion/expiry. All public ingress remains UNAPPROVED.
+[Full speculative design](docs/reviews/2026-11-17-picoshare-public-sharing-options.md).
+
+
 ## November 17 — Kuma post-image-upgrade native accepted; future sharing candidate
 
 **KUMA POST-UPDATE NOW NATIVE COMPLETE:** Nova ran the corrected
