@@ -10,7 +10,9 @@ on:
       - "ansible/nextcloud-isolated-files-restore.yml"
       - "ansible/nextcloud-retain-on-peanut.yml"
       - "ansible/nextcloud-update-readiness.yml"
+      - "ansible/nextcloud-qualify-maintenance-image.yml"
       - "tests/test_nextcloud_update_readiness.py"
+      - "tests/test_nextcloud_maintenance_image.py"
       - "tests/test_nextcloud_retention_peanut.py"
       - "tests/test_nextcloud_isolated_files_restore.py"
       - "tests/test_nextcloud_consistent_backup.py"
@@ -205,6 +207,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_nextcloud_recovery_specials.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_consistent_backup.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_update_readiness.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_maintenance_image.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_files_restore.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_retention_peanut.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
@@ -276,6 +279,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-recovery-inputs.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-consistent-backup.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-update-readiness.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-qualify-maintenance-image.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-isolated-files-restore.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-retain-on-peanut.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/yxorp.yml --syntax-check
