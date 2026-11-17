@@ -5,6 +5,8 @@ on:
       - "ansible/roles/yxorp/**"
       - "ansible/yxorp*.yml"
       - "ansible/group_vars/yxorp.yml"
+      - "ansible/group_vars/nextcloud.yml"
+      - "ansible/roles/nextcloud/**"
       - "ansible/nextcloud-recovery-inputs.yml"
       - "ansible/nextcloud-consistent-backup.yml"
       - "ansible/nextcloud-isolated-files-restore.yml"
@@ -18,6 +20,7 @@ on:
       - "tests/test_nextcloud_update_readiness.py"
       - "tests/test_nextcloud_maintenance_image.py"
       - "tests/test_nextcloud_maintenance_cycle.py"
+      - "tests/test_nextcloud_role_update_guard.py"
       - "tests/test_nextcloud_retention_peanut.py"
       - "tests/test_nextcloud_isolated_files_restore.py"
       - "tests/test_nextcloud_consistent_backup.py"
@@ -214,6 +217,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_nextcloud_update_readiness.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_maintenance_image.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_maintenance_cycle.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_role_update_guard.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_files_restore.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_retention_peanut.py'
           python3 -m unittest discover -s tests -p 'test_yxorp_contract.py'
