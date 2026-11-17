@@ -1,5 +1,61 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — LinkStack updater native PASSED; next is read-only Nextcloud reality check
+
+**LATEST USER NATIVE RESULT — LINKSTACK MOVING IMAGE COMPLETED:**
+Nova ran `ansible/linkstack-kvin-auto-update.yml` on
+`wdc2@kvin`: **`ok=21 changed=3 unreachable=0 failed=0
+skipped=0`**, actual `running_image=docker.io/linkstackorg/linkstack:latest`,
+Quadlet registry auto-update declared, existing
+`sanctum-linkstack-qualified-20261112t105926` rootless
+named SQLite volume and `127.0.0.1:18081` port preserved.
+LinkStack restarted successfully, local HTTP200,
+no YXORP/DNS/firewall or other services changed. The
+Nov17 live current SQLite archive was already **natively
+retained and independently SHA/SQLite checked on Peanut**:
+`linkstack-kvin-20261117t105833.tar`, 93,849,600 bytes,
+SHA `301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05`.
+No first future scheduled registry refresh observed, and
+admin login was not rechecked in *this* post-update play.
+**Do not rerun LinkStack auto-update, pre-update backup,
+one-time stage, or prior broad browser tests.**
+[Services #6 native acceptance](https://github.com/wdcallahan/sanctum-services/issues/6#issuecomment-6955900732).
+
+**NEXT ACTIVE FRONT — NEXTCLOUD #5:** current official app
+image source is frozen at Oct18 `34.0.5-apache` digest,
+with no `AutoUpdate=registry`; actual running version and
+image-reference drift remain unknown. Existing Nov16
+Nextcloud consistent Kvin multi-artifact snapshot,
+independent Peanut custody and isolated file/private
+extraction are accepted. **Do NOT rerun original backup
+or jump to major 35; independent full DB+app restore is
+not yet accepted.** New strict read-only
+`ansible/nextcloud-update-readiness.yml` observes
+`podman exec --user www-data ... php occ status --output=json`
+on actual Kvin existing rootless `sanctum-nextcloud`,
+current image identity vs Git digest, installed Quadlet
+auto-update declaration, actual version/maintenance/
+needsDbUpgrade, without any application, DB, route,
+firewall, secret, service, config or storage change.
+**FULL SOURCE+SYNTAX CI [44139307721 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44139307721)**.
+No native observation yet. Single next operator action
+on `wdc2@kvin`:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-update-readiness.yml \
+  -e nextcloud_update_readiness_approved=true
+```
+Ask for task **`Report actual Nextcloud update baseline
+without starting an upgrade`** plus recap or failed task
+and error. No sudo or outage. After receipt design a
+safe within-major patch/automatic update mechanism and
+recurring backup/offsite transfer that respects app+DB
+transaction/restore dependencies and Calendar 6.6.2.
+[Nextcloud #5 current source comment](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-6955995366).
+
+
 ## November 17 — Kvin LinkStack offhost retention NATIVE PASSED; auto-update rollout NEXT
 
 Nova executed `ansible/linkstack-kvin-retain-on-peanut.yml`
