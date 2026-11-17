@@ -79,7 +79,8 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
         raw = (ANS / "nextcloud-maintenance-activate.yml").read_text()
         self.assertEqual(self.activate["hosts"], "nextcloud")
         self.assertIs(self.activate["become"], False)
-        self.assertIs(self.activate["vars"]["nextcloud_complete_restore_qualified_in_source"], False)
+        self.assertIs(yaml.safe_load((ANS / "group_vars/nextcloud.yml").read_text())["nextcloud_complete_restore_qualified_in_source"], False)
+        self.assertIn("nextcloud_complete_restore_qualified_in_source", (ANS / "nextcloud-maintenance-preflight.yml").read_text())
         guards = self.activate["tasks"][0]["ansible.builtin.assert"]["that"]
         s = "\n".join(guards)
         for x in (
