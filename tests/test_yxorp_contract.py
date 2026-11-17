@@ -70,8 +70,8 @@ class YxorpContractTests(unittest.TestCase):
         self.assertEqual(self.defaults["yxorp_host_port"], 80)
         self.assertEqual(self.defaults["yxorp_deployment_scope"], "kvin_production")
         self.assertIs(self.defaults["yxorp_production_cutover_approved"], False)
-        self.assertRegex(self.defaults["yxorp_image"],
-                         r"^docker.io/library/nginx@sha256:[a-f0-9]{64}$")
+        self.assertEqual(self.defaults["yxorp_image"],
+                         "docker.io/library/nginx:stable-alpine")
         self.assertEqual(self.peanut["yxorp_deployment_scope"], "peanut_trial")
         self.assertEqual(self.peanut["yxorp_bind_address"], "0.0.0.0")
         self.assertEqual(self.peanut["yxorp_host_port"], 80)
