@@ -57,7 +57,7 @@ four-file bundle from Kvin, verifies it locally, copies precisely those
 four files with Ansible-managed SSH to a **fresh owner-only directory** on
 Peanut, then checks archive structure and hashes **on Peanut**. This
 supplies independent retention, not database or full application restore.
-Its tests/CI must pass before native use. Later an isolated application
+Its source, regression and Ansible syntax tests **passed [CI run 44021986569](https://github.com/wdcallahan/sanctum-services/actions/runs/44021986569)**; native use remains a separately operator-approved operation. Later an isolated application
 and owner PostgreSQL restore rehearsal can qualify the retained point.
 Avoid asking Nova to run duplicate source/SSD/Nextcloud login probes.
 
