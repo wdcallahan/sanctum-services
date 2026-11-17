@@ -1,21 +1,21 @@
 ---
 # No filesystem, volume or service changes occur before these validations.
-- name: Require the exact Kvin target, approval and pinned Uptime Kuma image
+- name: Require the exact Kvin target, approval and supported Uptime Kuma 2 image
   ansible.builtin.assert:
     that:
       - ansible_facts['fqdn'] == inventory_hostname
       - inventory_hostname == 'kvin.outer.sanctum'
       - ansible_facts['architecture'] == 'aarch64'
       - kuma_stage_approved | bool
-      - kuma_image | default('') is match('^.+@sha256:[0-9a-f]{64}$')
+      - kuma_image == 'docker.io/louislam/uptime-kuma:2'
       - kuma_bind_address == '127.0.0.1'
       - kuma_host_port | int == 13001
       - kuma_data_volume is match('^[a-z0-9][a-z0-9_.-]+$')
       - kuma_data_volume == 'sanctum-kuma-data'
       - kuma_db_type == 'sqlite'
     fail_msg: >-
-      This source is deliberately held: select an exact linux/arm64-tested
-      Kuma v2 image digest and separately approve a loopback-only candidate
+      This source requires the supported Kuma 2 registry update channel and
+      separate approval for any deployment
       on Kvin. Never change DNS, host firewall, incumbent Kvar Kuma or
       existing monitor state as a side effect.
 
@@ -34,7 +34,7 @@
   register: kuma_volume_created
   changed_when: kuma_volume_created.rc == 0
 
-- name: Observe whether the exact Kuma image exists
+- name: Observe whether the chosen Kuma 2 channel is locally cached
   ansible.builtin.command:
     argv: [podman, image, exists, "{{ kuma_image }}"]
   register: kuma_image_exists
@@ -42,7 +42,7 @@
   failed_when: kuma_image_exists.rc not in [0, 1]
   check_mode: false
 
-- name: Pull the exact pinned image if absent
+- name: Pull the supported Kuma 2 image channel if absent
   ansible.builtin.command:
     argv: [podman, pull, "{{ kuma_image }}"]
   when: kuma_image_exists.rc == 1
