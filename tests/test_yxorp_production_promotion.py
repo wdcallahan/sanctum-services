@@ -118,6 +118,12 @@ class ProductionPromotionTest(unittest.TestCase):
         self.assertIn("default(-1)",data["yarn_frontend_http_response"])
         self.assertIn("preexisting Yarn path not responding",data["yarn_frontend_note"])
 
+    def test_native_report_does_not_reopen_accepted_eyesonly_browser_gate(self):
+        report=next(t for t in self.play["post_tasks"] if t["name"]=="Report bounded Kvin YXORP production listener readiness")
+        next_gate=report["ansible.builtin.debug"]["msg"]["next_gate"]
+        self.assertIn("already banked",next_gate)
+        self.assertNotIn("Real EyesOnly Search browser/theme/results acceptance",next_gate)
+
     def test_real_ansible_projection_fixture_and_source_ci(self):
         c=CI.read_text()
         self.assertIn("test_yxorp_production_promotion.py",c)
