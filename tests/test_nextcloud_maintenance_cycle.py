@@ -91,9 +91,8 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
         ):
             self.assertIn(x, s)
         self.assertIn("state: restarted", raw)
-        self.assertIn("state: started", raw) if False else None
         self.assertIn("Calendar 6.6.2", raw)
-        self.assertIn("no unsafe image downgrade", raw)
+        self.assertIn("without unsafe image downgrade", raw)
         self.assertNotIn("pg_restore", raw)
         self.assertNotIn("pg_dump", raw)
         self.assertNotIn("podman-auto-update", raw)
