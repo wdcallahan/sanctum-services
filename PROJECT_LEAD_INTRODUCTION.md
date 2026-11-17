@@ -1,5 +1,34 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — NEW native Nextcloud backup-service acceptance; independent Peanut DB/app recovery SOURCE
+
+**MOST RECENT REAL NATIVE (Nov17):** Nova ran `ansible/nextcloud-backup-service-first-run.yml` on `wdc2@kvin`, proving the **ALREADY INSTALLED** weekly systemd one-shot can create a coherent backup. Exact `TASK [Report actual installed weekly Nextcloud backup service execution and Peanut recovery acceptance]` and `PLAY RECAP`: **`kvin.outer.sanctum ok=20 changed=1 unreachable=0 failed=0 skipped=0 rescued=0 ignored=0`**. NEW recovery ID **`nextcloud-20261117t134454`**, `actual_installed_service_executed=true`, `systemd_service_result=success`, `independent_peanut_bundle_verified=true`, `same_manifest_sha256_on_both_hosts=true`, `application_and_nextcloud_only_database_and_private_inputs_present=true`, `original_nextcloud_running_normal=true`, `weekly_timer_remains_enabled=true`, `software_update_not_run=true`, `automatic_pruning_not_performed=true`, `full_application_restore_not_claimed=true`, **`real_weekly_timer_firing_not_yet_observed=true`**. [Services #2 receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6960759294).
+
+**DO NOT ask Nova to repeat** the installer, this supervised first one-shot, older Nov16 manual backup, Nov17 image staging or already accepted Peanut copy/file restoration. Weekly systemd **service execution is genuinely proven**; future natural Sunday **timer firing** remains unobserved. The newer November17 source recovery point is banked, but first independent full-application disaster-recovery trial uses **Nov16 recovery ID `nextcloud-20261116t233618`**, because its HTML/private files are ALREADY extracted on Peanut.
+
+**REAL OWNER INTERFACE DISCOVERED:** Maintenance's current `tools/restore-nextcloud-postgresql` supports longer-lived **private `postgresql-trial-password` / `postgresql-trial.json` handoff** with a rootless `--network=none` trial PostgreSQL container, database/role `nextcloud_restore`, network `container:<cid>` to be shared only by recovered Nextcloud. Existing helper owns database restoration, not a Services SQL reimplementation. [Maintenance #17 interface coordination](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6960911545).
+
+**NEW SERVICES SOURCE (not native run):**
+- `ansible/nextcloud-isolated-db-trial-on-peanut.yml` consumes the verified **Nov16** retained private dump, confirms previously staged isolated HTML/private and unchanged private dest, validates manifest database SHA, uses **only** Maintenance's owner helper, optionally rootless-caches the exact owner-pinned PostgreSQL 18 digest under separate approval if missing, checks Peanut's native image/PG major, and verifies retained rootless PostgreSQL `--network=none` runtime + private 0700/0600 handoff. Does **not** touch production shared PG/Nextcloud. Leaves isolated DB running after success explicitly for Services' follow-on app test.
+- `tools/nextcloud-isolated-config.py` safely writes a one-time **0600/www-data-owned** `zzzz-sanctum-isolated.config.php` *only to the previously extracted Peanut copy*. Reads Maintenance's private password and handoff, never prints secrets or overwrites production `config.php`. Uses Nextcloud's documented additional `*.config.php` override mechanism.
+- `ansible/nextcloud-isolated-app-cli-trial-on-peanut.yml` later runs restored original **immutable 34.0.5** Nextcloud `occ status` and Calendar `occ app:list` only in the owner-labelled DB container's **networkless namespace**, no public port, no production DB contact even if original configuration is wrong. Source postchecks deliberately say **login and user-files still untested** until separate isolated HTTP/auth acceptance. Requires original 34.0.5 image cached on Peanut, no implicit pull. A successful CLI test alone does **not** release the 34.0.6 update gate.
+- CI workflow now tests both restore playbooks, rootless overlay helper and Ansible syntax. Check latest job state before calling them green.
+
+**NEXT NATIVE ACTION after source CI GREEN:** On `wdc2@kvin` run the **isolated Peanut PostgreSQL restoration** using already accepted Nov16 bundle+file-stage. Unlike earlier backup commands, this uses Peanut rootless Podman to cache a specific official PostgreSQL image if absent, writes a private test handoff and starts a **new isolated non-production DB** `--network=none`; does not restart or mutate any shared PostgreSQL service, Kvin or Nextcloud:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-isolated-db-trial-on-peanut.yml \
+  -e nextcloud_isolated_recovery_id=nextcloud-20261116t233618 \
+  -e nextcloud_isolated_db_trial_approved=true \
+  -e nextcloud_maintenance_restore_contract_approved=true \
+  -e nextcloud_isolated_db_image_cache_approved=true
+```
+**WARN** before giving: Peanut disk/cache and private restored DB, real new isolated test container persists; no production downtime or new Kvin backup, but later owner cleanup needed. Prerequisites: Maintenance checkout/helper is present on Peanut, and owner digest supports its architecture. If preflight fails, ask exact failed task/error without redoing other work. On success ask exact **`TASK [Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application]`** and **`PLAY RECAP`**. This is the first full **isolated DB** stage, not yet a recovered application login/files/Calendar acceptance.
+
+**Status:** live Nextcloud 34.0.5.1 still, 34.0.6 ARM64 candidate cached, separate live first-upgrade restore gate false, daily patch timer not installed; weekly backup timer enabled and user one-shot passed. Continue work rather than stopping at source-only deliverable while tool actions remain.
+
 ## November 17 — First installed weekly backup one-shot source/CI READY; next true operator action
 
 **MOST RECENT ACCEPTED KVIN:** `sanctum-nextcloud-backup.timer` was installed/enabled on `wdc2@kvin`, native `ok=13 changed=3 failed=0`, Sunday 03:30 local, original app unchanged. This installer is complete—do NOT repeat.
