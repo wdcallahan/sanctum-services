@@ -2,7 +2,7 @@
 
 **Date:** 2026-11-17  
 **Owner:** Sanctum Services (Nextcloud app); Sanctum Maintenance (PostgreSQL/host facilities)  
-**Status:** DESIGN ONLY, not a deployed updater, running automation, approved image change or proof of restore.  
+**Status:** SOURCE IMPLEMENTED AND FULL CI GREEN, NOT NATIVE DEPLOYED. Nova independently qualified cached official 34.0.6 ARM64; production remains 34.0.5.1. The update cycle, weekly backup timer and daily patch timer are source only. Full restored application+DB is not yet accepted; update timer activation remains blocked.  
 **Issues:** [Services #5](https://github.com/wdcallahan/sanctum-services/issues/5), [Services #6](https://github.com/wdcallahan/sanctum-services/issues/6), [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17).
 
 ## Why update cadence matters (Nova, November 17)
@@ -12,6 +12,44 @@ Nova explicitly requires **reasonably frequent unattended maintenance updates**,
 ### Newly implemented source-only candidate gate
 
 `ansible/nextcloud-qualify-maintenance-image.yml` now preflights the exact running Kvin Nextcloud, confirms it still has the frozen original image, pulls **only** the official `34.0-apache` image into Kvin's rootless image cache, checks actual ARM64 metadata and uses a short **networkless, read-only, ephemeral** PHP container to read the shipped Nextcloud version. It verifies that the candidate stays in major 34, minor 0 and doesn't regress below the actual running patch. It does **not** touch the live Quadlet, app, database, proxy, ports, timer, or backup. It is source-only until Nova runs it; its registry/cache/image probe is distinct from the already accepted read-only production baseline.
+
+## Source implementation and exact scheduling state
+
+**Qualified release is real:** Nova ran the accepted ARM64 cache-stage play
+on Kvin, `ok=13 changed=1 failed=0`, bundled 34.0.6 confirmed,
+live 34.0.5.1 and its persistent data untouched.
+
+**Implemented code:**
+`ansible/nextcloud-maintenance-cycle.yml` orders source-owned preflight
+(image comparison and no-op), a **fresh** owner-scoped Kvin consistent
+backup, independently checked Peanut custody and a restore-gated
+within-34 promotion. `ansible/nextcloud-maintenance-activate.yml`
+will only perform a live restart once the separate restored application
+and DB acceptance is banked (`nextcloud_complete_restore_qualified_in_source=false`
+until then). It verifies user data mounts and Calendar and places a
+private `.update-halted` marker after a failed live migration so
+automatic retries do not compound the failure. No blind image-only
+downgrade or `AutoUpdate=registry`. The canonical Nextcloud role's
+source-moving channel matches the managed Quadlet but the role refuses
+an old frozen production Quadlet so no ordinary `site.yml` can
+silently bypass this recovery gate.
+
+**Separate recurring backups:** `ansible/nextcloud-scheduled-backup.yml`
+runs the existing accepted source/Peanut procedures weekly via a
+user systemd timer **Sunday 03:30**, even if upstream has no new patch.
+Its opt-in timer installer verifies noninteractive same-user systemd
+manager Ansible/SSH access to Kvin and Peanut before enabling; it does
+not trigger an immediate backup. Protected archives are NOT auto-pruned.
+
+**Future automatic updates:** a separate daily **04:15** timer invokes
+the complete ordered patch cycle with a single `flock` shared by both
+jobs, and no catch-up outage after reboot. Its installer refuses until
+full isolated database+app restore and the first live moving-tag patch
+have passed. No timer is natively installed yet; no scheduled event
+observed. [Full source, tests and Ansible syntax CI 44157258868 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44157258868).
+The [operator runbook](../runbooks/nextcloud-instance-recovery.md)
+and [lead handoff](../../PROJECT_LEAD_INTRODUCTION.md) specify the exact
+next native backup-timer installation command/report.
 
 ## Accepted actual baseline — do not repeat observation
 
