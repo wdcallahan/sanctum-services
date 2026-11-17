@@ -272,3 +272,12 @@
           copied_off_kvin: false
           independent_restore_tested: false
           next_action: protected off-Kvin custody plus isolated app and database restore
+    - name: Expose verified current backup only to a coordinated maintenance cycle
+      ansible.builtin.set_fact:
+        nextcloud_cycle_backup_verified: true
+      changed_when: false
+      when:
+        - nextcloud_cycle_update_needed | default(false) | bool
+        - nextcloud_cycle_recovery_id | default('') == ('nextcloud-' ~ nextcloud_backup_stamp)
+        - (nextcloud_backup_assembled.stdout | from_json).archive_and_dump_hashes_match_manifest | bool
+
