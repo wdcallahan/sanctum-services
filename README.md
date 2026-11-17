@@ -6,28 +6,40 @@ Sanctum Services is the application-deployment project for the Sanctum home lab.
 
 The first application is **Nextcloud**. The active estate also includes **YXORP, LinkStack, Uptime Kuma and EyesOnly** (Search is owned by its own project); **Pi-hole is retired**. The [future-services section of the estate register](docs/SERVICE-ESTATE.md#future-services-backlog-not-deployed-by-this-register) records three explicit plans—**Sanctum VPN, Luanti and Home Assistant**—and keeps earlier brainstorming candidates clearly marked **uncommitted** rather than manufacturing installation tasks. We build for useful services **and** real hands-on engineering experience.
 
-> **Current status — November 17, 2026:** Kvar is unplugged, and
-> the seven-route Kvin YXORP, Uptime Kuma, LinkStack, EyesOnly Search and
-> Nextcloud with Calendar 6.6.2 are already normally usable. Pi-hole,
-> OpenWebUI and Endlessh are retired from the desired estate. YXORP,
-> Kuma and LinkStack now have native-accepted moving-image update policies.
-> Nextcloud has a **real, application-consistent Kvin backup**, an independent
-> verified four-file recovery point on Peanut and accepted isolated
-> HTML/private-file staging. The **Nextcloud-only PostgreSQL restore and
-> running independent application recovery are still outstanding**.
-> Nova additionally qualified official ARM64 Nextcloud **34.0.6** in
-> Kvin's image cache while live **34.0.5.1** remained untouched.
-> The coordinated pre-update backup/Peanut custody/within-34 updater
-> and independent weekly backup + eventual daily update timer are now
-> **source-built and CI-qualified, not yet installed or run in production**.
-> The next native Services action is a separate explicit installation
-> of the **weekly backup timer only**; the automatic stateful-app patch
-> timer remains gated by full app+DB restore acceptance.
-> Start from the [latest lead handoff](PROJECT_LEAD_INTRODUCTION.md),
-> [current roadmap](docs/ROADMAP.md) and
+> **Current status — November 17, 2026:** Kvar remains unplugged;
+> seven-route Kvin YXORP, Kuma, LinkStack, EyesOnly Search and Nextcloud
+> with Calendar 6.6.2 are usable; Pi-hole, OpenWebUI and Endlessh remain
+> retired from desired state. YXORP, Kuma and LinkStack have native
+> accepted moving-image update policies. **Nextcloud now has a real
+> enabled weekly user timer (Sunday 03:30) AND a natively accepted
+> successful execution of its installed backup one-shot.** That
+> supervised service run created a **new `nextcloud-20261117t134454`
+> consistent Kvin recovery point** and independently verified its
+> complete four-member recovery copy + matching manifest on Peanut.
+> Nextcloud returned to normal. **Natural Sunday timer firing not yet
+> observed**; backups not auto-pruned.
+>
+> Official Linux ARM64 Nextcloud **34.0.6** was separately qualified in
+> Kvin's image cache; production remains **34.0.5.1**. The protected
+> within-34 image updater and separate daily update timer are built,
+> but the application update is *not* yet authorized or deployed.
+> The already accepted **Nov16** Peanut recovery point's HTML/private
+> files are extracted and ready for a full isolation trial; the actual
+> restored PostgreSQL + working restored application are **NOT yet
+> natively accepted**. Services has source-qualified a narrow
+> integration using Maintenance's existing networkless/private
+> PostgreSQL handoff, a restored-copy-only Nextcloud config overlay,
+> and an isolated `occ`+Calendar trial. Source and syntax
+> [CI 44177213002 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44177213002).
+> Next operator action is **one privately isolated Nextcloud-only
+> database restore on Peanut using Nov16's already staged files**,
+> not another Kvin backup or timer installation. The separate
+> authenticated login/files/Calendar acceptance remains necessary
+> before the first production 34.0.6 patch.
+> See the [lead handoff](PROJECT_LEAD_INTRODUCTION.md),
+> [roadmap](docs/ROADMAP.md) and
 > [Nextcloud recovery runbook](docs/runbooks/nextcloud-instance-recovery.md).
-> Dated sections further below preserve history, not a request to rerun
-> accepted deployments or backups.
+> Later dated sections preserve history, not new tasks.
 
 ## Start here
 
