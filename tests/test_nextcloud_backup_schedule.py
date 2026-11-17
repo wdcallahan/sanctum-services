@@ -43,6 +43,14 @@ class WeeklyNextcloudSnapshot(unittest.TestCase):
             "immediate_backup_not_triggered: true",
         ):
             self.assertIn(required, raw)
+        self.assertIn("systemd-run", raw)
+        self.assertIn("--setenv=PATH=/home/wdc2/.local/bin", raw)
+        self.assertIn("nextcloud:yxorp_test", raw)
+        names = [t["name"] for t in self.install["tasks"]]
+        self.assertLess(
+            names.index("Verify unattended user-manager SSH to original Kvin and Peanut without running backup"),
+            names.index("Install source-owned weekly backup service and timer without starting a backup"),
+        )
         self.assertNotIn("state: restarted", raw)
         self.assertNotIn("become: true", raw)
         self.assertNotIn("pg_dump", raw)
