@@ -27,15 +27,14 @@ the owner-specific database export remain under **two false-by-default
 execution approval switches**; no live snapshot was created, and no
 automatic Nextcloud updates were enabled by this source integration.
 
-**One important owner maintenance dependency:** The helper itself currently
-refuses if the shared PostgreSQL running image does not match an *exact
-2026-10 installed image digest*. Nova rejects indefinite application image
-freezing: Maintenance must make its helper compatible with legitimate
-PostgreSQL maintenance image updates so required Nextcloud backups keep
-working. Avoid introducing a new permanent pinned production image in
-Services just to satisfy the helper; coordinate that change under
-[Maintenance #5](https://github.com/wdcallahan/sanctum-maintenance/issues/5#issuecomment-6935782334)
-and [#17](https://github.com/wdcallahan/sanctum-maintenance/issues/17).
+**Maintenance helper correction:** After rereading the current exporter,
+the actual runtime check matches the supported PostgreSQL repository's
+image-digest **family**, then verifies server major 18; it does **not**
+compare to its unused old `IMAGE` constant. The assertion that this
+helper would reject any valid new PostgreSQL 18 patch image was **wrong**;
+it was [explicitly corrected with Maintenance](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6939054034).
+The installed PostgreSQL 18.4 Quadlet is still pinned, an unrelated
+Maintenance-owned unattended-update defect.
 
 **Next real native qualification** after Services CI: one read-only Kvin
 version/runtime/help-path and timer inventory, private backup directory
@@ -43,6 +42,33 @@ capacity checked earlier, then approved short maintenance-mode capture,
 independent off-Kvin custody, and isolated restoration. A first backup
 still needs explicit owner/operator coordination; this paragraph is not
 live permission.
+
+## November 16 — Services next native recovery milestone is now unblocked
+
+Maintenance confirmed that **Services should run the coordinated backup
+playbook in an agreed short overnight Nextcloud maintenance window**,
+without a preceding separate Maintenance command. The source integration
+has [CI pass 44001769569](https://github.com/wdcallahan/sanctum-services/actions/runs/44001769569).
+The first actual backup has **not been run yet**.
+
+The follow-on source-only
+`ansible/nextcloud-retain-on-peanut.yml` takes the completed named private
+four-file bundle from Kvin, verifies it locally, copies precisely those
+four files with Ansible-managed SSH to a **fresh owner-only directory** on
+Peanut, then checks archive structure and hashes **on Peanut**. This
+supplies independent retention, not database or full application restore.
+Its tests/CI must pass before native use. Later an isolated application
+and owner PostgreSQL restore rehearsal can qualify the retained point.
+Avoid asking Nova to run duplicate source/SSD/Nextcloud login probes.
+
+The **first backup** will briefly put Nextcloud into maintenance mode,
+export only the Nextcloud DB, capture its persistent HTML tree and private
+inputs, verify the manifest, and **turn maintenance mode off even on a
+normal task failure**. Production user data, calendar, PostgreSQL's other
+databases and the system services are not otherwise altered. If Ansible
+is killed while the remote task is between mode-on and mode-off, the
+operator must explicitly check and restore normal Nextcloud mode; an
+`always` block cannot guarantee recovery after an interrupted controller.
 
 ## Consistency model — not atomically synchronized at every instant
 
