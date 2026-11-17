@@ -6,7 +6,28 @@ Sanctum Services is the application-deployment project for the Sanctum home lab.
 
 The first application is **Nextcloud**. The active estate also includes **YXORP, LinkStack, Uptime Kuma and EyesOnly** (Search is owned by its own project); **Pi-hole is retired**. The [future-services section of the estate register](docs/SERVICE-ESTATE.md#future-services-backlog-not-deployed-by-this-register) records three explicit plans—**Sanctum VPN, Luanti and Home Assistant**—and keeps earlier brainstorming candidates clearly marked **uncommitted** rather than manufacturing installation tasks. We build for useful services **and** real hands-on engineering experience.
 
-> **Current status — November 16, 2026:** Kvar has been **powered off** by Nova (not wiped). Kvin YXORP's seven wanted production routes, Kuma, LinkStack, and EyesOnly functionality have prior accepted evidence; Pi-hole, OpenWebUI and Endlessh are retired from the desired estate. Nextcloud is **installed and active**; Calendar 6.6.2 bidirectional GNOME Calendar use is accepted. We are developing **full-instance recovery**, not repeating the installation: the application/data directory is confirmed, the private bundle verifier/producer and guarded source-only coordinator have [passing source CI](https://github.com/wdcallahan/sanctum-services/actions/runs/43959448677), but no coordinated live backup, off-Kvin retention or isolated restore exists yet. Maintenance's Nextcloud-only PostgreSQL dump interface is pending. **Start from [the current lead handoff](PROJECT_LEAD_INTRODUCTION.md), [roadmap](docs/ROADMAP.md), [estate register](docs/SERVICE-ESTATE.md), and [Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2); dated stages below are historical, not new live instructions.**
+> **Current status — November 17, 2026:** Kvar is unplugged, and
+> the seven-route Kvin YXORP, Uptime Kuma, LinkStack, EyesOnly Search and
+> Nextcloud with Calendar 6.6.2 are already normally usable. Pi-hole,
+> OpenWebUI and Endlessh are retired from the desired estate. YXORP,
+> Kuma and LinkStack now have native-accepted moving-image update policies.
+> Nextcloud has a **real, application-consistent Kvin backup**, an independent
+> verified four-file recovery point on Peanut and accepted isolated
+> HTML/private-file staging. The **Nextcloud-only PostgreSQL restore and
+> running independent application recovery are still outstanding**.
+> Nova additionally qualified official ARM64 Nextcloud **34.0.6** in
+> Kvin's image cache while live **34.0.5.1** remained untouched.
+> The coordinated pre-update backup/Peanut custody/within-34 updater
+> and independent weekly backup + eventual daily update timer are now
+> **source-built and CI-qualified, not yet installed or run in production**.
+> The next native Services action is a separate explicit installation
+> of the **weekly backup timer only**; the automatic stateful-app patch
+> timer remains gated by full app+DB restore acceptance.
+> Start from the [latest lead handoff](PROJECT_LEAD_INTRODUCTION.md),
+> [current roadmap](docs/ROADMAP.md) and
+> [Nextcloud recovery runbook](docs/runbooks/nextcloud-instance-recovery.md).
+> Dated sections further below preserve history, not a request to rerun
+> accepted deployments or backups.
 
 ## Start here
 
