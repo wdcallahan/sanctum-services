@@ -11,17 +11,29 @@ suggestion in this estate or the November 8 Maintenance inventory.
 **Do not restart Kvar, rediscover its Pi-hole, recreate Pi-hole as a
 dependency or keep its backup lifecycle alive.**
 
-One **orphaned-looking rootful Quadlet** was found in Kvin's actual filesystem:
-`/etc/containers/systemd/sanctum-pihole-kvin.container`; it still
-contains original Pi-hole image/ports/`Pull=never`. A source file is not
-evidence of an authorized wanted service. The supplied `wdc2` rootless
-`podman ps` list does not establish rootful systemd service/Podman state.
-**The remaining implementation task is a scoped rootful read-only
-unit/container/boot observation followed by separately approved removal**
-of the obsolete unit and associated old restore source. Do not delete
-named volumes, private settings or any other service until exact owning
-resources are observed and cleanup approved; do not infer a current
-rootful process just from the stale Quadlet file.
+**Native Kvin observation accepted (November 16):** The leftover
+`/etc/containers/systemd/sanctum-pihole-kvin.container` is **not merely
+stale source**. The generated **rootful system** unit
+`sanctum-pihole-kvin.service` was observed
+`LoadState=loaded,ActiveState=active,SubState=running`. It is a **distinct
+restored copy on Kvin**, despite the old Kvar being unplugged. Nova has
+already approved decommissioning it, including deleting the two exclusively
+owned rootful Pi-hole volumes and private old Pi-hole archive directory;
+he intends a fresh installation if wanted again. **Do not request another
+enablement/state probe.**
+
+**GitHub source change:** Deleted the Pi-hole Kvin deploy/restore/backup
+playbooks, executable transfer/archive helpers, Pi-hole Quadlet template
+and corresponding deployment tests. A newly added narrowly scoped
+`tools/retire-pihole-kvin.sh` provides the actual Kvin rootful retirement:
+exact-host and `sudo` identity gates, stop only the named service, remove
+only its source Quadlet/container, dedicated two named volumes and dedicated
+local Pi-hole backup directory, and reload systemd to prevent resurrection.
+The obsolete YXORP stage playbook explicitly refuses even opt-in Pi-hole
+staging, preserving historical disabled route metadata only. This is a
+**source-only change until Nova runs the retirement command on Kvin**;
+**Pi-hole is still running as far as native evidence proves**. No runtime
+deletion has been performed by GitHub source changes.
 
 [Whole-Sanctum owner audit](https://github.com/wdcallahan/sanctum-maintenance/issues/38)
 tracks similar retired-resource resurrection hazards. This is an explicit
