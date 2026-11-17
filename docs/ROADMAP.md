@@ -49,10 +49,21 @@ dated and now-stale "CURRENT" paragraphs below.
    subsequently corrected to **`:2`** (NOT deprecated `:latest`
    which still tracks v1), rootless `AutoUpdate=registry`, and updated
    role/recovery-trial contracts; [full CI 44116110856 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44116110856).
-   **Native Kvin apply still pending**. The existing user Podman auto-update
-   timer was already active; installer may restart production Kuma on
-   latest major-v2 image and perform an in-place SQLite migration.
-   The Nov11 off-host archive is a known-good PRE-upgrade recovery point.
+   **Native Kvin apply PASSED November 17:** `ok=10 changed=3
+   failed=0 skipped=1`; running Kuma user service was reconciled to
+   major-v2 moving image policy and returned HTTP302, original SQLite
+   volume retained. The existing user Podman auto-update timer was
+   already active; no future scheduled update history is claimed.
+   The Nov11 off-host archive remains a known-good PRE-upgrade recovery
+   point. Source initial-stage report still emitted old hardcoded
+   negative acceptance flags, which were NOT actual login/monitor
+   observations and have been removed in later source. The new
+   **read-only post-upgrade** `ansible/kuma-post-update-verify.yml`
+   checks existing vaulted login and saved Wicket monitor/heartbeat
+   without modifying service or monitor. **[Full CI passed
+   44121324665](https://github.com/wdcallahan/sanctum-services/actions/runs/44121324665)**.
+   Await native observation before declaring the post-update
+   application session accepted.
 3. **LinkStack update lifecycle:** running Kvin restored candidate uses
    original digest and `Pull=never`; reconcile wanted persistent state,
    backup/restore ownership and move to sustained unattended update
