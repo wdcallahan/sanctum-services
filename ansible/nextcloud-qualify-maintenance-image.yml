@@ -46,7 +46,7 @@
           - (nextcloud_stage_original.stdout | from_json)[0].State.Running | bool
           - (nextcloud_stage_original.stdout | from_json)[0].ImageName == nextcloud_image
           - ('Image=' ~ nextcloud_image) in (nextcloud_stage_quadlet.content | b64decode).splitlines()
-          - 'AutoUpdate=registry' not in (nextcloud_stage_quadlet.content | b64decode).splitlines()
+          - "'AutoUpdate=registry' not in (nextcloud_stage_quadlet.content | b64decode).splitlines()"
         fail_msg: Current application differs from observed baseline; refuse even candidate staging.
 
     - name: Observe original application status read-only before staging
