@@ -54,15 +54,25 @@ dated and now-stale "CURRENT" paragraphs below.
    `301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05`,
    size `93849600`, SQLite integrity `ok`. Original user
    LinkStack restarted and returned HTTP200; no proxy or DNS change.
-   New `ansible/linkstack-kvin-retain-on-peanut.yml` transfers **that
-   exact snapshot** to Peanut and independently validates hashes and
-   SQLite without any live-service interruption. **Native Peanut
-   transfer NOT YET RUN**; qualify the playbook with source CI first.
-   After accepted off-host retention, correct the **current**
-   LinkStack Quadlet to upstream moving `:latest` plus rootless
-   `AutoUpdate=registry`, keeping the actual working volume and
-   accepted named browser route intact. Prior November12 Kvar archive
-   remains a historical recovery point, not the current data backup.
+   **NATIVE Peanut retention PASSED November 17**:
+   `ansible/linkstack-kvin-retain-on-peanut.yml` `ok=15 changed=2
+   failed=0 skipped=0`; actual off-Kvin archive 93,849,600 bytes,
+   independently matched SHA256
+   `301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05`,
+   extracted SQLite integrity and config checked on Peanut. Original
+   LinkStack running service untouched. **Independent complete
+   application restore has NOT been rerun from this fresh archive**.
+   **Source-prepared next:** `ansible/linkstack-kvin-auto-update.yml`
+   keeps the existing Kvin rootless unit/container and volume,
+   replaces only source Quadlet to official moving
+   `docker.io/linkstackorg/linkstack:latest` plus
+   `AutoUpdate=registry`, pulls a verified ARM64 image then
+   restarts only LinkStack with HTTP/port/volume confirmation.
+   It attempts restoring the original pinned Quadlet/unit on
+   failed migration but **does not silently revert a database schema**.
+   **Native moving-image deployment NOT YET RUN**;
+   require source CI green first. Prior Nov12 Kvar archive remains
+   historical rather than a fresh live Kvin backup.
 4. **Nextcloud scheduled backups and update policy:** real owner-scoped
    recoverable snapshot exists, but recurrence/failure notification and
    supported automatic application maintenance updates do **not**.
