@@ -1,5 +1,57 @@
 # Sanctum Services — Roadmap
 
+## November 17 — Nextcloud 34 candidate NATIVE; backup and maintenance orchestration SOURCE
+
+**Native user acceptance (do not rerun):** Nextcloud 34.0.5.1 remains
+production; Nova's new 34.0-apache candidate play confirmed
+**official ARM64 34.0.6** on Kvin, `ok=13 changed=1 failed=0`,
+cache-only, no app/data/DB/timer/restart. The image identities and
+acceptance are banked in [Nextcloud #5](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-6957836971).
+
+**Services source delivered:** `ansible/nextcloud-maintenance-cycle.yml`
+now composes four ordered playbooks: compare same-major cached candidate
+and current image (no-op if identical), create **new** Kvin consistent
+HTML/private+Nextcloud-only database recovery point, independently
+copy/hash-verify it on Peanut, then permit a guarded within-34 image
+activation. The restore gate in `ansible/group_vars/nextcloud.yml`
+remains **false** until genuine independent PostgreSQL + running restored
+Nextcloud login/file/Calendar acceptance, not merely file extraction.
+Ordinary `ansible/site.yml` refuses to bypass this ordered update path.
+No live 34.0.6 update has been authorized or applied.
+
+**Independent backups SOURCE:** `ansible/nextcloud-scheduled-backup.yml`
+reuses the already accepted Kvin consistent backup and Peanut retention
+with a shared recovery ID. A source-managed user systemd timer and
+opt-in install playbook propose **Sunday 03:30** weekly snapshots, with
+noninteractive Kvin+Peanut SSH proven from a temporary user-managed
+service *before* enabling the timer. No automatic deletion of prior
+protected copies. Source-only until operator executes install.
+
+**Daily patch timer SOURCE:** future user timer at **04:15 daily**
+checks upstream official 34.0 maintenance image and uses the same
+flock lock as weekly backup. It is disabled/uninstalled while restore
+acceptance remains false; after a failed live promotion it requires
+an operator-reviewed recovery instead of repeating stateful migrations
+each night. The timer install playbook also refuses before full restore
+and first accepted moving-tag runtime. Neither scheduled release update
+nor automatic delivery has been observed.
+
+**Next immediate Services native action after source CI:** Install and
+qualify only the **independent weekly backup timer** on Kvin with
+explicit user approval; it will not take a snapshot at install time
+and causes no immediate outage. Request exact
+`TASK [Report source-owned weekly Nextcloud backup schedule without claiming first occurrence]`
+and `PLAY RECAP`; if the transient noninteractive user-manager SSH
+probe fails, request that failure instead. This does not require
+repeating the November16 accepted recovery point.
+
+**Parallel owner dependency:** Maintenance #17 still owns complete
+isolated Nextcloud-only PostgreSQL restoration and a durable test
+database endpoint. Services already staged real HTML/private on Peanut;
+combine both for running restored app/Calendar acceptance so that
+timely 34.0.6 and future patches can proceed. Do not turn this
+bounded dependency into an indefinite image freeze.
+
 ## CURRENT — November 17: Services remains ACTIVE; multiple independent fronts
 
 **Operator correction:** Sanctum Services is **NOT finished** and is **NOT
