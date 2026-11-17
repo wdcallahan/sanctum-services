@@ -599,3 +599,53 @@ remotely**. These are measurements for capacity and role planning only:
 no config, databases, containers or storage are changed. Choose destination
 and retention only once both actual capacities are known.
 
+
+## November 16 — Native HTML allocation and controller SSD sizes resolved
+
+Nova ran the approved **read-only Kvin rootless `du`** and
+noninteractive Peanut SSH device check. The actual allocated directory
+breakdown from `du -h` was:
+
+| Kvin Nextcloud HTML component | Approximate disk allocation |
+| --- | ---: |
+| Entire persisted HTML mount | **5.5 GiB** |
+| `data` | **4.6 GiB** |
+| `data/wdc2` | **4.4 GiB** |
+| `data/appdata_oc0fmherf6qh` | **112 MiB** |
+| `apps` (shipped Nextcloud apps) | **523 MiB** |
+| `core` | 158 MiB |
+| `custom_apps` (Calendar etc.) | 97 MiB |
+| `dist` | 75 MiB |
+| `3rdparty` | 53 MiB |
+
+Thus **the unexpected majority is the single Nextcloud user account
+directory `data/wdc2`**, not Nextcloud shipped code. Nova states
+he has not yet meaningfully migrated his data. **We don't yet know what
+inside `data/wdc2` accounts for 4.4 GiB**; do not guess default
+skeleton, orphaned uploads, test files, versions or trash without
+checking the next level. Preserve all user files, hidden folders,
+shares/versions/trash and database metadata; **no cleanup/delete** is
+authorized. Next operator step is a read-only `du` within
+`data/wdc2` and optionally an actual largest-file-name list (names,
+not file contents), if Nova is comfortable reporting those file names.
+Do not rerun already accepted full-tree readability, link scans, or
+host-capacity test.
+
+**Actual Kvin/Peanut device identity and capacity (read-only):**
+
+- Kvin `/dev/nvme0n1`: **931.5 GiB** Crucial CT1000P3SSD8;
+  root `/dev/nvme0n1p2`, ext4 **917 GiB** capacity,
+  **32 GiB used, 849 GiB free**.
+- Peanut `/dev/nvme0n1`: **465.8 GiB** Kingston SNV2S500G;
+  root `/dev/nvme0n1p2`, ext4 **459 GiB** capacity,
+  **8.0 GiB used, 432 GiB free**.
+- Nova wants both originally symmetric; **Peanut** is the half-sized
+  drive to replace eventually. There is ample present disk space
+  for capacity investigation. This does not establish any live
+  PostgreSQL replication, and the backup design must not equate
+  replication with historical independent recovery.
+
+The Services→Maintenance owner-interface request and intended
+primary/secondary reconciliation remain at
+[Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6932965316).
+No live host/database mutation is required by this observation.
