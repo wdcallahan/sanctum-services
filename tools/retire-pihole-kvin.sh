@@ -18,6 +18,7 @@ quadlet="/etc/containers/systemd/sanctum-pihole-kvin.container"
 container="sanctum-pihole-kvin"
 volume_etc="sanctum-pihole-etc-20261112t161524"
 volume_dns="sanctum-pihole-dnsmasq-20261112t161524"
+image="ghcr.io/pi-hole/pihole@sha256:13089e5c4d33c5cd8eb7b011949a380145f3ff1405dea24c81dd54dcb255b792"
 archive_dir="/home/wdc2/.local/share/sanctum-services/backups/pihole"
 
 # Match the exact standalone old Pi-hole declaration before stopping anything.
@@ -53,6 +54,12 @@ for volume in "$volume_etc" "$volume_dns"; do
   fi
 done
 
+# Drop only the original cached Pi-hole image when nothing else uses it.
+# Podman refuses the image removal if an unrelated container still needs it.
+if podman image exists "$image"; then
+  podman image rm "$image"
+fi
+
 # Nova explicitly chose to discard retained Pi-hole backups. This dedicated
 # directory is never used for any other application recovery point.
 if [[ -e "$archive_dir" || -L "$archive_dir" ]]; then
@@ -63,7 +70,7 @@ if [[ -e "$archive_dir" || -L "$archive_dir" ]]; then
   rm -rf -- "$archive_dir"
 fi
 
-printf 'Pi-hole rootful service, Quadlet, named container, volumes and local archive directory retired.\n'
+printf 'Pi-hole rootful service, Quadlet, named container, volumes, original image and local archive directory retired.\n'
 printf 'Unit state: '
 systemctl show "$unit" --property=LoadState,ActiveState --no-pager |
   tr '\n' ' '
