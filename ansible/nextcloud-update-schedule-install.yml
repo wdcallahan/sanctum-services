@@ -1,0 +1,124 @@
+---
+# Prepare ONLY after real complete isolated DB+app recovery is accepted,
+# and after a real guarded within-34 production promotion has succeeded.
+# This source play never runs an immediate image update.
+- name: Install daily source-managed Nextcloud patch cycle timer after real acceptance
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_update_timer_dir: /home/wdc2/.config/systemd/user
+    nextcloud_update_timer_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
+    nextcloud_update_timer_name: sanctum-nextcloud-maintenance-update.timer
+    nextcloud_update_service_name: sanctum-nextcloud-maintenance-update.service
+  tasks:
+    - name: Require native recovered Nextcloud, source restore acceptance and separate timer approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - nextcloud_image == 'docker.io/library/nextcloud:34.0-apache'
+          - nextcloud_complete_restore_qualified_in_source | bool
+          - nextcloud_update_schedule_install_approved | default(false) | bool
+        fail_msg: >-
+          Do not install an unattended stateful-app upgrade timer before
+          actual full app+DB recovery and operator-approved live promotion.
+
+    - name: Read installed source-owned Nextcloud Quadlet privately before timer activation
+      ansible.builtin.slurp:
+        src: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container
+      register: nextcloud_update_timer_quadlet
+      no_log: true
+
+    - name: Require only managed within-34 image and no uncoordinated registry timer
+      ansible.builtin.assert:
+        that:
+          - "'Image=docker.io/library/nextcloud:34.0-apache' in current_quadlet_lines"
+          - "'Pull=never' in current_quadlet_lines"
+          - "'AutoUpdate=registry' not in current_quadlet_lines"
+          - "'ContainerName=sanctum-nextcloud' in current_quadlet_lines"
+          - "'PublishPort=0.0.0.0:8085:80/tcp' in current_quadlet_lines"
+        fail_msg: Production Quadlet not on the backup-gated moving 34.0 channel.
+      vars:
+        current_quadlet_lines: "{{ (nextcloud_update_timer_quadlet.content | b64decode).splitlines() }}"
+
+    - name: Require original accepted Nextcloud currently runs on the intended channel
+      ansible.builtin.command:
+        argv: [podman, container, inspect, sanctum-nextcloud]
+      register: nextcloud_update_timer_live
+      changed_when: false
+      no_log: true
+
+    - name: Refuse enabling timer over stale frozen-image runtime
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_update_timer_live.stdout | from_json | length) == 1
+          - (nextcloud_update_timer_live.stdout | from_json)[0].State.Running | bool
+          - (nextcloud_update_timer_live.stdout | from_json)[0].ImageName == nextcloud_image
+        fail_msg: Live Nextcloud has not completed source-managed maintenance channel activation.
+
+    - name: Require separate weekly backup timer is enabled
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-enabled, sanctum-nextcloud-backup.timer]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_update_timer_xdg }}"
+      register: nextcloud_update_timer_backup_scheduled
+      changed_when: false
+      failed_when: nextcloud_update_timer_backup_scheduled.rc != 0 or (nextcloud_update_timer_backup_scheduled.stdout | trim) != 'enabled'
+
+    - name: Create user-systemd directory if necessary
+      ansible.builtin.file:
+        path: "{{ nextcloud_update_timer_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Install only Services-owned daily maintenance service and timer
+      ansible.builtin.copy:
+        src: "files/{{ item }}"
+        dest: "{{ nextcloud_update_timer_dir }}/{{ item }}"
+        mode: '0644'
+      loop:
+        - "{{ nextcloud_update_service_name }}"
+        - "{{ nextcloud_update_timer_name }}"
+      register: nextcloud_update_timer_files
+
+    - name: Enable daily patch-check user timer without running an image update
+      ansible.builtin.systemd_service:
+        name: "{{ nextcloud_update_timer_name }}"
+        scope: user
+        daemon_reload: "{{ nextcloud_update_timer_files.changed }}"
+        enabled: true
+        state: started
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_update_timer_xdg }}"
+
+    - name: Verify installed daily user update timer is enabled
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-enabled, "{{ nextcloud_update_timer_name }}"]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_update_timer_xdg }}"
+      register: nextcloud_update_timer_enabled
+      changed_when: false
+
+    - name: Require source-managed update timer enabled
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_update_timer_enabled.stdout | trim) == 'enabled'
+
+    - name: Report source-owned unattended Nextcloud 34 maintenance timer without claiming update
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          installed_enabled_timer: "{{ nextcloud_update_timer_name }}"
+          cadence: Daily 04:15 local, no delayed catch-up
+          release_channel: "{{ nextcloud_image }}"
+          pre_update_current_snapshot_and_peanut_custody_required: true
+          no_op_when_image_unchanged: true
+          lock_shared_with_weekly_backup: true
+          stop_unattended_retry_after_failed_promotion: true
+          first_timer_run_not_yet_observed: true
+          nextcloud_not_restarted_by_timer_install: true
+          next_action: Observe natural next scheduled run, no-op or backed-up patch activation and application health
