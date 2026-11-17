@@ -1,0 +1,45 @@
+---
+# Independent of whether upstream publishes another image. This orchestrates
+# the already native-accepted backup + Peanut retention procedures in one
+# invocation. The user timer is a separate explicitly approved install.
+- name: Allocate one fresh backup identity for the regular Nextcloud snapshot
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  tasks:
+    - name: Require Kvin owner and explicit recurring backup-cycle approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - nextcloud_scheduled_backup_approved | default(false) | bool
+        fail_msg: Only the explicitly approved Kvin-owned Nextcloud backup cycle is supported.
+
+    - name: Choose a unique private recovery point shared by source and off-host transfer
+      ansible.builtin.set_fact:
+        nextcloud_cycle_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+        nextcloud_cycle_recovery_id: "nextcloud-{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+        nextcloud_cycle_update_needed: false
+      changed_when: false
+
+    - name: Report scheduled Nextcloud backup point before touching application mode
+      ansible.builtin.debug:
+        msg:
+          source: kvin.outer.sanctum
+          backup_recovery_id: "{{ nextcloud_cycle_recovery_id }}"
+          full_app_and_database_backup_next: true
+          offhost_integrity_verification_next: peanut.arcane.sanctum
+          application_image_update_not_requested: true
+
+- import_playbook: nextcloud-consistent-backup.yml
+  vars:
+    nextcloud_consistent_backup_approved: "{{ nextcloud_scheduled_backup_approved | default(false) }}"
+    nextcloud_database_export_contract_approved: "{{ nextcloud_scheduled_backup_approved | default(false) }}"
+
+- import_playbook: nextcloud-retain-on-peanut.yml
+  vars:
+    nextcloud_recovery_id: "{{ hostvars['kvin.outer.sanctum'].nextcloud_cycle_recovery_id }}"
+    nextcloud_retain_to_peanut_approved: "{{ nextcloud_scheduled_backup_approved | default(false) }}"
