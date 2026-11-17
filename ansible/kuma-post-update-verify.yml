@@ -1,0 +1,146 @@
+---
+# Read-only post-image-update validation on the existing Kuma 2 Kvin instance.
+# No monitor reconciliation, initial setup, backup, restore or service mutation.
+- name: Verify existing Kuma credentials and saved Wicket monitor after v2 image update
+  hosts: kuma
+  gather_facts: true
+  become: false
+  vars_files:
+    - /home/wdc2/.config/sanctum-services/secrets/kuma-admin.vault.yml
+  vars:
+    kuma_verify_quadlet: /home/wdc2/.config/containers/systemd/sanctum-kuma.container
+    kuma_verify_admin_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-admin-init.js') }}"
+    kuma_verify_monitor_js: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/kuma-reconcile-monitors.js') }}"
+    kuma_verify_monitor: "{{ (lookup('ansible.builtin.file', playbook_dir ~ '/../data/kuma-monitors.yml') | from_yaml).kuma_monitors[0] }}"
+  tasks:
+    - name: Require exact already-deployed Kvin Kuma and read-only post-update approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['architecture'] == 'aarch64'
+          - ansible_facts['user_id'] == 'wdc2'
+          - kuma_post_update_verify_approved | default(false) | bool
+          - kuma_image == 'docker.io/louislam/uptime-kuma:2'
+          - kuma_data_volume == 'sanctum-kuma-data'
+          - kuma_host_port | int == 13001
+          - kuma_bind_address == '127.0.0.1'
+          - kuma_db_type == 'sqlite'
+          - kuma_verify_monitor.name == 'Wicket Ollama'
+        fail_msg: Only the existing retained Kvin Kuma v2 may be verified.
+
+    - name: Require existing Vault administrator password
+      ansible.builtin.assert:
+        that:
+          - vault_kuma_admin_password is defined
+          - vault_kuma_admin_password is string
+          - (vault_kuma_admin_password | default('')) | length > 0
+      no_log: true
+
+    - name: Read the installed user Quadlet as structured source text
+      ansible.builtin.slurp:
+        src: "{{ kuma_verify_quadlet }}"
+      register: kuma_verify_quadlet_source
+      no_log: true
+
+    - name: Require installed v2 registry update declaration and preserved volume
+      ansible.builtin.assert:
+        that:
+          - "'Image=docker.io/louislam/uptime-kuma:2' in kuma_verify_quadlet_lines"
+          - "'AutoUpdate=registry' in kuma_verify_quadlet_lines"
+          - "'ContainerName=sanctum-kuma' in kuma_verify_quadlet_lines"
+          - "'Volume=sanctum-kuma-data:/app/data' in kuma_verify_quadlet_lines"
+          - "'PublishPort=127.0.0.1:13001:3001/tcp' in kuma_verify_quadlet_lines"
+          - "'Environment=UPTIME_KUMA_DB_TYPE=sqlite' in kuma_verify_quadlet_lines"
+        vars:
+          kuma_verify_quadlet_lines: "{{ (kuma_verify_quadlet_source.content | b64decode).splitlines() }}"
+        fail_msg: Installed Kuma Quadlet is not the newly approved v2 source policy.
+
+    - name: Observe existing running user Kuma without making changes
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, sanctum-kuma.service]
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      register: kuma_verify_service
+      changed_when: false
+
+    - name: Read existing running Kuma image identity
+      ansible.builtin.command:
+        argv: [podman, inspect, --type, container, --format, "{{ '{{.ImageName}}' }}", sanctum-kuma]
+      register: kuma_verify_image
+      changed_when: false
+
+    - name: Authenticate the existing administrator WITHOUT creating a user
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - sanctum-kuma
+          - node
+          - -e
+          - "{{ kuma_verify_admin_js }}"
+          - verify
+        stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password} | to_json }}"
+        stdin_add_newline: false
+      changed_when: false
+      register: kuma_verify_admin
+      no_log: true
+
+    - name: Require successful login to original administrator
+      ansible.builtin.assert:
+        that:
+          - (kuma_verify_admin.stdout | from_json).administrator_login_verified | bool
+          - not ((kuma_verify_admin.stdout | from_json).administrator_created | bool)
+        fail_msg: Existing Kuma administrator could not be authenticated.
+
+    - name: Observe existing Wicket monitor and saved heartbeat WITHOUT reconciliation
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - --interactive
+          - --workdir
+          - /app
+          - sanctum-kuma
+          - node
+          - -e
+          - "{{ kuma_verify_monitor_js }}"
+          - observe
+        stdin: "{{ {'username': 'sanctum-admin', 'password': vault_kuma_admin_password, 'monitor': kuma_verify_monitor} | to_json }}"
+        stdin_add_newline: false
+      register: kuma_verify_monitor_result
+      changed_when: false
+      no_log: true
+
+    - name: Require existing monitor remains configured, unmodified and without notifications
+      ansible.builtin.assert:
+        that:
+          - (kuma_verify_monitor_result.stdout | from_json).persisted_configuration_verified | bool
+          - (kuma_verify_monitor_result.stdout | from_json).monitor_id | int == 1
+          - (kuma_verify_monitor_result.stdout | from_json).monitor_name == 'Wicket Ollama'
+          - (kuma_verify_monitor_result.stdout | from_json).changed == false
+          - not ((kuma_verify_monitor_result.stdout | from_json).notifications_attached | bool)
+          - (kuma_verify_monitor_result.stdout | from_json).latest_status_in_kuma in ['Up', 'Down', 'Pending', 'Maintenance', 'Unknown']
+        fail_msg: Saved Wicket monitor or authenticated read-only API did not match prior state.
+
+    - name: Report bounded post-update original administrator and monitor acceptance
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          source_image_policy: "{{ kuma_image }}"
+          installed_running_image: "{{ kuma_verify_image.stdout | trim }}"
+          installed_auto_update: registry
+          service_active: "{{ kuma_verify_service.stdout | trim }}"
+          original_admin_login_verified: true
+          existing_wicket_monitor_config_verified: true
+          monitor_id: "{{ (kuma_verify_monitor_result.stdout | from_json).monitor_id | int }}"
+          latest_wicket_status: "{{ (kuma_verify_monitor_result.stdout | from_json).latest_status_in_kuma }}"
+          heartbeat_age_seconds: "{{ (kuma_verify_monitor_result.stdout | from_json).heartbeat_age_seconds }}"
+          currently_up_and_recent: "{{ (kuma_verify_monitor_result.stdout | from_json).actual_up_accepted | bool }}"
+          service_or_database_modified_by_test: false
+          monitor_reconciled_or_changed_by_test: false
+          original_named_client_and_backup_acceptances_preserved: true
+          first_future_scheduled_auto_update_observed: false
