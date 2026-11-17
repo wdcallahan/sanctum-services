@@ -49,15 +49,15 @@ route or service restart. Source report in
   acceptance and successful moving-image production runtime.
   Not installed or triggered.
 
-**CURRENT CI:** Full Services source/Ansible syntax
-[run 44157258868](https://github.com/wdcallahan/sanctum-services/actions/runs/44157258868)
-is validating these current sources (only call it passed after confirming
-job success). Prior complete patch cycle source + syntax
-[run 44155550032 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44155550032).
+**CURRENT CI: FULL SOURCE, TESTS, ANSIBLE SYNTAX
+[run 44157258868 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44157258868)**,
+including the independent weekly backup schedule installer, the deferred
+daily patch timer installer, shared lock and preflight. Earlier completed
+patch-cycle source [run 44155550032 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44155550032).
 All recent work so far is GitHub source only; do not misstate timer
 or latest application update as installed.
 
-**NEXT SPECIFIC OPERATOR ACTION once CI passes:** opt-in installing
+**NEXT SPECIFIC OPERATOR ACTION, NOW READY (CI PASSED):** opt-in installing
 **only** the scheduled independent weekly backup timer on
 `wdc2@kvin`, via
 `ansible/nextcloud-backup-schedule-install.yml`
@@ -70,6 +70,19 @@ enter maintenance mode by standing operator approval. Exact outputs
 requested afterward: **`TASK [Report source-owned weekly Nextcloud backup schedule without claiming first occurrence]`**
 and **`PLAY RECAP`**, or failed task/error. Give host and full
 pasteable command when handing it to Nova after CI is green.
+
+**One exact user paste command on wdc2@kvin** (no sudo; installs and
+enables only a future weekly snapshot timer, after a transient
+read-only systemd-user-namespace Ansible ping to Kvin+Peanut; next
+Sunday at 03:30 a future scheduled job will briefly quiesce Nextcloud
+and retain current data on Peanut):
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-backup-schedule-install.yml \
+  -e nextcloud_backup_schedule_install_approved=true
+```
 
 **Parallel true owner dependency:** [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17)
 has not reported actual isolated Nextcloud-only PostgreSQL restore or a
