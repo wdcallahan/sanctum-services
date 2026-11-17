@@ -44,7 +44,7 @@ class PeanutIsolatedDatabaseTrial(unittest.TestCase):
         )
         self.assertEqual(
             self.play["vars"]["nextcloud_db_trial_pg_image"],
-            "docker.io/library/postgres@sha256:1961f96e6029a02c3812d7cb329a3b03a3ac2bb067058dec17b0f5596aca9296",
+            "docker.io/library/postgres:18",
         )
         invoke=self.get("Invoke ONLY the Maintenance-owned")
         argv=invoke["ansible.builtin.command"]["argv"]
@@ -57,6 +57,14 @@ class PeanutIsolatedDatabaseTrial(unittest.TestCase):
         for forbidden in ("pg_restore", "CREATE DATABASE",
                           "systemctl", "state: restarted", "become: true"):
             self.assertNotIn(forbidden,self.raw)
+        self.assertNotIn("postgres@sha256:",self.raw)
+        self.assertIn("Refuse restore unless Maintenance's actual helper uses the moving PostgreSQL major channel",self.names)
+        self.assertIn("nextcloud_db_trial_owner_image_contract.stdout",self.raw)
+        self.assertIn("runpy.run_path(sys.argv[1])",self.raw)
+        self.assertLess(
+            self.names.index("Refuse restore unless Maintenance's actual helper uses the moving PostgreSQL major channel"),
+            self.names.index("Cache only supported PostgreSQL 18 major channel when separately approved and absent"),
+        )
         self.assertIn("nextcloud_isolated_db_image_cache_approved | default(false) | bool",self.raw)
         self.assertIn("podman, pull, \"{{ nextcloud_db_trial_pg_image }}\"",self.raw)
         self.assertIn("podman, image, inspect",self.raw)
