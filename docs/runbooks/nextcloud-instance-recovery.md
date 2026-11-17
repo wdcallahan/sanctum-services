@@ -1,5 +1,45 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 16 final native recovery acceptance — isolated files STAGED on Peanut
+
+Nova ran `ansible/nextcloud-isolated-files-restore.yml` from Kvin,
+targeting the **real retained recovery point**
+`nextcloud-20261116t233618` on Peanut, and returned
+**`ok=14 changed=5 unreachable=0 failed=0 skipped=0 rescued=0`**.
+
+Actual report: `isolated_application_tree_staged=true`,
+`isolated_private_inputs_staged=true`,
+`source_bundle_integrity_checked=true`,
+`database_dump_not_imported=true`,
+`nextcloud_container_not_started=true`,
+`live_nextcloud_untouched=true`,
+`postgres_cluster_untouched=true`, and
+`restore_application_accepted=false` (correct).
+
+**Private source retained bundle on Peanut (do not modify):**
+`/home/wdc2/.local/share/sanctum-services/backups/nextcloud/nextcloud-20261116t233618`.
+
+**Peanut-only restored target:**
+`/home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials/nextcloud-20261116t233618`,
+with `html/` and `private/`. Production Kvin was untouched.
+
+**Now actual accepted:** Kvin consistent snapshot, independent Peanut
+copy with SHA/archive checks, and Peanut application-file extraction.
+**Still open:** isolate and restore the actual Nextcloud-only PostgreSQL
+dump via owner [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6940147324);
+then start a fully **isolated** Nextcloud against an independently
+available Nextcloud-only trial DB and accept real login, Calendar,
+file and sync-client behavior.
+
+Maintenance's existing `tools/restore-nextcloud-postgresql` is a
+networkless **disposable** database-restore rehearsal and **removes its
+restored DB/container** after validating tables. It cannot itself be
+the still-running DB server for an application test. Agree on a
+separately owned longer-lived isolated test-DB interface, **never**
+modifying the production shared PostgreSQL service. Do not overclaim
+full instance recovery until user-level application checks pass.
+[Services issue #2 native file-stage receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6940151074).
+
 ## November 16, late — NATIVE first complete off-Kvin backup ACCEPTED
 
 **This section supersedes historical below statements that no real backup
