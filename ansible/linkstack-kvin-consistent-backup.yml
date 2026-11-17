@@ -1,0 +1,235 @@
+---
+# First live Kvin LinkStack production-state snapshot before enabling rolling
+# registry updates. Do not reuse November 12 Kvar archive as a new backup.
+# Quiesce ONLY the existing rootless Kvin LinkStack SQLite writer, export its
+# named volume, and ALWAYS restart the original service. No networking changes.
+- name: Create a consistent current Kvin LinkStack snapshot before image updates
+  hosts: kuma
+  become: false
+  gather_facts: true
+  vars:
+    linkstack_live_service: sanctum-linkstack-kvin-candidate.service
+    linkstack_live_container: sanctum-linkstack-kvin-candidate
+    linkstack_live_volume: sanctum-linkstack-qualified-20261112t105926
+    linkstack_live_image: docker.io/linkstackorg/linkstack@sha256:b1a16980ad4964aac81e484e1b5c870d37a4d040892607d963b443c2be1f8df1
+    linkstack_live_quadlet: /home/wdc2/.config/containers/systemd/sanctum-linkstack-kvin-candidate.container
+    linkstack_backup_dir: /home/wdc2/.local/share/sanctum-services/backups/linkstack
+    linkstack_backup_stamp: "{{ ansible_facts['date_time']['iso8601_basic_short'] | lower }}"
+    linkstack_backup_partial: "{{ linkstack_backup_dir }}/linkstack-kvin-{{ linkstack_backup_stamp }}.tar.partial"
+    linkstack_backup_archive: "{{ linkstack_backup_dir }}/linkstack-kvin-{{ linkstack_backup_stamp }}.tar"
+    linkstack_archive_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Kvin live LinkStack and explicit short-interruption permission
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - not ansible_check_mode
+          - sanctum_linkstack_kvin_backup_approved | default(false) | bool
+          - linkstack_backup_stamp is match('^[0-9]{8}t[0-9]{6}$')
+        fail_msg: Only the exact Kvin rootless LinkStack service may be quiesced for this backup.
+
+    - name: Read live LinkStack user Quadlet from its exact source-owned path
+      ansible.builtin.slurp:
+        src: "{{ linkstack_live_quadlet }}"
+      register: linkstack_live_quadlet_contents
+      no_log: true
+
+    - name: Require current immutable-image original volume and loopback-only service
+      ansible.builtin.assert:
+        that:
+          - "('Image=' ~ linkstack_live_image) in linkstack_live_quadlet_lines"
+          - "('ContainerName=' ~ linkstack_live_container) in linkstack_live_quadlet_lines"
+          - "('Volume=' ~ linkstack_live_volume ~ ':/htdocs:Z') in linkstack_live_quadlet_lines"
+          - "'PublishPort=127.0.0.1:18081:80/tcp' in linkstack_live_quadlet_lines"
+          - "'Pull=never' in linkstack_live_quadlet_lines"
+        fail_msg: Refusing backup against an unexpected live LinkStack identity.
+      vars:
+        linkstack_live_quadlet_lines: "{{ (linkstack_live_quadlet_contents.content | b64decode).splitlines() }}"
+
+    - name: Require existing live LinkStack rootless data volume
+      ansible.builtin.command:
+        argv: [podman, volume, exists, "{{ linkstack_live_volume }}"]
+      changed_when: false
+      register: linkstack_live_volume_exists
+      failed_when: linkstack_live_volume_exists.rc not in [0, 1]
+
+    - name: Refuse backup if original volume is missing
+      ansible.builtin.assert:
+        that:
+          - linkstack_live_volume_exists.rc == 0
+
+    - name: Require original running LinkStack user service
+      ansible.builtin.command:
+        argv: [systemctl, --user, is-active, "{{ linkstack_live_service }}"]
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+      changed_when: false
+      register: linkstack_service_before
+
+    - name: Observe backup directory without following symlinks
+      ansible.builtin.stat:
+        path: "{{ linkstack_backup_dir }}"
+        follow: false
+      register: linkstack_backup_parent
+
+    - name: Refuse unsafe backup path
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_backup_parent.stat.islnk | default(false))
+          - not (linkstack_backup_parent.stat.exists | default(false))
+            or (linkstack_backup_parent.stat.isdir | default(false))
+
+    - name: Create only owner-private Kvin LinkStack backup directory
+      ansible.builtin.file:
+        path: "{{ linkstack_backup_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Check neither backup filename is already occupied
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ linkstack_backup_partial }}"
+        - "{{ linkstack_backup_archive }}"
+      register: linkstack_backup_outputs
+
+    - name: Refuse overwriting any earlier recovery artifact
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_backup_outputs.results[0].stat.exists | default(false))
+          - not (linkstack_backup_outputs.results[1].stat.exists | default(false))
+
+    - name: Reserve fresh private incomplete archive without clobber
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; fd=os.open(sys.argv[1],os.O_CREAT|os.O_EXCL|os.O_WRONLY,0o600); os.close(fd)"
+          - "{{ linkstack_backup_partial }}"
+      changed_when: true
+
+    - name: Quiesce only live LinkStack for a consistent SQLite volume export
+      block:
+        - name: Stop only the Kvin LinkStack rootless user service
+          ansible.builtin.systemd_service:
+            name: "{{ linkstack_live_service }}"
+            state: stopped
+            scope: user
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+        - name: Verify Kvin LinkStack is no longer active
+          ansible.builtin.command:
+            argv: [systemctl, --user, is-active, "{{ linkstack_live_service }}"]
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+          register: linkstack_stopped_state
+          changed_when: false
+          failed_when: false
+
+        - name: Require stopped SQLite writer before export
+          ansible.builtin.assert:
+            that:
+              - linkstack_stopped_state.rc != 0
+              - linkstack_stopped_state.stdout | trim != 'active'
+
+        - name: Export only stopped LinkStack data volume to private Kvin archive
+          ansible.builtin.command:
+            argv:
+              - podman
+              - volume
+              - export
+              - "{{ linkstack_live_volume }}"
+              - --output
+              - "{{ linkstack_backup_partial }}"
+          register: linkstack_volume_export
+          changed_when: linkstack_volume_export.rc == 0
+          diff: false
+      always:
+        - name: Start original Kvin LinkStack even when archive export fails
+          ansible.builtin.systemd_service:
+            name: "{{ linkstack_live_service }}"
+            state: started
+            scope: user
+          environment:
+            XDG_RUNTIME_DIR: "/run/user/{{ ansible_facts['user_uid'] }}"
+
+    - name: Require original LinkStack HTTP service recovered
+      ansible.builtin.uri:
+        url: http://127.0.0.1:18081/
+        status_code: [200, 301, 302, 307, 308]
+        follow_redirects: none
+        timeout: 5
+      register: linkstack_http_restored
+      retries: 15
+      delay: 2
+      until: linkstack_http_restored.status | default(0) in [200, 301, 302, 307, 308]
+      changed_when: false
+
+    - name: Require exact owner-private exported artifact
+      ansible.builtin.stat:
+        path: "{{ linkstack_backup_partial }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      register: linkstack_backup_stat
+
+    - name: Refuse malformed or non-private exported data
+      ansible.builtin.assert:
+        that:
+          - linkstack_backup_stat.stat.isreg | default(false)
+          - not (linkstack_backup_stat.stat.islnk | default(false))
+          - linkstack_backup_stat.stat.pw_name == 'wdc2'
+          - linkstack_backup_stat.stat.mode == '0600'
+          - linkstack_backup_stat.stat.size | int > 0
+
+    - name: Validate actual SQLite and owned configuration inside new archive
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_archive_validator }}"
+          - archive
+          - "{{ linkstack_backup_partial }}"
+      register: linkstack_validated
+      changed_when: false
+      no_log: true
+
+    - name: Require verified complete LinkStack archive and SQLite integrity
+      ansible.builtin.assert:
+        that:
+          - (linkstack_validated.stdout | from_json).archive_verified | bool
+          - (linkstack_validated.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_validated.stdout | from_json).configuration_file_present | bool
+          - (linkstack_validated.stdout | from_json).archive_sha256 == linkstack_backup_stat.stat.checksum
+          - not ((linkstack_validated.stdout | from_json).recovery_proven | bool)
+          - not ((linkstack_validated.stdout | from_json).off_host_copy_verified | bool)
+
+    - name: Promote validated archive using exclusive hardlink
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "import os,sys; os.link(sys.argv[1],sys.argv[2]); os.unlink(sys.argv[1])"
+          - "{{ linkstack_backup_partial }}"
+          - "{{ linkstack_backup_archive }}"
+      changed_when: true
+
+    - name: Report actual consistent current Kvin LinkStack backup
+      ansible.builtin.debug:
+        msg:
+          source: "{{ inventory_hostname }}"
+          backup_archive: "{{ linkstack_backup_archive }}"
+          archive_bytes: "{{ (linkstack_validated.stdout | from_json).archive_bytes | int }}"
+          archive_sha256: "{{ linkstack_backup_stat.stat.checksum }}"
+          sqlite_integrity: "{{ (linkstack_validated.stdout | from_json).sqlite_integrity }}"
+          original_service_restarted: true
+          original_http_status: "{{ linkstack_http_restored.status | int }}"
+          current_kvin_data_consistently_captured: true
+          copied_to_peanut: false
+          production_dns_or_proxy_modified: false
+          next_action: Retain this fresh snapshot off-host before switching LinkStack image update policy
