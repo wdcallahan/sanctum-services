@@ -1,5 +1,85 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 17 — Nextcloud 34.0.6 native image accepted; coordinated patch and weekly backups SOURCE
+
+**LATEST NATIVE RECEIPT:** Nova ran the previously green
+`ansible/nextcloud-qualify-maintenance-image.yml`, exact report task
+**`Report actual independent Nextcloud 34 maintenance image qualification`**
+and `PLAY RECAP`:
+**`kvin.outer.sanctum ok=13 changed=1 unreachable=0 failed=0 skipped=0`**.
+Actual original version **34.0.5.1**, original image ID
+`dcdf0b20ac50bce33cb2585c96fc92968e7c2d7378aef185547f735c9058f7b2`;
+official cached `docker.io/library/nextcloud:34.0-apache`
+Linux ARM64 **34.0.6**, new ID
+`e72f1a9e448447bc170f7fb3993033ff21d233906542852afd10c1cc5ec37d60`,
+different image available. No live app, HTML/data, DB, Quadlet, timer,
+route or service restart. Source report in
+[Services #5](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-6957836971).
+**Do not repeat native image stage or Nov17 baseline observation.**
+
+**NEW ENGINEERING IMPLEMENTED SOURCE ONLY:**
+- `ansible/nextcloud-maintenance-cycle.yml`: checked 34.0 ARM64
+  candidate, new source-consistent Kvin backup, independently verified
+  corresponding Peanut copy, then only source-approved, explicitly
+  authorized live within-major patch activation. Source controls no-op,
+  preserves existing Calendar 6.6.2 and mounts, failure latch, no blind
+  old-image downgrade. Full app+DB isolated restore gate is
+  `nextcloud_complete_restore_qualified_in_source=false` until real
+  Maintenance-owned database restore and running isolated Nextcloud
+  login/files/Calendar acceptance. **No live update performed.**
+- Canonical `ansible/group_vars/nextcloud.yml` now declares target
+  moving tag `docker.io/library/nextcloud:34.0-apache` but Kvin
+  still runs the frozen older image. Ordinary `ansible/site.yml`
+  **refuses** to migrate it outside the qualified cycle. New Quadlet
+  has `Pull=never`, NO `AutoUpdate=registry` so the unrelated
+  global Podman timer cannot bypass the coordinated snapshot.
+  The one-time 34.0.6 candidate is already cached. No wrong-date
+  repeated baseline, old snapshot, Peanut copy, or filesystem stage.
+- `ansible/nextcloud-scheduled-backup.yml`: standalone fresh Kvin
+  coherent source snapshot + Peanut independent retention, regardless
+  of a new upstream image. A proposed **Sunday 03:30** rootless user
+  timer (source `ansible/files/sanctum-nextcloud-backup.*`) runs it
+  through a single shared flock lock. It requires explicit opt-in
+  installation, verifies normal-user controller tools, existing
+  backup path and **noninteractive Kvin + Peanut Ansible SSH from
+  a transient user-manager service** before enabling. It does not
+  trigger a snapshot at timer installation. No auto-pruning.
+- Future **daily 04:15** same-lock maintenance timer has its own
+  source-only installer, deliberately guarded by full recovery
+  acceptance and successful moving-image production runtime.
+  Not installed or triggered.
+
+**CURRENT CI:** Full Services source/Ansible syntax
+[run 44157258868](https://github.com/wdcallahan/sanctum-services/actions/runs/44157258868)
+is validating these current sources (only call it passed after confirming
+job success). Prior complete patch cycle source + syntax
+[run 44155550032 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44155550032).
+All recent work so far is GitHub source only; do not misstate timer
+or latest application update as installed.
+
+**NEXT SPECIFIC OPERATOR ACTION once CI passes:** opt-in installing
+**only** the scheduled independent weekly backup timer on
+`wdc2@kvin`, via
+`ansible/nextcloud-backup-schedule-install.yml`
+and `-e nextcloud_backup_schedule_install_approved=true`.
+It will make a temporary **read-only** Kvin+Peanut SSH test from
+a systemd user service, write two owner user timer/service files and
+enable only the timer. **It DOES NOT run immediate backup, application
+restart or upgrade**; next scheduled overnight run will briefly
+enter maintenance mode by standing operator approval. Exact outputs
+requested afterward: **`TASK [Report source-owned weekly Nextcloud backup schedule without claiming first occurrence]`**
+and **`PLAY RECAP`**, or failed task/error. Give host and full
+pasteable command when handing it to Nova after CI is green.
+
+**Parallel true owner dependency:** [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17)
+has not reported actual isolated Nextcloud-only PostgreSQL restore or a
+long-lived trial DB for working Nextcloud; Nov16 Peanut app HTML/private
+is already staged and accepted. Services must not touch shared PG or
+declare full app restore from file-only extraction. User expressly
+requires timely automatic updates so this dependency must progress
+rather than become an indefinite freeze; lead can keep doing independent
+source work until genuine operator/owner boundary.
+
 ## November 17 — CONTINUATION RULE CORRECTED; 34.0 candidate qualification engineering underway
 
 **Nova correction:** On an unfinished, active project a source-only result, CI pass or broad recap is **not** permission to stop and end with "PIXEL CONTINUATION REQUIRED / no command" while the assistant still has authorized work and available tools. Continue substantive source implementation, tests, CI, docs and owner coordination until commissioned work is done, **a genuine Nova operator action/decision is required**, or an actual runtime/tool limit prevents continuation. This is also recorded in [shared Nova–Pixel Interface Standard](https://github.com/wdcallahan/engineering-standards/blob/main/Nova-Pixel-Project-Interface-Standard.md); the previous routine stop was a project-lead error. **Do not manufacture a probe merely to force a handoff.**
