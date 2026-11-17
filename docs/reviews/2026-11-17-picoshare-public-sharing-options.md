@@ -1,5 +1,47 @@
 # Candidate review — occasional externally reachable file shares
 
+## November 17 — random full BASE-62 case-sensitive short-code requirement (Nova)
+
+**Correction to earlier assistant-proposed "readable" reduced
+alphabets: reject that restriction.** Nova requires ALL 62 characters
+`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789`,
+including visually confusable `I`, `l`, `1`, `O`, `0`; his
+choice of typeface is not the application's security policy.
+**All short URLs must be random, NEVER sequential**, and the
+system must preserve letter case without folding it at the
+HTTP gateway, URL handler, URL shortener lookup or database
+collation.
+
+**Official YOURLS facts:** YOURLS did NOT change names; **Piwik**
+was renamed **Matomo** in January 2018. YOURLS's
+`YOURLS_URL_CONVERT=62` selects mixed-case base62 keywords;
+its default keyword generation is still sequential unless
+a suitable random plugin or exact caller-supplied random
+custom keyword is selected.
+[YOURLS character-set documentation](https://yourls.org/docs/guide/essentials/charset)
+and [source keyword creation](https://github.com/YOURLS/YOURLS/blob/master/includes/functions-shorturls.php)
+confirm the distinction. We should generate random keywords with a
+cryptographic random source, check correct case-sensitive
+collision behavior and ensure no case-insensitive DB collation
+can silently conflate `aB` with `Ab`.
+Do not assume a random-keyword *plugin* uses CSPRNG without
+reading/testing its algorithm.
+
+**Possible lengths, NOT yet fixed:** all 62 characters used
+uniformly, 8 random chars gives ~47.6 bits (ordinary
+non-sensitive links); 10 gives ~59.5 bits; 12 gives
+~71.5 bits (one-time private file link); 14 gives ~83.4 bits.
+With short expiry and 404/rate limiting, 12 chars seems a
+practical compromise for private one-shot links.
+Shortening a strong token does NOT preserve the long token's
+entropy; the public alias itself is the bearer capability.
+Example `buny.us/aB7kQ2m9` is ILLUSTRATIVE, not live.
+
+The original shortener is not yet authorized for installation;
+the home-hosted one-shot sharing and separate
+`vpn.buny.us` remain design candidates. The existing
+Services commitments still take priority.
+
 ## November 17 — NOVA RECALLED `buny.us`'s ORIGINAL PURPOSE: YOURLS URL SHORTENER
 
 Nova registered `buny.us` specifically to host **YOURLS** (Your
@@ -36,11 +78,10 @@ A strong 128-bit file token hidden behind a public five-character
 alias does **NOT** impart 128-bit unguessability to the public link:
 an attacker only has to guess the shorter code.
 Normal YOURLS sequential/default keywords are inappropriate for
-sensitive file links. Use unambiguous, cryptographically random,
-human-typeable codes with a separately chosen minimum length,
-for example 12 chars from a 34-character alphabet
-(~61 bits before rate limiting, limited lifetime),
-or 14 chars (~71 bits); hyphen grouping is a UI option.
+sensitive file links. Use **case-sensitive, cryptographically random full base62**
+keywords and a separately chosen minimum length. Twelve base62
+characters provide approximately 71.5 bits; eight provide ~47.6
+bits. No visually-confusable characters are excluded.
 Shorter non-sensitive redirects may use different alias rules.
 Time-based expiry, 404-throttle, and prompt alias disable/revoke
 after successful transfer are necessary practical controls.
@@ -97,10 +138,10 @@ No deployment or security audit has been done.
 
 **Candidate not safe to install as-is for Nova's STRONG public security:**
 - Its **5-character default** offers ~25 bits and is guessable at scale.
-  Use a short hostname and a **14–16-character human-typeable code**
-  (~71–81 bits for a uniform 34-character alphabet), with brute-force
-  throttling and short expiry, and consider groups separated by hyphens
-  for humans. These lengths are a proposed design, not user's selected
+  If adapting fdrop, replace its base34 alphabet with Nova's
+  **full case-sensitive base62** set, use a fresh CSPRNG and
+  configurable code lengths (a provisional 12 chars for private
+  one-time sharing), with brute-force throttling and short expiry. These lengths are a proposed design, not user's selected
   settings or a live link. Example domain must be owner controlled.
 - Inspected [download handler](https://github.com/polimo-dev/fdrop/blob/main/internal/server/download.go)
   opens/checks the token, then serves the entire file via `io.Copy`
