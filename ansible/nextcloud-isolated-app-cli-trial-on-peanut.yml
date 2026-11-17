@@ -1,0 +1,229 @@
+---
+# Restore-validation phase 2. NEVER start a production user service or
+# publish an HTTP listener. The only network namespace is container:<id>
+# of Maintenance's --network=none PostgreSQL trial, so a wrong Nextcloud
+# config cannot contact Kvin/shared production DB, DNS, proxy or the LAN.
+# Exact original 34.0.5 image, not the cached production update candidate.
+- name: Validate restored Nextcloud CLI against isolated PostgreSQL on Peanut
+  hosts: yxorp_test
+  gather_facts: true
+  become: false
+  vars_files:
+    - group_vars/nextcloud.yml
+  vars:
+    nextcloud_app_trial_recovery_id: "{{ nextcloud_isolated_recovery_id | default('UNSET') }}"
+    nextcloud_app_trial_base: /home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials
+    nextcloud_app_trial_dest: "{{ nextcloud_app_trial_base }}/{{ nextcloud_app_trial_recovery_id }}"
+    nextcloud_app_trial_html: "{{ nextcloud_app_trial_dest }}/html"
+    nextcloud_app_trial_password_file: "{{ nextcloud_app_trial_dest }}/postgresql-trial/postgresql-trial-password"
+    nextcloud_app_trial_receipt: "{{ nextcloud_app_trial_dest }}/postgresql-trial/postgresql-trial.json"
+    nextcloud_app_trial_image: "{{ nextcloud_original_frozen_image }}"
+    nextcloud_app_trial_container_prefix:
+      - podman
+      - run
+      - --rm
+      - --pull=never
+      - --read-only
+      - --security-opt=no-new-privileges
+      - --cap-drop=all
+      - --tmpfs=/tmp:rw,nosuid,nodev,size=32m
+      - --user=www-data
+      - --workdir=/var/www/html
+      - --entrypoint=php
+  tasks:
+    - name: Require exact rootless Peanut and separate isolated app trial approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - not ansible_check_mode
+          - nextcloud_isolated_app_trial_approved | default(false) | bool
+          - nextcloud_app_trial_recovery_id is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
+          - nextcloud_app_trial_image == 'docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145'
+          - nextcloud_app_trial_image != nextcloud_image
+        fail_msg: >-
+          Exact independently staged Peanut app+Maintenance DB must be
+          approved. Never test using the moving production image or host.
+
+    - name: Verify original extracted trial tree and private Maintenance handoff exist
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+        get_checksum: false
+      loop:
+        - "{{ nextcloud_app_trial_dest }}"
+        - "{{ nextcloud_app_trial_html }}/config/config.php"
+        - "{{ nextcloud_app_trial_html }}/data"
+        - "{{ nextcloud_app_trial_html }}/custom_apps"
+        - "{{ nextcloud_app_trial_password_file }}"
+        - "{{ nextcloud_app_trial_receipt }}"
+        - "{{ nextcloud_app_trial_html }}/config/zzzz-sanctum-isolated.config.php"
+      register: nextcloud_app_trial_inputs
+      no_log: true
+
+    - name: Require real staged HTML and private DB handoff, with NO prior override
+      ansible.builtin.assert:
+        that:
+          - nextcloud_app_trial_inputs.results[0].stat.isdir | default(false)
+          - nextcloud_app_trial_inputs.results[0].stat.mode == '0700'
+          - nextcloud_app_trial_inputs.results[1].stat.isreg | default(false)
+          - nextcloud_app_trial_inputs.results[2].stat.isdir | default(false)
+          - nextcloud_app_trial_inputs.results[3].stat.isdir | default(false)
+          - nextcloud_app_trial_inputs.results[4].stat.isreg | default(false)
+          - nextcloud_app_trial_inputs.results[4].stat.mode == '0600'
+          - nextcloud_app_trial_inputs.results[5].stat.isreg | default(false)
+          - nextcloud_app_trial_inputs.results[5].stat.mode == '0600'
+          - not (nextcloud_app_trial_inputs.results[6].stat.exists | default(false))
+        fail_msg: Missing isolated files/DB owner handoff or existing trial config; never overwrite an earlier app test.
+
+    - name: Read private Maintenance DB-only receipt without publishing credentials
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_app_trial_receipt }}"
+      register: nextcloud_app_trial_owner_receipt
+      no_log: true
+
+    - name: Require the private owner receipt is a running networkless database contract
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).status == 'isolated_database_ready_for_application'
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).database == 'nextcloud_restore'
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).username == 'nextcloud_restore'
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).host == '127.0.0.1'
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).port | int == 5432
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id is match('^[a-f0-9]{64}$')
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).network == ('container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id)
+          - (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).password_file == nextcloud_app_trial_password_file
+          - not ((nextcloud_app_trial_owner_receipt.content | b64decode | from_json).application_started | bool)
+          - not ((nextcloud_app_trial_owner_receipt.content | b64decode | from_json).production_database_contacted | bool)
+        fail_msg: The isolated DB handoff does not match the accepted Maintenance contract.
+
+    - name: Inspect owner-labelled PostgreSQL namespace before any application execution
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - inspect
+          - "{{ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id }}"
+      register: nextcloud_app_trial_db_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Refuse connecting to a nonisolated PostgreSQL or dead test database
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_db_inspect.stdout | from_json | length) == 1
+          - (nextcloud_app_trial_db_inspect.stdout | from_json)[0].State.Running | bool
+          - (nextcloud_app_trial_db_inspect.stdout | from_json)[0].HostConfig.NetworkMode == 'none'
+          - (nextcloud_app_trial_db_inspect.stdout | from_json)[0].Config.Labels['io.sanctum.nextcloud-restore'] == 'peanut'
+        fail_msg: The only permitted Nextcloud trial network is an owner-labelled --network=none PG namespace.
+
+    - name: Check immutable original 34.0.5 image cache without accessing a registry
+      ansible.builtin.command:
+        argv: [podman, image, exists, "{{ nextcloud_app_trial_image }}"]
+      register: nextcloud_app_trial_image_exists
+      changed_when: false
+      failed_when: false
+
+    - name: Refuse unknown original app image, no implicit registry or major update
+      ansible.builtin.assert:
+        that:
+          - nextcloud_app_trial_image_exists.rc == 0
+        fail_msg: >-
+          Original 34.0.5 Nextcloud image is not already cached on
+          Peanut. Qualify its immutable platform-compatible image before
+          starting any trial; never fall back to :latest or live Kvin.
+
+    - name: Inspect exact immutable original Nextcloud image
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ nextcloud_app_trial_image }}"]
+      register: nextcloud_app_trial_image_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Require native platform image identity without changing Peanut cache
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_image_inspect.stdout | from_json | length) == 1
+          - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Os == 'linux'
+          - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Architecture == ({'aarch64':'arm64','x86_64':'amd64'}[ansible_facts['architecture']])
+          - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
+        fail_msg: Refuse running old application image for a foreign CPU or unknown OS.
+
+    - name: Create PRIVATE restored-app-only DB configuration overlay under rootless user namespace
+      ansible.builtin.command:
+        argv:
+          - podman
+          - unshare
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-isolated-config.py') }}"
+          - "{{ nextcloud_app_trial_recovery_id }}"
+          - "{{ nextcloud_app_trial_html }}"
+          - "{{ nextcloud_app_trial_password_file }}"
+      register: nextcloud_app_trial_config_result
+      changed_when: nextcloud_app_trial_config_result.rc == 0
+      no_log: true
+
+    - name: Require isolated PHP override created without changing backed-up original config
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_config_result.stdout | from_json).status == 'isolated_nextcloud_config_ready'
+          - (nextcloud_app_trial_config_result.stdout | from_json).recovery_id == nextcloud_app_trial_recovery_id
+          - (nextcloud_app_trial_config_result.stdout | from_json).db_container_id == (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id
+          - (nextcloud_app_trial_config_result.stdout | from_json).isolated_only | bool
+          - (nextcloud_app_trial_config_result.stdout | from_json).original_restored_config_unchanged | bool
+          - not ((nextcloud_app_trial_config_result.stdout | from_json).production_database_contacted | bool)
+        fail_msg: Private Nextcloud trial config was not safely prepared.
+
+    - name: Run only restored Nextcloud occ status inside networkless DB namespace
+      ansible.builtin.command:
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_image, 'occ', 'status', '--output=json'] }}"
+      register: nextcloud_app_trial_occ
+      changed_when: false
+      no_log: true
+
+    - name: Require restored Nextcloud installed and healthy without a DB update
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_occ.stdout | from_json).installed | bool
+          - not ((nextcloud_app_trial_occ.stdout | from_json).maintenance | bool)
+          - not ((nextcloud_app_trial_occ.stdout | from_json).needsDbUpgrade | default(false) | bool)
+          - (nextcloud_app_trial_occ.stdout | from_json).version is match('^34[.]0[.]5([.][0-9]+)?$')
+        fail_msg: Restored application cannot prove original 34.0.5 state against trial DB.
+
+    - name: Run restored Calendar app inspection in same isolated namespace
+      ansible.builtin.command:
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_image, 'occ', 'app:list', '--output=json'] }}"
+      register: nextcloud_app_trial_apps
+      changed_when: false
+      no_log: true
+
+    - name: Require Calendar remains present in restored independent application
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_apps.stdout | from_json).enabled.calendar is defined
+          - (nextcloud_app_trial_apps.stdout | from_json).enabled.calendar == '6.6.2'
+        fail_msg: The restored Calendar app is missing or mismatched.
+
+    - name: Report actual networkless Nextcloud recovered application CLI and Calendar trial
+      ansible.builtin.debug:
+        msg:
+          observer: peanut.arcane.sanctum
+          source_recovery_id: "{{ nextcloud_app_trial_recovery_id }}"
+          restored_original_nextcloud_version: "{{ (nextcloud_app_trial_occ.stdout | from_json).version }}"
+          restored_calendar_version: "{{ (nextcloud_app_trial_apps.stdout | from_json).enabled.calendar }}"
+          restored_nextcloud_occ_status_passed: true
+          restored_calendar_app_enabled: true
+          completely_isolated_network_namespace: true
+          no_network_path_to_production_kvin_postgresql: true
+          only_restored_html_and_owner_test_database_used: true
+          original_restored_config_untouched: true
+          no_http_listener_or_browser_session_started: true
+          authenticated_login_not_yet_tested: true
+          restored_user_files_in_app_not_yet_tested: true
+          full_app_restore_not_yet_accepted: true
+          live_nextcloud_or_shared_postgresql_not_changed: true
+          next_action: Qualify isolated HTTP login, backed-up user files and Calendar use before releasing live 34.0.6 update gate
