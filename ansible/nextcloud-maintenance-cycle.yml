@@ -1,0 +1,30 @@
+---
+# Future attended/automated maintenance workflow, NOT YET APPROVED FOR LIVE USE.
+# This explicitly orders: candidate decision -> NEW consistent Kvin snapshot ->
+# independently checked Peanut custody -> production activation.
+# The final activation play refuses until an actual full DB+app restore has been
+# source-accepted, and requires its own approval. Do not put Nextcloud under
+# the unrelated global podman-auto-update.timer.
+#
+# Native operator/runtime is currently ansible-playbook on Kvin (the already
+# accepted backup/retention execution path). A future scheduled controller
+# will use the same Ansible entry with a single run lock; no timer is installed.
+- import_playbook: nextcloud-maintenance-preflight.yml
+
+# No update == no maintenance-mode pause, no fresh backup, no restart.
+# A new image, even for a base-image rebuild at the same Nextcloud patch,
+# must first pass the same backup/custody boundary.
+- import_playbook: nextcloud-consistent-backup.yml
+  vars:
+    nextcloud_consistent_backup_approved: "{{ nextcloud_maintenance_cycle_approved | default(false) }}"
+    nextcloud_database_export_contract_approved: "{{ nextcloud_maintenance_cycle_approved | default(false) }}"
+  when: hostvars['kvin.outer.sanctum'].nextcloud_cycle_update_needed | default(false) | bool
+
+- import_playbook: nextcloud-retain-on-peanut.yml
+  vars:
+    nextcloud_recovery_id: "{{ hostvars['kvin.outer.sanctum'].nextcloud_cycle_recovery_id }}"
+    nextcloud_retain_to_peanut_approved: "{{ nextcloud_maintenance_cycle_approved | default(false) }}"
+  when: hostvars['kvin.outer.sanctum'].nextcloud_cycle_update_needed | default(false) | bool
+
+- import_playbook: nextcloud-maintenance-activate.yml
+  when: hostvars['kvin.outer.sanctum'].nextcloud_cycle_update_needed | default(false) | bool
