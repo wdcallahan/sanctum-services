@@ -1,5 +1,48 @@
 # Sanctum Services — Project Lead Handoff
 
+## Current live recovery result — November 16, late
+
+**Nova has completed the FIRST THREE real Nextcloud recovery stages,
+not just the source checks:**
+
+- Kvin live Nextcloud consistent backup `nextcloud-20261116t233618`,
+  Ansible **ok=29 changed=9 failed=0**, application mode restored and HTTP
+  healthy; owner-scoped PostgreSQL dump plus HTML and private config checks.
+- Peanut off-host retained snapshot, **ok=14 changed=3 failed=0**,
+  four artifacts with **independent Peanut-side verified SHA256 and tar
+  structure**, original point still privately present on Kvin too.
+- Peanut isolated application **filesystem extraction**, **ok=14 changed=5
+  failed=0**. Actual report:
+  `isolated_application_tree_staged=true`,
+  `isolated_private_inputs_staged=true`,
+  `source_bundle_integrity_checked=true`, `database_dump_not_imported=true`,
+  `nextcloud_container_not_started=true`,
+  `live_nextcloud_untouched=true`,
+  `postgres_cluster_untouched=true`,
+  `restore_application_accepted=false`.
+
+**Exact retained Peanut backup:**
+`/home/wdc2/.local/share/sanctum-services/backups/nextcloud/nextcloud-20261116t233618`.
+**Extracted Peanut-only files:**
+`/home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials/nextcloud-20261116t233618/html`
+and `.../private`.
+
+**CURRENT OWNER BOUNDARY:** Services reported native success via
+[Services issue #2](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6940151074)
+and handed actual real snapshot path to
+[Maintenance issue #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6940147324).
+Maintenance owns `tools/restore-nextcloud-postgresql` for an isolated,
+networkless, disposable **actual Nextcloud-only database restore** on Peanut
+from the original retained dump. **That test deletes its restored database
+after inspection**, so it does not yet make a connection target for a running
+restored Nextcloud instance. A longer-lived, *isolated and separate* PostgreSQL
+trial service/interface will be needed to connect to a restored Nextcloud app,
+followed by real login, files and Calendar acceptance. Services owns app
+startup once owner DB interface is ready, and should prepare source only
+without claiming backup+file extraction is full recovery. No return to Kvin,
+no rebackup, no Pi-hole probe, no bulk size/file census.
+
+
 **Current: November 16, 2026.** This is the concise, authoritative entry point for a user-appointed Sanctum Services lead. The previous 4,509-line rolling handoff was preserved unchanged at [the historical handoff archive](docs/history/PROJECT_LEAD_INTRODUCTION-through-2026-11-16.md). It is historical evidence, **not** a queue of outstanding commands; numerous older "CURRENT" and "NEXT" paragraphs there are superseded. Read current `main`, [issue #2](https://github.com/wdcallahan/sanctum-services/issues/2), [the roadmap](docs/ROADMAP.md), [the estate register](docs/SERVICE-ESTATE.md), and the specific runbook for the active work. Do not mechanically replay dated instructions.
 
 ## Appointment, mission, and operating rhythm
@@ -15,7 +58,7 @@ Nova appoints **this chat as the Sanctum Services project lead**, not Bunny Fact
 ## What we are actually building (operator-facing explanation)
 
 **One backup playbook, one restore playbook, one recovery point stored off Kvin.**
-Read the [operator model at the beginning of the Nextcloud recovery runbook](docs/runbooks/nextcloud-instance-recovery.md#operator-model--two-ansible-jobs-and-one-protected-recovery-point). The backup snapshot is a single private directory with `nextcloud-html.tar` (the Kvin host **bind mount**, not a named Podman volume), `nextcloud-postgresql.dump` (Nextcloud's own database only), `nextcloud-private.tar` (private inputs), and `manifest.json` (integrity). Restore via an Ansible playbook into an **isolated** application instance and independent database; accept real data/calendar/login before any production cutover. The owner DB export/isolated restore interface, off-host destination/space and actual snapshots are still pending.
+Read the [operator model at the beginning of the Nextcloud recovery runbook](docs/runbooks/nextcloud-instance-recovery.md#operator-model--two-ansible-jobs-and-one-protected-recovery-point). The backup snapshot is a single private directory with `nextcloud-html.tar` (the Kvin host **bind mount**, not a named Podman volume), `nextcloud-postgresql.dump` (Nextcloud's own database only), `nextcloud-private.tar` (private inputs), and `manifest.json` (integrity). Restore via an Ansible playbook into an **isolated** application instance and independent database; accept real data/calendar/login before any production cutover. The Kvin backup, Peanut independent off-host retention, and isolated application file extraction are **now native-accepted**. The full database and application restore trial, functional login/Calendar checks and future automated backup scheduling remain open; see the current live recovery result above.
 
 **Don't conceal ordinary filenames or link targets from Nova.** The earlier staged probes were over-redacted and made the project sound mysterious; they do not justify hiding routine source structure. User-facing information should focus on **what is done, why, and what next**, not on symbolic-link primers or adversarial hypotheticals. Protect **password contents, private configuration values and backup archives**, not innocuous names. The 25 actual link examples from Nova were ordinary `apps/.../js/*.js.map.license -> *.js.license` build artifacts. We know only those 25 by name; avoid declaring that all 118 have that pattern. The prior source scan with 118 links and 5,769,576,446 file bytes has **passed**; don't rerun it.
 
