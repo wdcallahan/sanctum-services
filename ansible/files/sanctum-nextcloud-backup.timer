@@ -1,0 +1,12 @@
+[Unit]
+Description=Weekly Night Nextcloud recovery point on Kvin and Peanut
+
+[Timer]
+# A short overnight maintenance-mode window is accepted; don't run missed
+# backups unexpectedly in the middle of the day after a long power outage.
+OnCalendar=Sun *-*-* 03:30:00
+Persistent=false
+Unit=sanctum-nextcloud-backup.service
+
+[Install]
+WantedBy=timers.target
