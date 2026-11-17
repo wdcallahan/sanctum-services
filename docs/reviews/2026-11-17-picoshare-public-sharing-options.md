@@ -1,5 +1,66 @@
 # Candidate review — occasional externally reachable file shares
 
+## November 17 later — short enough to TYPE in remote Firefox is a hard usability requirement
+
+Nova additionally requires a full link **short enough to type by hand**
+on a cloud-hosted remote virtual system where he opens Firefox, in
+addition to tapping/copying or presenting a QR code. A 128-character
+opaque query string is **not** acceptable. Recipient must still have
+a single ordinary browser action with no app/account/passphrase.
+
+**Promising existing candidate found:** [fdrop](https://github.com/polimo-dev/fdrop),
+a small open-source Go project published Aug 2026, explicitly written
+for human-typed single-download URLs. Its example is
+`https://f.example.com/a3k9m`; actual candidate config uses
+`FDROP_ID_LENGTH` (5 default; up to 20), cryptographically
+generated readable lowercase letters and digits 2–9, time expiry,
+one-download cap, HTTP direct download with no confirmation, handling
+of `HEAD`/recognized prefetch requests, and partial-transfer retry.
+Its image supports ARM64; HTTPS requires a reverse proxy.
+No deployment or security audit has been done.
+
+**Candidate not safe to install as-is for Nova's STRONG public security:**
+- Its **5-character default** offers ~25 bits and is guessable at scale.
+  Use a short hostname and a **14–16-character human-typeable code**
+  (~71–81 bits for a uniform 34-character alphabet), with brute-force
+  throttling and short expiry, and consider groups separated by hyphens
+  for humans. These lengths are a proposed design, not user's selected
+  settings or a live link. Example domain must be owner controlled.
+- Inspected [download handler](https://github.com/polimo-dev/fdrop/blob/main/internal/server/download.go)
+  opens/checks the token, then serves the entire file via `io.Copy`
+  and **only then** calls `store.Consume`. The SQL update prevents
+  double *counting* but **not two overlapping transfers** from both
+  successfully fetching a one-shot file. Fix via **atomic in-flight
+  claim** before streaming and release on failed/aborted transfer,
+  with recovery from abandoned claims after a controlled timeout.
+- Current implementation purges the SQLite row **and blob** immediately
+  when download cap is reached or expiry hits. User wants a spent/expired
+  **token invalid immediately** but file **retained privately about
+  24 hours** to reissue a *fresh* share code without reuploading.
+  Separate public-token lifecycle from private blob-retention lifecycle.
+  Ensure expired/orphan cleanup never deletes other services' data.
+- Need convenient **QR code display**, not just visible short URL; add
+  in the owner UI if missing. Admin/upload paths should be available
+  only from a protected internal management channel, while only the
+  direct-download path is publicly permitted by the ingress proxy.
+- `io.Copy` finishing without error and the full file length being
+  submitted to the HTTP response gives a practical, server-observable
+  completion point, **NOT proof the browser saved the file**. TCP
+  acknowledgments reflect network-stack receipt (potentially by a
+  proxy), not the final application save, and server writes may be
+  buffered. Disable reverse-proxy response buffering/caching for
+  direct downloads; treat network aborts as retryable. HEAD/prefetch
+  must not consume. Existing files are preserved as owner-only blobs.
+- New tiny low-adoption repository (Aug 2026, limited public uptake),
+  deserving a focused source security review before exposing ANY
+  port to the Internet; existing docs/tests alone are not certification.
+
+**Important:** This is a better functional candidate than modifying
+PicoShare for one-shot link semantics. It is still just a feasibility
+discovery and **not** authorization for installation, offsite hosting,
+public ingress or additional unfinished Services scope.
+
+
 ## November 17 operator correction — HOME ONLY; ZERO RECIPIENT FRICTION
 
 **This supersedes the external VPS/object-storage and multi-secret
