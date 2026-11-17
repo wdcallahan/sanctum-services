@@ -1,4 +1,69 @@
 # Candidate review — occasional externally reachable file shares
+
+## November 17 operator correction — HOME ONLY; ZERO RECIPIENT FRICTION
+
+**This supersedes the external VPS/object-storage and multi-secret
+recommendations below.** Nova explicitly rejected offsite hosting:
+if files cannot be served from *his own network*, this service is not
+worth installing. Also rejected any added recipient application,
+registration, passphrase, second channel, manual decryption or other
+procedure. The wanted experience is:
+
+1. Nova selects/uploads a file from his own computer/phone.
+2. Service immediately produces a share URL and a QR code for that URL.
+3. Recipient taps URL or scans QR with a normal phone/browser and
+   immediately downloads the file **without further questions or apps**.
+4. After that ONE download the link becomes unusable (plus configurable
+   expiry/revocation for files not collected). No broad public browsing
+   of old shared files.
+5. Network is publicly reachable over trusted HTTPS via ISP-provided
+   STATIC address, but host/service has **no reachability into Sanctum
+   internal management/LAN networks**. All additional protection is
+   server-side; ordinary LAN services retain sensible low-friction access.
+
+**Implementation observation from current upstream PicoShare source:**
+[handlers/download.go](https://github.com/mtlynch/picoshare/blob/master/handlers/download.go)
+calls `http.ServeContent` and only then `recordDownload` as a
+historical download log; it does NOT atomically consume or revoke the
+entry after serving. Its [metadata model](https://github.com/mtlynch/picoshare/blob/master/picoshare/picoshare.go)
+has a download count but not an owner-configurable maximum downloads
+per file. **PicoShare cannot be claimed to meet "exactly one GET and
+invalidate" out-of-the-box.** Its built-in expiry is time-based and
+the Nov16 v1.5.5 optional passphrase is an unwanted recipient step here.
+We should assess either a **small isolated one-shot download gateway**
+with atomic token redemption, or a narrowly scoped patch to PicoShare;
+only build either if selected by Nova. A policy promise based merely
+on reading a download count is subject to races and is insufficient.
+
+**Operational nuance:** Safe handling of `HEAD`, range/resume requests,
+preview/unfurl bots and retries must be designed and tested.
+An unconditional first-GET consumption can allow an antivirus/link
+scanner to burn a file before the real recipient clicks, or prevent
+recovering a dropped mobile download. Determine whether the practical
+meaning is "one started transfer" or "one completed transfer", because
+they cannot always be distinguished perfectly over unreliable networks
+without adding a recipient acknowledgement. No need to ask Nova to
+install anything or impose a second interaction.
+
+**Only on-premises network choices:** use a physically or logically
+separate public DMZ host/segment with default-deny initiation into the
+interior network, isolated storage containing only explicitly
+uploaded/shareable files, no Kvin/Peanut/Wicket data mounts, private
+administration/upload channel, and incoming 443 only. The existing
+second static IP could be used **if** Bunny Factory establishes
+real routed/address ownership; static address alone is not isolation.
+The home public endpoint remains a service that can be scanned/attacked,
+so keep software updated, restrict exposed HTTP routes and rate-limit
+abuse. Public certificate/hostname is a server-owned convenience,
+not a recipient step. Do not expose existing production Nginx/Kvin as
+the default just to avoid one additional isolated container/host.
+
+**Status:** User has specified product goals, **not approved a
+deployment**; don't purchase, route/NAT, open ports or install
+anything before choosing an on-premises implementation. It's still an
+uncommitted future candidate, not a new blocking task for current
+Kuma/LinkStack/Nextcloud commitments.
+
 ## November 17, 2026 — NOT an approved installation or WAN change
 
 Nova is exploring using **PicoShare** for an occasional public link handed
