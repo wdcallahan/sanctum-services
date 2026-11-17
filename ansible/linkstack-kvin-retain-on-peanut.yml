@@ -1,0 +1,146 @@
+---
+# Independent off-Kvin retention of the real November 17 live LinkStack
+# SQLite-consistent archive. Transfer only the accepted owner-private tar
+# to Peanut and independently verify bytes, structure and SQLite integrity.
+# NO LinkStack stop/restart, upgrade, production networking or database write.
+- name: Retain verified current Kvin LinkStack backup on independent Peanut
+  hosts: yxorp_test
+  gather_facts: true
+  become: false
+  vars:
+    linkstack_retention_filename: linkstack-kvin-20261117t105833.tar
+    linkstack_retention_sha256: 301ee0eeee9de17a96ec1dc0292dbeaa059bceb3b7d45eed7426523727efbe05
+    linkstack_retention_size: 93849600
+    linkstack_retention_local_dir: /home/wdc2/.local/share/sanctum-services/backups/linkstack
+    linkstack_retention_remote_dir: /home/wdc2/.local/share/sanctum-services/backups/linkstack
+    linkstack_retention_local: "{{ linkstack_retention_local_dir }}/{{ linkstack_retention_filename }}"
+    linkstack_retention_remote: "{{ linkstack_retention_remote_dir }}/{{ linkstack_retention_filename }}"
+    linkstack_retention_validator: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/linkstack-archive-verify.py') }}"
+  tasks:
+    - name: Require exact Peanut destination and explicit LinkStack retention approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_user == 'wdc2'
+          - ansible_facts['env']['HOME'] == '/home/wdc2'
+          - not ansible_check_mode
+          - sanctum_linkstack_kvin_retain_on_peanut_approved | default(false) | bool
+        fail_msg: This operation copies one accepted LinkStack snapshot only from Kvin to Peanut.
+
+    - name: Observe actual Ansible controller FQDN
+      ansible.builtin.command:
+        argv: [hostname, -f]
+      delegate_to: localhost
+      changed_when: false
+      register: linkstack_retention_controller
+
+    - name: Require current Kvin source controller and owner
+      ansible.builtin.assert:
+        that:
+          - linkstack_retention_controller.stdout | trim == 'kvin.outer.sanctum'
+          - lookup('env', 'HOME') == '/home/wdc2'
+
+    - name: Read and independently hash the accepted Kvin backup file
+      ansible.builtin.stat:
+        path: "{{ linkstack_retention_local }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      delegate_to: localhost
+      register: linkstack_retention_local_stat
+
+    - name: Require actual exact current Kvin snapshot before transfer
+      ansible.builtin.assert:
+        that:
+          - linkstack_retention_local_stat.stat.isreg | default(false)
+          - not (linkstack_retention_local_stat.stat.islnk | default(false))
+          - linkstack_retention_local_stat.stat.pw_name == 'wdc2'
+          - linkstack_retention_local_stat.stat.mode == '0600'
+          - linkstack_retention_local_stat.stat.size | int == linkstack_retention_size | int
+          - linkstack_retention_local_stat.stat.checksum == linkstack_retention_sha256
+        fail_msg: Kvin snapshot no longer matches November 17 native accepted evidence.
+
+    - name: Check independent Peanut LinkStack directory without following symlinks
+      ansible.builtin.stat:
+        path: "{{ linkstack_retention_remote_dir }}"
+        follow: false
+      register: linkstack_retention_parent
+
+    - name: Reject symlink or non-directory Peanut destination
+      ansible.builtin.assert:
+        that:
+          - not (linkstack_retention_parent.stat.islnk | default(false))
+          - not (linkstack_retention_parent.stat.exists | default(false))
+            or (linkstack_retention_parent.stat.isdir | default(false))
+
+    - name: Create owner-private LinkStack retention directory on Peanut
+      ansible.builtin.file:
+        path: "{{ linkstack_retention_remote_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Copy only actual November 17 Kvin LinkStack archive over managed SSH
+      ansible.builtin.copy:
+        src: "{{ linkstack_retention_local }}"
+        dest: "{{ linkstack_retention_remote }}"
+        mode: '0600'
+        force: false
+      diff: false
+
+    - name: Independently hash actual LinkStack archive on Peanut
+      ansible.builtin.stat:
+        path: "{{ linkstack_retention_remote }}"
+        follow: false
+        get_checksum: true
+        checksum_algorithm: sha256
+      register: linkstack_retention_remote_stat
+
+    - name: Require exact Peanut bytes, SHA256, private file mode and owner
+      ansible.builtin.assert:
+        that:
+          - linkstack_retention_remote_stat.stat.isreg | default(false)
+          - not (linkstack_retention_remote_stat.stat.islnk | default(false))
+          - linkstack_retention_remote_stat.stat.mode == '0600'
+          - linkstack_retention_remote_stat.stat.pw_name == 'wdc2'
+          - linkstack_retention_remote_stat.stat.size | int == linkstack_retention_size | int
+          - linkstack_retention_remote_stat.stat.checksum == linkstack_retention_sha256
+        fail_msg: Copied archive bytes or private file identity do not match Kvin.
+
+    - name: Independently verify retained LinkStack SQLite archive on Peanut
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - "{{ linkstack_retention_validator }}"
+          - archive
+          - "{{ linkstack_retention_remote }}"
+      register: linkstack_retention_remote_validation
+      changed_when: false
+      no_log: true
+
+    - name: Require independently readable retained SQLite and configuration
+      ansible.builtin.assert:
+        that:
+          - (linkstack_retention_remote_validation.stdout | from_json).schema == 'sanctum-linkstack-archive/v1'
+          - (linkstack_retention_remote_validation.stdout | from_json).archive_verified | bool
+          - (linkstack_retention_remote_validation.stdout | from_json).sqlite_integrity == 'ok'
+          - (linkstack_retention_remote_validation.stdout | from_json).configuration_file_present | bool
+          - (linkstack_retention_remote_validation.stdout | from_json).archive_bytes | int == linkstack_retention_size | int
+          - (linkstack_retention_remote_validation.stdout | from_json).archive_sha256 == linkstack_retention_sha256
+          - not ((linkstack_retention_remote_validation.stdout | from_json).recovery_proven | bool)
+        fail_msg: Independent Peanut LinkStack archive structure or SQLite failed verification.
+
+    - name: Report real LinkStack off-Kvin retention on Peanut
+      ansible.builtin.debug:
+        msg:
+          source: kvin.outer.sanctum
+          destination: peanut.arcane.sanctum
+          retained_archive: "{{ linkstack_retention_remote }}"
+          archive_bytes: "{{ linkstack_retention_size }}"
+          archive_sha256: "{{ linkstack_retention_sha256 }}"
+          hash_and_sqlite_verified_on_peanut: true
+          original_linkstack_running_service_untouched: true
+          production_dns_proxy_firewall_untouched: true
+          restore_to_independent_host_not_retested_by_copy: true
+          next_action: Migrate LinkStack image source to moving supported channel and registry auto-updates
