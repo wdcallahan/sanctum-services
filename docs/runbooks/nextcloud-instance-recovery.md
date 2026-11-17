@@ -1,5 +1,52 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 17 — Weekly user backup timer installed; first one-shot qualification
+
+Nova completed the actual Kvin schedule installer:
+**`kvin.outer.sanctum ok=13 changed=3 failed=0 unreachable=0`**,
+exact **`TASK [Report source-owned weekly Nextcloud backup schedule without claiming first occurrence]`**:
+`installed_and_enabled=true`, Sunday 03:30 local,
+`immediate_backup_not_triggered=true`,
+`current_nextcloud_not_restarted=true`,
+`scheduled_first_run_not_yet_observed=true`. Native receipt
+[Services #2](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6958782891).
+**Do not rerun installation to confirm it.**
+
+**New supervised first-job source qualification:**
+`ansible/nextcloud-backup-service-first-run.yml` requires separately
+approved live snapshot execution and exactly Kvin/`wdc2`. It starts
+the **ALREADY INSTALLED** rootless systemd
+`sanctum-nextcloud-backup.service` once and awaits actual completion,
+verifies successful systemd one-shot result, identifies exactly one
+newly created private recovery directory not present beforehand,
+checks the expected same manifest SHA256 and complete archive/DB
+headers independently on Kvin and Peanut, and verifies Nextcloud
+returned to normal mode. No updater, timer modification, deletion,
+shared PostgreSQL service change or software restart. This first
+run uses the existing Maintenance-only export and may briefly put
+Nextcloud into maintenance mode, write a new data/DB bundle and
+transfer it to Peanut, so a new distinct user approval is required.
+**A supervised service start is NOT proof that a later natural Sunday
+timer triggering was observed.** That remains a future acceptance
+item.
+
+**Upon full CI green, the exact operator command** for a supervised
+first-run test, in the normal `wdc2` shell on Kvin (no sudo), is:
+```bash
+cd ~/src/sanctum-services &&
+git pull --ff-only &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-backup-service-first-run.yml \
+  -e nextcloud_first_backup_run_approved=true
+```
+Request the exact
+**`TASK [Report actual installed weekly Nextcloud backup service execution and Peanut recovery acceptance]`**
+and **`PLAY RECAP`**, or the full failed task and error. A fresh verified
+backup is intentionally made as part of this new test; no repetition of
+the already accepted Nov16 manual snapshot is needed. On failure,
+retain all candidate bytes for diagnosis; do not assume the scheduled
+worker succeeded just because the timer is enabled.
+
 ## November 17 — Native 34.0.6 image ready; updater and weekly backup SOURCE, not live
 
 **Native qualified image-only observation ACCEPTED:** On Kvin, Nova ran
