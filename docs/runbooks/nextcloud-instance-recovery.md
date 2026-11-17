@@ -6,6 +6,44 @@ source-managed, but **full-instance backup, independent storage, and an
 isolated recovery have not been accepted**. This document authorizes no
 application downtime or database change.
 
+## November 16, late — Maintenance export handoff resolved in source
+
+Maintenance has **published** its supported bounded
+[Nextcloud-only PostgreSQL exporter](https://github.com/wdcallahan/sanctum-maintenance/blob/main/docs/runbooks/nextcloud-postgresql-backup.md)
+(`/home/wdc2/src/sanctum-maintenance/tools/backup-nextcloud-postgresql` on Kvin).
+[Maintenance's CI 43974977911](https://github.com/wdcallahan/sanctum-maintenance/actions/runs/43974977911)
+accepted its source contract and **disposable PostgreSQL export/restore**.
+This is **not** a native backup of Nova's actual Nextcloud database.
+
+Services' source-only `ansible/nextcloud-consistent-backup.yml` now declares
+the **exact** source-owned helper call
+`/usr/bin/python3 <maintenance-helper> <new-private-nextcloud-postgresql.dump>`,
+checks existence and ownership before changing Nextcloud mode, and requires
+a successful helper receipt naming **only database `nextcloud`**, a
+readable `pg_restore --list` catalog and the expected fixed dump basename.
+The helper exports with local peer authentication, not arbitrary admin
+credentials or a broad PostgreSQL installer. Both the application quiesce and
+the owner-specific database export remain under **two false-by-default
+execution approval switches**; no live snapshot was created, and no
+automatic Nextcloud updates were enabled by this source integration.
+
+**One important owner maintenance dependency:** The helper itself currently
+refuses if the shared PostgreSQL running image does not match an *exact
+2026-10 installed image digest*. Nova rejects indefinite application image
+freezing: Maintenance must make its helper compatible with legitimate
+PostgreSQL maintenance image updates so required Nextcloud backups keep
+working. Avoid introducing a new permanent pinned production image in
+Services just to satisfy the helper; coordinate that change under
+[Maintenance #5](https://github.com/wdcallahan/sanctum-maintenance/issues/5#issuecomment-6935782334)
+and [#17](https://github.com/wdcallahan/sanctum-maintenance/issues/17).
+
+**Next real native qualification** after Services CI: one read-only Kvin
+version/runtime/help-path and timer inventory, private backup directory
+capacity checked earlier, then approved short maintenance-mode capture,
+independent off-Kvin custody, and isolated restoration. A first backup
+still needs explicit owner/operator coordination; this paragraph is not
+live permission.
+
 ## Consistency model — not atomically synchronized at every instant
 
 Nextcloud's file tree and PostgreSQL are **two distinct stores**; they do
