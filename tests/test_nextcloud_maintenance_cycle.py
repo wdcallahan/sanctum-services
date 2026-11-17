@@ -61,6 +61,8 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
             self.assertIn(requirement, raw)
         for flag in ("--rm", "--pull=never", "--network=none", "--read-only"):
             self.assertIn(flag, raw)
+        self.assertIn(".update-halted", raw)
+        self.assertIn("Refuse an unattended retry", raw)
         self.assertNotIn("maintenance:mode", raw)
         self.assertNotIn("systemd_service:", raw)
         self.assertNotIn("pg_dump", raw)
@@ -94,6 +96,8 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
         self.assertIn("state: restarted", raw)
         self.assertIn("Calendar 6.6.2", raw)
         self.assertIn("without unsafe image downgrade", raw)
+        self.assertIn("Persist failed application-upgrade latch", raw)
+        self.assertIn(".update-halted", raw)
         self.assertNotIn("pg_restore", raw)
         self.assertNotIn("pg_dump", raw)
         self.assertNotIn("podman-auto-update", raw)
