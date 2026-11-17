@@ -1,5 +1,37 @@
 # Kuma — consistent backup and isolated restore trial
 
+## November 17 — retain the already accepted Kuma archive on Peanut
+
+**Existing actual Kvin proof remains accepted:** November 11
+`ok=49 changed=11 failed=0` genuinely stopped only Kuma for a
+consistent SQLite volume archive, restarted it, and completed a
+network-disconnected restored-monitor/login test. Private local archive:
+`sanctum-kuma-20261111t144137.tar`, **290816 bytes**, SHA256
+`97f7fae21ed845f6e719352025166a155c6ede9489525f701dbaedaed6273648`.
+
+Services now has `ansible/kuma-retain-on-peanut.yml` to copy **that exact
+already-validated backup**, as `wdc2` from Kvin to Peanut under the
+separate private `/home/wdc2/.local/share/sanctum-services/backups/kuma`
+directory. It verifies both independent SHA256 values and keeps
+ordinary filenames/results visible, with binary diffs disabled.
+**It does not stop Kuma, alter an SQLite database, update an image,
+restart any service or copy encrypted admin Vault files**. A qualified
+Kuma data copy is **not** full disaster recovery until the original
+vault credentials/rebuild inputs can also be recovered as needed.
+
+Next milestone after a real accepted off-host copy: reconcile Kuma's
+unattended image-updater policy. **Uptime Kuma upstream explicitly
+recommends `louislam/uptime-kuma:2`; `:latest` is deprecated and points
+to version 1** ([official tag documentation](https://github.com/louislam/uptime-kuma/wiki/Docker-Tags)).
+Do not unthinkingly apply the same `:latest` policy as EyesOnly.
+The current Quadlet still has an exact fixed image and no
+`AutoUpdate=registry`, and the old backup trial's assertions also
+enforce the exact digest. Update them together with source tests;
+do not declare live updates before the application has actually
+been reconciled, and don't repeat the November 11 rescue trial
+just to justify an ordinary off-host copy.
+
+
 ## Native recovery trial ACCEPTED — November 11, 2026
 
 Nova executed the actual Kvin guard-approved playbook:
