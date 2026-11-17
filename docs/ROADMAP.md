@@ -1,5 +1,48 @@
 # Sanctum Services — Roadmap
 
+## November 17 — Weekly backup worker NATIVE ACCEPTED; separate database+application restore path SOURCE
+
+Nova natively exercised the **already installed weekly rootless backup service**
+and it completed end-to-end: **`ok=20 changed=1 failed=0`**,
+NEW consistent recovery ID `nextcloud-20261117t134454`,
+independent Peanut complete four-file bundle verification and matching
+SHA256 manifest, live Nextcloud normal, timer still enabled. No software
+update; no automatic prune; actual Sunday timer firing still unobserved.
+[Native acceptance](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6960759294).
+**Do not rerun timer install or the supervised first worker proof.**
+
+**Full recovery is separate:** For initial app+DB trial use Nov16
+`nextcloud-20261116t233618`, because its HTML/private files are already
+extracted on Peanut. Current Maintenance
+`tools/restore-nextcloud-postgresql` **already has a supported
+longer-lived trial handoff** (`postgresql-trial-password`, 
+`postgresql-trial.json`, isolated owner-labelled networkless PostgreSQL
+container/nextcloud_restore role). Services source:
+`ansible/nextcloud-isolated-db-trial-on-peanut.yml` validates original
+Peanut retained dump/manifest, old file-stage and distinct new approval,
+optionally caches ONLY the owner-pinned native PostgreSQL18 image, then
+invokes ONLY Maintenance's helper for the DB. Separately, source-only
+`ansible/nextcloud-isolated-app-cli-trial-on-peanut.yml` and
+`tools/nextcloud-isolated-config.py` permit original immutable
+34.0.5 Nextcloud `occ` + Calendar checks in that same
+**`--network=none`** DB namespace against a private-only config
+override; original copied config is not changed, no HTTP/browser service,
+no production DB/LAN path.
+
+**Acceptance boundaries:** neither isolated PostgreSQL nor restored
+Nextcloud CLI has been natively run yet. No production 34.0.6 update;
+the restored application's authenticated login, user files and Calendar
+interaction must still be proven before unlocking the protected patch
+cycle; a CLI pass alone is not full disaster recovery. Maintenance owns
+the actual DB helper and cleanup; Services owns the application. First
+operator command after CI: run `ansible/nextcloud-isolated-db-trial-on-peanut.yml`
+from Kvin against **Nov16** with explicit two restore authorizations
+and optional exact-digest cache approval. Ask exact
+`TASK [Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application]`
+plus `PLAY RECAP`. This leaves an isolated Peanut test DB running
+until later app acceptance and Maintenance cleanup; never confuse it
+with production PostgreSQL or a new Kvin backup.
+
 ## November 17 — Weekly Nextcloud backup timer NATIVE ENABLED; supervised worker test prepared
 
 Nova ran the approved user timer installer on Kvin,
