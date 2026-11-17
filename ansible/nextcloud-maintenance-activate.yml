@@ -1,0 +1,235 @@
+---
+# Fourth and last play of a maintenance cycle, after:
+# (1) real Kvin 34.0 candidate preflight; (2) NEW same-run consistent
+# Nextcloud HTML/private/Nextcloud-only PG dump; (3) complete Peanut off-host
+# custody independently verified. Does not change shared PostgreSQL service.
+# The actual Nextcloud application/database may migrate on restart.
+- name: Guarded Nextcloud 34 maintenance image activation after recoverable snapshot
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_cycle_rootless_quadlet: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container
+    nextcloud_cycle_managed_source: files/sanctum-nextcloud-kvin-maintenance.container
+    nextcloud_cycle_target_image: docker.io/library/nextcloud:34.0-apache
+    nextcloud_cycle_unit: sanctum-nextcloud.service
+    nextcloud_cycle_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
+    # Not an operator shortcut: change only when the independent
+    # PostgreSQL + full application restore has actually been proven.
+    # A restored filesystem without restored DB/working app is NOT enough.
+    nextcloud_complete_restore_qualified_in_source: false
+  tasks:
+    - name: Require exact live-service scope, complete recovery qualification and separate activation approval
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - not ansible_check_mode
+          - nextcloud_maintenance_cycle_approved | default(false) | bool
+          - nextcloud_maintenance_activation_approved | default(false) | bool
+          - nextcloud_complete_restore_qualified_in_source | bool
+          - nextcloud_cycle_update_needed | default(false) | bool
+          - nextcloud_cycle_old_image_id | default('') is match('^[a-f0-9]{64}$')
+          - nextcloud_cycle_candidate_image_id | default('') is match('^[a-f0-9]{64}$')
+          - nextcloud_cycle_candidate == nextcloud_cycle_target_image
+          - nextcloud_cycle_recovery_id | default('') is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
+          - nextcloud_cycle_backup_verified | default(false) | bool
+          - hostvars['peanut.arcane.sanctum'].nextcloud_cycle_peanut_verified | default(false) | bool
+        fail_msg: >-
+          Refusing production update. Both current Kvin consistent backup
+          and independently verified Peanut custody must succeed in this
+          invocation, isolated full database+app restore must be accepted,
+          and live activation needs separate explicit approval.
+
+    - name: Read current live Nextcloud Quadlet privately before change
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_cycle_rootless_quadlet }}"
+      register: nextcloud_activation_before_quadlet
+      no_log: true
+
+    - name: Require preserved mounted data, network and published port in installed Quadlet
+      ansible.builtin.assert:
+        that:
+          - "'ContainerName=sanctum-nextcloud' in nextcloud_installed_lines"
+          - "'Network=slirp4netns' in nextcloud_installed_lines"
+          - "'PublishPort=0.0.0.0:8085:80/tcp' in nextcloud_installed_lines"
+          - "'Volume=/home/wdc2/srv/sanctum-services/nextcloud/html:/var/www/html' in nextcloud_installed_lines"
+          - "'Volume=/home/wdc2/.config/sanctum-services/nextcloud/postgresql-password:/run/secrets/nextcloud-postgresql-password:ro' in nextcloud_installed_lines"
+          - "'Volume=/home/wdc2/.config/sanctum-services/nextcloud/postgresql-database:/run/secrets/nextcloud-postgresql-database:ro' in nextcloud_installed_lines"
+          - "'Volume=/home/wdc2/.config/sanctum-services/nextcloud/postgresql-username:/run/secrets/nextcloud-postgresql-username:ro' in nextcloud_installed_lines"
+          - "'EnvironmentFile=/home/wdc2/.config/sanctum-services/nextcloud/nextcloud.env' in nextcloud_installed_lines"
+          - "nextcloud_installed_lines | select('match','^Volume=') | list | length == 4"
+          - "nextcloud_installed_lines | select('match','^Image=') | list | length == 1"
+          - "'AutoUpdate=registry' not in nextcloud_installed_lines"
+        fail_msg: Original Nextcloud configuration differs from accepted input; live update refused.
+      vars:
+        nextcloud_installed_lines: "{{ (nextcloud_activation_before_quadlet.content | b64decode).splitlines() }}"
+
+    - name: Inspect live container and candidate image immediately before activation
+      ansible.builtin.command:
+        argv: "{{ item }}"
+      loop:
+        - [podman, container, inspect, sanctum-nextcloud]
+        - [podman, image, inspect, "{{ nextcloud_cycle_target_image }}"]
+      register: nextcloud_activation_images
+      changed_when: false
+      no_log: true
+
+    - name: Require exactly the earlier qualified image IDs and still running original
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_activation_images.results[0].stdout | from_json | length) == 1
+          - (nextcloud_activation_images.results[1].stdout | from_json | length) == 1
+          - (nextcloud_activation_images.results[0].stdout | from_json)[0].State.Running | bool
+          - (nextcloud_activation_images.results[0].stdout | from_json)[0].Image == nextcloud_cycle_old_image_id
+          - (nextcloud_activation_images.results[1].stdout | from_json)[0].Id == nextcloud_cycle_candidate_image_id
+          - nextcloud_cycle_old_image_id != nextcloud_cycle_candidate_image_id
+        fail_msg: Live runtime or cached candidate changed between preflight and activation; update refused.
+
+    - name: Confirm original application version and mode remained stable through backup
+      ansible.builtin.command:
+        argv: [podman, exec, --user, www-data, sanctum-nextcloud, php, occ, status, --output=json]
+      register: nextcloud_activation_before_occ
+      changed_when: false
+      no_log: true
+
+    - name: Refuse concurrent app migration or maintenance-mode drift
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_activation_before_occ.stdout | from_json).version == nextcloud_cycle_prior_version
+          - (nextcloud_activation_before_occ.stdout | from_json).installed | bool
+          - not ((nextcloud_activation_before_occ.stdout | from_json).maintenance | bool)
+          - not ((nextcloud_activation_before_occ.stdout | from_json).needsDbUpgrade | default(false) | bool)
+        fail_msg: Original Nextcloud changed or is in maintenance; refuse restart.
+
+    - name: Activate only the backup-gated Nextcloud 34 rootless Quadlet and inspect health
+      block:
+        - name: Install managed 34.0 image Quadlet without independent registry auto-update
+          ansible.builtin.copy:
+            src: "{{ nextcloud_cycle_managed_source }}"
+            dest: "{{ nextcloud_cycle_rootless_quadlet }}"
+            owner: wdc2
+            mode: '0644'
+            backup: true
+          register: nextcloud_activation_source_copy
+
+        - name: Restart only Nextcloud with cached within-major maintenance image
+          ansible.builtin.systemd_service:
+            name: "{{ nextcloud_cycle_unit }}"
+            scope: user
+            daemon_reload: true
+            state: restarted
+          environment:
+            XDG_RUNTIME_DIR: "{{ nextcloud_cycle_xdg }}"
+
+        - name: Wait for official application update to finish before testing mode
+          ansible.builtin.command:
+            argv: [podman, exec, --user, www-data, sanctum-nextcloud, php, occ, status, --output=json]
+          register: nextcloud_activation_after_occ
+          changed_when: false
+          failed_when: false
+          retries: 30
+          delay: 10
+          until: nextcloud_activation_after_occ.rc == 0
+          no_log: true
+
+        - name: Require installed updated Nextcloud, no pending database upgrade and normal mode
+          ansible.builtin.assert:
+            that:
+              - nextcloud_activation_after_occ.rc == 0
+              - (nextcloud_activation_after_occ.stdout | from_json).installed | bool
+              - not ((nextcloud_activation_after_occ.stdout | from_json).maintenance | bool)
+              - not ((nextcloud_activation_after_occ.stdout | from_json).needsDbUpgrade | default(false) | bool)
+              - "(nextcloud_activation_after_occ.stdout | from_json).version.split('.')[:3] | join('.') == nextcloud_cycle_expected_version"
+            fail_msg: Candidate did not reach healthy expected 34.0.x application version.
+
+        - name: Verify current Nextcloud HTTP status endpoint after only app restart
+          ansible.builtin.uri:
+            url: http://127.0.0.1:8085/status.php
+            use_proxy: false
+            status_code: [200]
+            return_content: true
+            timeout: 5
+          register: nextcloud_activation_http
+          retries: 15
+          delay: 5
+          until: nextcloud_activation_http.status | default(0) | int == 200
+          changed_when: false
+
+        - name: Require HTTP reports installed and outside maintenance
+          ansible.builtin.assert:
+            that:
+              - nextcloud_activation_http.json.installed | bool
+              - not (nextcloud_activation_http.json.maintenance | bool)
+            fail_msg: Nextcloud HTTP health incomplete after update.
+
+        - name: Observe Calendar app state after application update
+          ansible.builtin.command:
+            argv: [podman, exec, --user, www-data, sanctum-nextcloud, php, occ, app:list, --output=json]
+          register: nextcloud_activation_apps
+          changed_when: false
+          no_log: true
+
+        - name: Require previously accepted Calendar 6.6.2 remains enabled
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_activation_apps.stdout | from_json).enabled.calendar is defined
+              - (nextcloud_activation_apps.stdout | from_json).enabled.calendar == '6.6.2'
+            fail_msg: Calendar 6.6.2 is no longer enabled at accepted version after update.
+
+        - name: Inspect actual updated container and published listener
+          ansible.builtin.command:
+            argv: "{{ item }}"
+          loop:
+            - [podman, container, inspect, sanctum-nextcloud]
+            - [podman, port, sanctum-nextcloud, 80/tcp]
+          register: nextcloud_activation_after_runtime
+          changed_when: false
+          no_log: true
+
+        - name: Require candidate image, same four mounted paths and original port
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].State.Running | bool
+              - (nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].ImageName == nextcloud_cycle_target_image
+              - (nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].Image == nextcloud_cycle_candidate_image_id
+              - "((nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].Mounts | map(attribute='Source') | list | sort) == ((nextcloud_activation_images.results[0].stdout | from_json)[0].Mounts | map(attribute='Source') | list | sort)"
+              - "((nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].Mounts | map(attribute='Destination') | list | sort) == ((nextcloud_activation_images.results[0].stdout | from_json)[0].Mounts | map(attribute='Destination') | list | sort)"
+              - "'0.0.0.0:8085' in nextcloud_activation_after_runtime.results[1].stdout"
+            fail_msg: Nextcloud runtime image, persisted mounts or publishing changed unexpectedly.
+
+      rescue:
+        - name: Report failed promotion and protected complete recovery point without unsafe image downgrade
+          ansible.builtin.debug:
+            msg:
+              status: update_failed_requires_operator_review
+              protected_recovery_id: "{{ nextcloud_cycle_recovery_id }}"
+              independently_retained_on_peanut: true
+              image_only_downgrade_not_attempted: true
+              full_app_and_database_restore_required_for_reversal: true
+              no_other_service_changed_by_this_playbook: true
+        - name: Stop this maintenance cycle rather than silently reporting success
+          ansible.builtin.fail:
+            msg: Nextcloud 34 maintenance promotion failed; examine the original failure and protected full backup before any recovery action.
+
+    - name: Report verified 34 maintenance deployment with independently retained recovery point
+      ansible.builtin.debug:
+        msg:
+          updated_from: "{{ nextcloud_cycle_prior_version }}"
+          updated_to: "{{ nextcloud_cycle_expected_version }}"
+          running_image: "{{ nextcloud_cycle_target_image }}"
+          native_platform: linux/arm64
+          source_version_family: "34.0.x"
+          calendar_version_preserved: "6.6.2"
+          production_database_service_untouched: true
+          pre_upgrade_recovery_id: "{{ nextcloud_cycle_recovery_id }}"
+          independently_verified_on_peanut: true
+          existing_nextcloud_user_service_restarted: true
+          original_persistent_mounts_preserved: true
+          source_managed_quadlet: "{{ nextcloud_cycle_rootless_quadlet }}"
+          independent_podman_auto_update_disabled_for_this_app: true
+          client_login_and_calendar_sync_not_checked_by_this_play: true
+          next_action: Accept normal user files and Calendar clients, then publish routine controller scheduling and canonical source reconciliation
