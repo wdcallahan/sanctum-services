@@ -32,6 +32,12 @@ class PiHoleRetiredPolicy(unittest.TestCase):
         self.assertNotIn("podman system prune", c)
         self.assertNotIn("podman volume rm -f", c)
 
+    def test_legacy_stage_refuses_even_explicit_pihole_opt_in(self):
+        import yaml
+        stage=yaml.safe_load((ROOT/"ansible/yxorp-kvin-stage.yml").read_text())[0]
+        first=stage["pre_tasks"][0]["ansible.builtin.assert"]["that"]
+        self.assertIn("not (yxorp_stage_pihole_approved | default(false) | bool)",first)
+
     def test_no_restoration_source_or_ci_reinsertion(self):
         for retired in (
             "ansible/pihole-consistent-backup.yml",
