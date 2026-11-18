@@ -31,15 +31,20 @@ class NewPixelColdStart(unittest.TestCase):
         self.assertIn("sanctum-maintenance/issues/38", readme)
 
     def test_wanted_images_use_advancing_release_channels_not_frozen_digests(self):
+        # Validate *advancing channels*, not forever-locked versions.
+        # A deliberate supported major-channel change must remain possible.
         image_cases = (
-            ("group_vars/yxorp.yml", "yxorp_image", "docker.io/library/nginx:stable-alpine"),
-            ("group_vars/kuma.yml", "kuma_image", "docker.io/louislam/uptime-kuma:2"),
-            ("group_vars/nextcloud.yml", "nextcloud_image", "docker.io/library/nextcloud:34.0-apache"),
+            ("group_vars/yxorp.yml", "yxorp_image",
+             r"docker[.]io/library/nginx:(stable-alpine|mainline-alpine)"),
+            ("group_vars/kuma.yml", "kuma_image",
+             r"docker[.]io/louislam/uptime-kuma:[0-9]+"),
+            ("group_vars/nextcloud.yml", "nextcloud_image",
+             r"docker[.]io/library/nextcloud:[0-9]+[.][0-9]+-apache"),
         )
-        for file, key, expected in image_cases:
+        for file, key, moving_channel_pattern in image_cases:
             with self.subTest(file=file):
                 actual = yaml.safe_load((ANS / file).read_text())[key]
-                self.assertEqual(actual, expected)
+                self.assertRegex(actual, "^" + moving_channel_pattern + "$")
                 self.assertNotIn("@sha256:", actual)
         linkstack = (ANS / "files/sanctum-linkstack-kvin-managed.container").read_text()
         self.assertIn("Image=docker.io/linkstackorg/linkstack:latest", linkstack)
@@ -51,7 +56,8 @@ class NewPixelColdStart(unittest.TestCase):
         backup_timer = (ANS / "files/sanctum-nextcloud-backup.timer").read_text()
         updater = (ANS / "nextcloud-maintenance-cycle.yml").read_text()
         install = (ANS / "nextcloud-update-schedule-install.yml").read_text()
-        self.assertIn("Image=docker.io/library/nextcloud:34.0-apache", managed)
+        configured = yaml.safe_load((ANS / "group_vars/nextcloud.yml").read_text())["nextcloud_image"]
+        self.assertIn("Image=" + configured, managed)
         self.assertIn("Pull=never", managed)
         self.assertNotIn("AutoUpdate=registry", [line.strip() for line in managed.splitlines() if not line.lstrip().startswith('#')])
         self.assertIn("OnCalendar=Sun *-*-* 03:30:00", backup_timer)
