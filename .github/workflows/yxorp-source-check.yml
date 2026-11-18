@@ -35,6 +35,9 @@ on:
       - "tests/test_nextcloud_backup_schedule.py"
       - "tests/test_nextcloud_backup_service_first_run.py"
       - "tests/test_nextcloud_isolated_db_trial.py"
+      - "tests/test_sanctum_policy_bootstrap.py"
+      - "AGENTS.md"
+      - "README.md"
       - "tests/test_nextcloud_isolated_config.py"
       - "tests/test_nextcloud_isolated_app_cli.py"
       - "tests/test_nextcloud_update_schedule.py"
@@ -238,6 +241,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_nextcloud_backup_schedule.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_backup_service_first_run.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_db_trial.py'
+          python3 -m unittest discover -s tests -p 'test_sanctum_policy_bootstrap.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_config.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_app_cli.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_update_schedule.py'
