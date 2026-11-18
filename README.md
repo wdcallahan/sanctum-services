@@ -4,6 +4,12 @@
 
 Sanctum Services is the application-deployment project for the Sanctum home lab. Its intended, still-being-qualified workflow uses **Ansible Navigator, containerized Ansible execution environments, and Podman Quadlets (rootless or rootful according to each service's actual needs)** to make services reproducible and operable without relying on a particular assistant or undocumented shell history.
 
+**For a new Pixel session:** start with [AGENTS.md](AGENTS.md) and the
+[lead handoff](PROJECT_LEAD_INTRODUCTION.md) before changing source or
+proposing an operator command. The active
+[whole-Sanctum audit (Maintenance #38)](https://github.com/wdcallahan/sanctum-maintenance/issues/38)
+records established decisions that a new session must not reverse.
+
 The first application is **Nextcloud**. The active estate also includes **YXORP, LinkStack, Uptime Kuma and EyesOnly** (Search is owned by its own project); **Pi-hole is retired**. The [future-services section of the estate register](docs/SERVICE-ESTATE.md#future-services-backlog-not-deployed-by-this-register) records three explicit plans—**Sanctum VPN, Luanti and Home Assistant**—and keeps earlier brainstorming candidates clearly marked **uncommitted** rather than manufacturing installation tasks. We build for useful services **and** real hands-on engineering experience.
 
 > **Current status — November 17, 2026:** Kvar remains unplugged;
@@ -31,11 +37,18 @@ The first application is **Nextcloud**. The active estate also includes **YXORP,
 > PostgreSQL handoff, a restored-copy-only Nextcloud config overlay,
 > and an isolated `occ`+Calendar trial. Source and syntax
 > [CI 44177213002 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44177213002).
-> Next operator action is **one privately isolated Nextcloud-only
-> database restore on Peanut using Nov16's already staged files**,
-> not another Kvin backup or timer installation. The separate
-> authenticated login/files/Calendar acceptance remains necessary
-> before the first production 34.0.6 patch.
+> **Current owner dependency, no user command:** The earlier
+> Peanut database-trial command was withdrawn after it copied an
+> obsolete SHA-pinned PostgreSQL helper image into the restore
+> procedure, contrary to the November 16 Sanctum-wide audit.
+> Services source now requires a supported moving `postgres:18`
+> major channel and refuses to pull or restore until the
+> Maintenance-owned helper selects that channel as well.
+> [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6961470716)
+> owns that adjustment; the [Services fix passed
+> CI](https://github.com/wdcallahan/sanctum-services/actions/runs/44179757198).
+> Authenticated login/files/Calendar recovery acceptance remains
+> necessary before the first production 34.0.6 patch.
 > See the [lead handoff](PROJECT_LEAD_INTRODUCTION.md),
 > [roadmap](docs/ROADMAP.md) and
 > [Nextcloud recovery runbook](docs/runbooks/nextcloud-instance-recovery.md).
