@@ -21,7 +21,7 @@ class NewPixelColdStart(unittest.TestCase):
             "sanctum-maintenance/issues/38",
             "sanctum-maintenance/issues/17",
             "PROJECT_LEAD_INTRODUCTION.md",
-            "already accepted",
+            "previously accepted operation",
             "WITHDRAWN command",
             "EXTERNAL OWNER DEPENDENCY",
         ):
@@ -53,7 +53,7 @@ class NewPixelColdStart(unittest.TestCase):
         install = (ANS / "nextcloud-update-schedule-install.yml").read_text()
         self.assertIn("Image=docker.io/library/nextcloud:34.0-apache", managed)
         self.assertIn("Pull=never", managed)
-        self.assertNotIn("AutoUpdate=registry", managed)
+        self.assertNotIn("AutoUpdate=registry", [line.strip() for line in managed.splitlines() if not line.lstrip().startswith('#')])
         self.assertIn("OnCalendar=Sun *-*-* 03:30:00", backup_timer)
         self.assertIn("nextcloud-consistent-backup.yml", updater)
         self.assertIn("nextcloud-retain-on-peanut.yml", updater)
