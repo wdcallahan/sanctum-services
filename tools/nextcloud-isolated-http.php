@@ -28,7 +28,8 @@ function request($method, $path, $user = null, $password = null, $headers = [], 
     if ($body !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
     $ok = curl_exec($ch);
     $code = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-    curl_close($ch);
+    // CurlHandle is released automatically; curl_close emits a deprecation on PHP 8.5.
+    unset($ch);
     return [$ok !== false ? $code : 0, $out];
 }
 
@@ -155,15 +156,29 @@ function probe($user, $password) {
     return $result;
 }
 
+function emit_probe_result(array $result) {
+    // A single JSON record is the entire stdout contract. Any PHP output
+    // emitted during the probe (including unexpected library warnings) is
+    // discarded, never mixed with the bounded result or sent to the operator.
+    fwrite(STDOUT, json_encode($result, JSON_THROW_ON_ERROR) . "\n");
+}
+
 if (!defined('NEXTCLOUD_HTTP_TEST')) {
+    ini_set('display_errors', 'stderr');
+    ini_set('log_errors', '0');
+    ob_start();
     try {
         $secret = json_decode(stream_get_contents(STDIN), true, 8, JSON_THROW_ON_ERROR);
         if (!is_string($secret['username'] ?? null) || !is_string($secret['password'] ?? null)
             || $secret['username'] === '' || $secret['password'] === '') throw new RuntimeException('missing_credentials');
         $result = probe($secret['username'], $secret['password']);
-        echo json_encode($result, JSON_THROW_ON_ERROR), "\n";
     } catch (Throwable $err) {
         // Never return an exception message: it might include private data.
-        echo '{"stage":"probe_exception","http_ready":false,"authenticated_as_restored_user":false,"restored_file_read_passed":false,"calendar_query_passed":false}', "\n";
+        $result = ['stage'=>'probe_exception', 'http_ready'=>false,
+            'authenticated_as_restored_user'=>false, 'restored_file_read_passed'=>false,
+            'calendar_query_passed'=>false];
+    } finally {
+        ob_end_clean();
     }
+    emit_probe_result($result);
 }

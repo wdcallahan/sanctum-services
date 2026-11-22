@@ -1,5 +1,11 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 21 — HTTP trial reached the probe; reporting failed, Apache cleaned up
+
+Native HTTP rehearsal reached `Report bounded restored HTTP and DAV observations` and failed decoding stdout as JSON (line 2 column 1). **Peanut ok=20 changed=2 unreachable=0 failed=1 skipped=0 rescued=0 ignored=0**, temporary Apache removal succeeded. The native result did not establish whether authentication, files or calendar reads succeeded. Retained DB, filesystem, isolated overlay and OCC/Calendar acceptance remain banked; do not repeat them. Production update gate remains closed.
+
+Correct the probe's stdout protocol: PHP diagnostics to stderr, no deprecated `curl_close` call, output buffering of incidental content and exactly one JSON record. Private decode with shape validation; on malformed result report only lengths, return code and fixed warning categories, then remove Apache as before. Actual retry needed; no previous raw credentials/output requested. Next command is the same HTTP trial from the existing Kvin terminal after Pixel verifies complete CI. Prompt for restored Nextcloud account again; no password in conversation. Work quota is not a blocker.
+
 ## November 21 — restored Nextcloud CLI and Calendar NATIVE ACCEPTED
 
 Nova's actual corrected CLI result: **Peanut ok=28 changed=1 unreachable=0 failed=0 skipped=3 rescued=0 ignored=0**. Recovered Nextcloud **34.0.5.1** and Calendar **6.6.2** against the independently recovered 137-table DB, official moving same-series runtime shipped 34.0.6.2. [Receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528). Document-root correction confirmed. Do NOT rerun prior backups, filesystem, DB or OCC acceptance.

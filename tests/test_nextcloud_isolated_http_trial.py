@@ -1,6 +1,7 @@
 """The isolated HTTP rehearsal neither exposes a host port nor leaks credentials."""
 from pathlib import Path
 import subprocess
+import json
 import unittest
 import yaml
 
@@ -29,6 +30,24 @@ class HttpTrial(unittest.TestCase):
         self.assertIn("http_container.stdout", str(b["always"]))
         self.assertIn("restored_file_read_passed", raw)
         self.assertIn("calendar_query_passed", raw)
+
+    def test_output_protocol_isolated_from_php_diagnostics(self):
+        raw = PLAY.read_text()
+        self.assertIn("display_errors=stderr", raw)
+        self.assertIn("log_errors=0", raw)
+        self.assertIn("Decode the bounded JSON protocol privately", raw)
+        self.assertIn("Report malformed probe output without returning private bytes", raw)
+        self.assertNotIn('msg: "{{ http_probe.stdout | from_json }}"', raw)
+        self.assertNotIn("curl_close($ch);", PHP.read_text())
+        # Use the same php -r invocation and malformed credentials. Even
+        # with display_errors enabled, stdout must be one valid JSON object.
+        result = subprocess.run(
+            ["php", "-d", "display_errors=stderr", "-d", "log_errors=0",
+             "-r", PHP.read_text()[6:]], input="not-json", text=True,
+            capture_output=True, check=True,
+        )
+        self.assertEqual(json.loads(result.stdout)["stage"], "probe_exception")
+        self.assertEqual(len(result.stdout.splitlines()), 1)
 
     def test_php_syntax_and_paths(self):
         subprocess.run(["php","-l",str(PHP)],check=True,capture_output=True,text=True)

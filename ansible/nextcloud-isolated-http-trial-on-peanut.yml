@@ -169,6 +169,12 @@
               - --user=www-data
               - "{{ http_container.stdout | trim }}"
               - php
+              - -d
+              - display_errors=stderr
+              - -d
+              - log_errors=0
+              - -d
+              - html_errors=0
               - -r
               - "{{ (lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-isolated-http.php'))[6:] }}"
             expand_argument_vars: false
@@ -185,9 +191,41 @@
               - http_probe.stdout | length > 0
             fail_msg: Local HTTP probe could not execute; do not expose its private output.
 
+        - name: Decode the bounded JSON protocol privately
+          block:
+            - name: Parse HTTP probe result without exposing its raw streams
+              ansible.builtin.set_fact:
+                http_result: "{{ http_probe.stdout | from_json }}"
+              no_log: true
+            - name: Require the expected HTTP result shape
+              ansible.builtin.assert:
+                that:
+                  - http_result is mapping
+                  - http_result.stage in ['http_startup', 'authenticated_user', 'webdav', 'caldav', 'complete', 'probe_exception']
+                  - http_result.http_ready is boolean
+                  - http_result.authenticated_as_restored_user is boolean
+                  - http_result.restored_file_read_passed is boolean
+                  - http_result.calendar_query_passed is boolean
+              no_log: true
+          rescue:
+            - name: Report malformed probe output without returning private bytes
+              ansible.builtin.debug:
+                msg:
+                  protocol_valid: false
+                  return_code: "{{ http_probe.rc }}"
+                  stdout_bytes: "{{ http_probe.stdout | default('') | length }}"
+                  stderr_bytes: "{{ http_probe.stderr | default('') | length }}"
+                  php_diagnostic_categories: >-
+                    {{ ((http_probe.stdout | default('')) ~ ' ' ~ (http_probe.stderr | default('')))
+                    | regex_findall('(?i)deprecated|warning|fatal error|parse error|permission denied|could not open input file|undefined function|uncaught|notice')
+                    | map('lower') | unique | list }}
+            - name: Refuse acceptance of a malformed probe report
+              ansible.builtin.fail:
+                msg: HTTP probe output was not valid bounded JSON; temporary Apache will be removed.
+
         - name: Report bounded restored HTTP and DAV observations
           ansible.builtin.debug:
-            msg: "{{ http_probe.stdout | from_json }}"
+            msg: "{{ http_result }}"
       always:
         - name: Remove only the temporary Apache container created by this trial
           ansible.builtin.command:
@@ -202,12 +240,12 @@
     - name: Require real recovered account file and Calendar access
       ansible.builtin.assert:
         that:
-          - (http_probe.stdout | from_json).http_ready | bool
-          - (http_probe.stdout | from_json).authenticated_as_restored_user | bool
-          - (http_probe.stdout | from_json).webdav_listing_passed | default(false) | bool
-          - (http_probe.stdout | from_json).restored_file_read_passed | bool
-          - (http_probe.stdout | from_json).caldav_listing_passed | default(false) | bool
-          - (http_probe.stdout | from_json).calendar_query_passed | bool
+          - http_result.http_ready | bool
+          - http_result.authenticated_as_restored_user | bool
+          - http_result.webdav_listing_passed | default(false) | bool
+          - http_result.restored_file_read_passed | bool
+          - http_result.caldav_listing_passed | default(false) | bool
+          - http_result.calendar_query_passed | bool
           - http_cleanup.rc == 0
         fail_msg: Recovered HTTP, account, file or Calendar evidence incomplete; review the bounded report. The retained DB is preserved.
 
@@ -219,7 +257,7 @@
           restored_account_authenticated_over_http: true
           restored_user_file_read: true
           calendar_collection_query_passed: true
-          calendar_event_objects: "{{ (http_probe.stdout | from_json).calendar_event_objects }}"
+          calendar_event_objects: "{{ http_result.calendar_event_objects }}"
           browser_login_not_tested: true
           temporary_apache_removed: true
           existing_database_retained_for_owner_cleanup: true
