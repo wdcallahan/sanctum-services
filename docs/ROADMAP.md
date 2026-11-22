@@ -1,5 +1,13 @@
 # Sanctum Services — Roadmap
 
+## November 21 — Maintenance #17 source dependency resolved; Services restore integration prepared
+
+Maintenance [owner handoff](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-7073128840) and [#17 correction](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073141882) confirm reviewed owner revision `7a5f3185`: the helper exports `docker.io/library/postgres:18`, resolves the cached local image once for server and peer, and checks the running PostgreSQL major before restoring. Seven local owner tests, syntax/target selection and Services' runpy contract passed. Native retained restore remains to be proven.
+
+Services' `ansible/nextcloud-isolated-db-trial-on-peanut.yml` now reads only the two owner helper files from that reviewed Git revision on the Kvin controller (obtaining missing Git objects without switching or advancing either Maintenance checkout), stages them in the existing Peanut trial's private `maintenance-helper` directory, and checks the actual staged channel before any image pull or DB restore. The old fixed-digest download remains withdrawn. Source revision records the owner's tested code, NOT an image pin. The retained original November 16 bundle and filesystem staging are the inputs. Do not repeat prior backup, retention, extraction, or timer installation.
+
+**Next operator step, after source CI is green:** run the isolated Peanut DB restore from the normal Kvin Services checkout, then return the final TASK and PLAY RECAP or exact failed task. The command and scope are in [the recovery runbook](docs/runbooks/nextcloud-instance-recovery.md). This starts a separate rootless networkless DB on Peanut and retains its private handoff for the restored app; it does not start the app, promote an image in production, or change shared PostgreSQL. Until actual result, neither full restore nor unattended patch promotion is accepted.
+
 ## November 17 — Nov16 whole-Sanctum audit #38 corrected restore-helper image regression
 
 **User explicitly challenged a new request to download a frozen PostgreSQL

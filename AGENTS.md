@@ -75,15 +75,14 @@ commands are not newer authority.
   files are ALREADY restored in a separate tree on Peanut. A full
   database restoration and isolated functioning Nextcloud login,
   files and Calendar are NOT yet accepted.
-- **WITHDRAWN command:** An older suggested Peanut test tried to
-  download a fixed PostgreSQL SHA. Nova rejected the reintroduced
-  practice under audit #38. Services'
-  `ansible/nextcloud-isolated-db-trial-on-peanut.yml` now expects
-  `docker.io/library/postgres:18` and refuses **before any pull**
-  unless Maintenance's actual restore helper also agrees. The owner
-  [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6961470716)
-  must reconcile that old helper. **Do not reuse the withdrawn
-  operator command or pretend the helper has been updated.**
+- **WITHDRAWN command:** The old fixed PostgreSQL image download is
+  still prohibited. November 21 [Maintenance #17 owner correction](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073141882)
+  resolves the source mismatch. Services stages only two reviewed
+  helper files inside the existing Peanut trial; no Maintenance
+  checkout advance. The actual native DB and app restore still await
+  acceptance. Read the current [lead handoff](PROJECT_LEAD_INTRODUCTION.md)
+  and recovery runbook before issuing the next command. Do not repeat
+  accepted recovery stages or reuse the withdrawn digest download.
 
 ## Human handoff after interruption
 

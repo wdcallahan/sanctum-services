@@ -37,16 +37,13 @@ The first application is **Nextcloud**. The active estate also includes **YXORP,
 > PostgreSQL handoff, a restored-copy-only Nextcloud config overlay,
 > and an isolated `occ`+Calendar trial. Source and syntax
 > [CI 44177213002 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44177213002).
-> **Current owner dependency, no user command:** The earlier
-> Peanut database-trial command was withdrawn after it copied an
-> obsolete SHA-pinned PostgreSQL helper image into the restore
-> procedure, contrary to the November 16 Sanctum-wide audit.
-> Services source now requires a supported moving `postgres:18`
-> major channel and refuses to pull or restore until the
-> Maintenance-owned helper selects that channel as well.
-> [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-6961470716)
-> owns that adjustment; the [Services fix passed
-> CI](https://github.com/wdcallahan/sanctum-services/actions/runs/44179757198).
+> **November 21 update:** [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073141882)
+> resolved the restore-helper source dependency. Services now stages
+> the reviewed owner helper files without advancing scheduled
+> Maintenance checkouts. The next step, after current source CI is
+> green, is the isolated Peanut database rehearsal. The withdrawn
+> old-digest download must not be reused; see the current
+> [recovery runbook](docs/runbooks/nextcloud-instance-recovery.md).
 > Authenticated login/files/Calendar recovery acceptance remains
 > necessary before the first production 34.0.6 patch.
 > See the [lead handoff](PROJECT_LEAD_INTRODUCTION.md),

@@ -1,5 +1,28 @@
 # Town Square / Nextcloud — complete-instance recovery boundary
 
+## November 21 — Maintenance #17 source dependency resolved; Services restore integration prepared
+
+Maintenance [owner handoff](https://github.com/wdcallahan/sanctum-maintenance/issues/20#issuecomment-7073128840) and [#17 correction](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073141882) confirm reviewed owner revision `7a5f3185`: the helper exports `docker.io/library/postgres:18`, resolves the cached local image once for server and peer, and checks the running PostgreSQL major before restoring. Seven local owner tests, syntax/target selection and Services' runpy contract passed. Native retained restore remains to be proven.
+
+Services' `ansible/nextcloud-isolated-db-trial-on-peanut.yml` now reads only the two owner helper files from that reviewed Git revision on the Kvin controller (obtaining missing Git objects without switching or advancing either Maintenance checkout), stages them in the existing Peanut trial's private `maintenance-helper` directory, and checks the actual staged channel before any image pull or DB restore. The old fixed-digest download remains withdrawn. Source revision records the owner's tested code, NOT an image pin. The retained original November 16 bundle and filesystem staging are the inputs. Do not repeat prior backup, retention, extraction, or timer installation.
+
+**Next operator step, after source CI is green:** run the isolated Peanut DB restore from the normal Kvin Services checkout, then return the final TASK and PLAY RECAP or exact failed task. The command and scope are in the command below. This starts a separate rootless networkless DB on Peanut and retains its private handoff for the restored app; it does not start the app, promote an image in production, or change shared PostgreSQL. Until actual result, neither full restore nor unattended patch promotion is accepted.
+
+From the ordinary `wdc2@kvin` shell:
+
+```bash
+cd ~/src/sanctum-services &&
+git pull &&
+ansible-playbook -i ansible/inventory/hosts.yml \
+  ansible/nextcloud-isolated-db-trial-on-peanut.yml \
+  -e nextcloud_isolated_recovery_id=nextcloud-20261116t233618 \
+  -e nextcloud_isolated_db_trial_approved=true \
+  -e nextcloud_maintenance_restore_contract_approved=true \
+  -e nextcloud_isolated_db_image_cache_approved=true
+```
+
+Only after [current integration CI](https://github.com/wdcallahan/sanctum-services/actions) is green. The three existing approval inputs authorize one isolated restore, the Maintenance-owned interface, and a cache pull of the corresponding moving major channel if absent. The controller stages the reviewed files from Git objects, not from the installed Peanut checkout. On success report `TASK [Report actual independent Nextcloud-only PostgreSQL trial ready for isolated application]` and `PLAY RECAP`. On failure report the exact failed task and preserve the trial; do not blindly rerun. The retained helper can later perform its owner-defined cleanup with `--cleanup PRIVATE_PASSWORD_FILE` after the restored application has stopped. No new backup or production change is part of this command.
+
 ## November 17 — NOV16 WHOLE-SANCTUM AUDIT OVERRIDES OLD PINNED IMAGE COMMAND
 
 **WITHDRAWN:** The below older example directing an explicit cache pull of

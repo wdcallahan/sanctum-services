@@ -27,7 +27,7 @@ class NewPixelColdStart(unittest.TestCase):
         ):
             self.assertIn(needed, entry)
         self.assertIn("[AGENTS.md](AGENTS.md)", readme)
-        self.assertIn("no user command", readme)
+        self.assertIn("withdrawn", readme.lower())
         self.assertIn("sanctum-maintenance/issues/38", readme)
 
     def test_wanted_images_use_advancing_release_channels_not_frozen_digests(self):
