@@ -21,6 +21,9 @@ on:
       - "ansible/nextcloud-backup-service-first-run.yml"
       - "ansible/nextcloud-isolated-db-trial-on-peanut.yml"
       - "ansible/nextcloud-isolated-app-cli-trial-on-peanut.yml"
+      - "ansible/nextcloud-isolated-http-trial-on-peanut.yml"
+      - "tools/nextcloud-isolated-http.php"
+      - "tests/test_nextcloud_isolated_http_trial.py"
       - "tools/nextcloud-isolated-config.py"
       - "ansible/nextcloud-update-schedule-install.yml"
       - "ansible/files/sanctum-nextcloud-backup.service"
@@ -244,6 +247,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_sanctum_policy_bootstrap.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_config.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_app_cli.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_http_trial.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_update_schedule.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_isolated_files_restore.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_retention_peanut.py'
@@ -325,6 +329,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-backup-service-first-run.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-isolated-db-trial-on-peanut.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-isolated-app-cli-trial-on-peanut.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-isolated-http-trial-on-peanut.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-update-schedule-install.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-isolated-files-restore.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-retain-on-peanut.yml --syntax-check

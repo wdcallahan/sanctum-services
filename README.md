@@ -40,8 +40,8 @@ The first application is **Nextcloud**. The active estate also includes **YXORP,
 > **November 21:** [Native isolated PostgreSQL restore PASSED](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132):
 > 137 restored application tables, private retained owner handoff,
 > networkless DB on Peanut, production unchanged. The old pinned-image
-> command remains withdrawn. Next: exercise the restored application
-> code with a supported same-series runtime and the existing DB.
+> command remains withdrawn. [Native restored OCC and Calendar PASSED](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528).
+> Next: authenticate over isolated HTTP and read recovered files and calendars.
 > [Current recovery procedure](docs/runbooks/nextcloud-instance-recovery.md).
 > Authenticated login/files/Calendar recovery acceptance remains
 > necessary before the first production 34.0.6 patch.

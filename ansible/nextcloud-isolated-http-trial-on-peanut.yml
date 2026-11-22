@@ -1,0 +1,226 @@
+---
+# Rehearse actual authenticated HTTP access to the already restored copy.
+# No production or LAN listener, no new DB, no code sync, no credential storage.
+- name: Exercise restored Nextcloud HTTP and DAV on isolated Peanut
+  hosts: yxorp_test
+  become: false
+  gather_facts: true
+  vars_files:
+    - group_vars/nextcloud.yml
+  vars_prompt:
+    - name: nextcloud_trial_username
+      prompt: Existing Nextcloud username from the recovered backup
+      private: false
+    - name: nextcloud_trial_password
+      prompt: Existing Nextcloud password (or app password present in the backup)
+      private: true
+  vars:
+    trial_id: "{{ nextcloud_isolated_recovery_id | default('UNSET') }}"
+    trial_dir: "/home/wdc2/.local/share/sanctum-services/nextcloud-restore-trials/{{ trial_id }}"
+    trial_html: "{{ trial_dir }}/html"
+    trial_password_file: "{{ trial_dir }}/postgresql-trial/postgresql-trial-password"
+    trial_receipt: "{{ trial_dir }}/postgresql-trial/postgresql-trial.json"
+    trial_name: "sanctum-nextcloud-http-{{ trial_id }}"
+  tasks:
+    - name: Require the approved existing Peanut recovery trial
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'peanut.arcane.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - not ansible_check_mode
+          - nextcloud_isolated_http_trial_approved | default(false) | bool
+          - trial_id is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
+          - nextcloud_image is match('^docker.io/library/nextcloud:34[.]0-apache$')
+          - nextcloud_trial_username | default('') | length > 0
+          - nextcloud_trial_password | default('') | length > 0
+        fail_msg: Require the existing isolated trial and a recovered account.
+      no_log: true
+
+    - name: Read the existing private database handoff
+      ansible.builtin.slurp:
+        src: "{{ trial_receipt }}"
+      register: receipt
+      no_log: true
+
+    - name: Decode private handoff without returning its contents
+      ansible.builtin.set_fact:
+        db_trial: "{{ receipt.content | b64decode | from_json }}"
+      no_log: true
+
+    - name: Require the Maintenance-owned isolated database identity
+      ansible.builtin.assert:
+        that:
+          - db_trial.status == 'isolated_database_ready_for_application'
+          - db_trial.container_id is match('^[a-f0-9]{64}$')
+          - db_trial.network == 'container:' ~ db_trial.container_id
+          - db_trial.password_file == trial_password_file
+          - db_trial.host == '127.0.0.1'
+          - db_trial.database == 'nextcloud_restore'
+          - not db_trial.production_database_contacted
+
+    - name: Verify owner database remains running with no external network
+      ansible.builtin.command:
+        argv: [podman, container, inspect, "{{ db_trial.container_id }}"]
+      register: db_inspect
+      changed_when: false
+      no_log: true
+
+    - name: Check running isolated database namespace and owner label
+      ansible.builtin.assert:
+        that:
+          - (db_inspect.stdout | from_json)[0].State.Running
+          - (db_inspect.stdout | from_json)[0].HostConfig.NetworkMode == 'none'
+          - (db_inspect.stdout | from_json)[0].Config.Labels['io.sanctum.nextcloud-restore'] == 'peanut'
+
+    - name: Check the previously verified isolated config overlay exists
+      ansible.builtin.stat:
+        path: "{{ trial_html }}/config/zzzz-sanctum-isolated.config.php"
+        follow: false
+      register: overlay
+
+    - name: Require the existing overlay instead of reconstructing the application
+      ansible.builtin.assert:
+        that:
+          - overlay.stat.isreg | default(false)
+          - not (overlay.stat.islnk | default(false))
+          - overlay.stat.mode == '0600'
+
+    - name: Verify the existing config against the private owner handoff
+      ansible.builtin.command:
+        argv:
+          - podman
+          - unshare
+          - python3
+          - -c
+          - "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-isolated-config.py') }}"
+          - "{{ trial_id }}"
+          - "{{ trial_html }}"
+          - "{{ trial_password_file }}"
+      register: config_check
+      changed_when: false
+      no_log: true
+
+    - name: Require unchanged verified overlay
+      ansible.builtin.assert:
+        that:
+          - (config_check.stdout | from_json).status == 'isolated_nextcloud_config_ready'
+          - not (config_check.stdout | from_json).overlay_created
+          - (config_check.stdout | from_json).db_container_id == db_trial.container_id
+
+    - name: Resolve existing supported runtime without pulling
+      ansible.builtin.command:
+        argv: [podman, image, inspect, "{{ nextcloud_image }}"]
+      register: runtime_info
+      changed_when: false
+      no_log: true
+
+    - name: Require native runtime identity
+      ansible.builtin.assert:
+        that:
+          - (runtime_info.stdout | from_json)[0].Os == 'linux'
+          - (runtime_info.stdout | from_json)[0].Architecture == ({'aarch64':'arm64','x86_64':'amd64'}[ansible_facts['architecture']])
+          - (runtime_info.stdout | from_json)[0].Id is match('^(sha256:)?[a-f0-9]{64}$')
+
+    - name: Start and exercise only a temporary Apache container in the existing DB namespace
+      block:
+        - name: Start restored Apache without the image initialization or a published port
+          ansible.builtin.command:
+            argv:
+              - podman
+              - run
+              - --detach
+              - --rm
+              - --pull=never
+              - "--network=container:{{ db_trial.container_id }}"
+              - "--name={{ trial_name }}"
+              - --label=io.sanctum.nextcloud-http-trial=peanut
+              - "--volume={{ trial_html }}:/var/www/html:Z"
+              - --entrypoint=apache2-foreground
+              - "{{ (runtime_info.stdout | from_json)[0].Id | regex_replace('^sha256:', '') }}"
+          register: http_container
+
+        - name: Require a real temporary container ID
+          ansible.builtin.assert:
+            that:
+              - http_container.stdout | trim is match('^[a-f0-9]{64}$')
+
+        - name: Confirm no external network or published port is introduced
+          ansible.builtin.command:
+            argv: [podman, container, inspect, "{{ http_container.stdout | trim }}"]
+          register: http_inspect
+          changed_when: false
+          no_log: true
+
+        - name: Require same isolated namespace and no host port bindings
+          ansible.builtin.assert:
+            that:
+              - (http_inspect.stdout | from_json)[0].HostConfig.NetworkMode == 'container:' ~ db_trial.container_id
+              - not ((http_inspect.stdout | from_json)[0].HostConfig.PortBindings | default({}) | bool)
+              - (http_inspect.stdout | from_json)[0].Config.Labels['io.sanctum.nextcloud-http-trial'] == 'peanut'
+
+        - name: Authenticate and read backed-up files and calendars over local HTTP
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - -i
+              - --user=www-data
+              - "{{ http_container.stdout | trim }}"
+              - php
+              - -r
+              - "{{ (lookup('ansible.builtin.file', playbook_dir ~ '/../tools/nextcloud-isolated-http.php'))[6:] }}"
+            expand_argument_vars: false
+            stdin: "{{ {'username': nextcloud_trial_username, 'password': nextcloud_trial_password} | to_json }}"
+          register: http_probe
+          changed_when: false
+          failed_when: false
+          no_log: true
+
+        - name: Require diagnostic probe execution
+          ansible.builtin.assert:
+            that:
+              - http_probe.rc == 0
+              - http_probe.stdout | length > 0
+            fail_msg: Local HTTP probe could not execute; do not expose its private output.
+
+        - name: Report bounded restored HTTP and DAV observations
+          ansible.builtin.debug:
+            msg: "{{ http_probe.stdout | from_json }}"
+      always:
+        - name: Remove only the temporary Apache container created by this trial
+          ansible.builtin.command:
+            argv: [podman, rm, --force, --ignore, --volumes, "{{ http_container.stdout | trim }}"]
+          when:
+            - http_container is defined
+            - http_container.rc | default(1) == 0
+            - http_container.stdout | default('') | trim is match('^[a-f0-9]{64}$')
+          register: http_cleanup
+          changed_when: true
+
+    - name: Require real recovered account file and Calendar access
+      ansible.builtin.assert:
+        that:
+          - (http_probe.stdout | from_json).http_ready | bool
+          - (http_probe.stdout | from_json).authenticated_as_restored_user | bool
+          - (http_probe.stdout | from_json).webdav_listing_passed | default(false) | bool
+          - (http_probe.stdout | from_json).restored_file_read_passed | bool
+          - (http_probe.stdout | from_json).caldav_listing_passed | default(false) | bool
+          - (http_probe.stdout | from_json).calendar_query_passed | bool
+          - http_cleanup.rc == 0
+        fail_msg: Recovered HTTP, account, file or Calendar evidence incomplete; review the bounded report. The retained DB is preserved.
+
+    - name: Report native restored Nextcloud authenticated HTTP file and calendar acceptance
+      ansible.builtin.debug:
+        msg:
+          source_recovery_id: "{{ trial_id }}"
+          isolated_http_status_passed: true
+          restored_account_authenticated_over_http: true
+          restored_user_file_read: true
+          calendar_collection_query_passed: true
+          calendar_event_objects: "{{ (http_probe.stdout | from_json).calendar_event_objects }}"
+          browser_login_not_tested: true
+          temporary_apache_removed: true
+          existing_database_retained_for_owner_cleanup: true
+          production_untouched: true

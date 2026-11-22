@@ -79,9 +79,9 @@ commands are not newer authority.
   retained isolated PostgreSQL on Peanut, old app files untouched,
   private [Maintenance #17 handoff](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073941735). Do not recreate it. **WITHDRAWN command:** the old pinned
   image download remains withdrawn; use the current accepted recovery
-  frontier, not a historical operator packet. Next: run the actual restored
-  code against that isolated database with a supported same-series
-  PHP runtime, then test login/files/Calendar. See current lead
+  frontier, not a historical operator packet. [Native recovered OCC and Calendar passed](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528).
+  Next: authenticated HTTP, actual file read and calendar query using the
+  retained isolated database. Do not repeat OCC. See the current lead
   handoff and recovery runbook.
 
 ## Human handoff after interruption

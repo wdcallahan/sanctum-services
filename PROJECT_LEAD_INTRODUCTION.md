@@ -1,5 +1,11 @@
 # Sanctum Services — Project Lead Handoff
 
+## November 21 — restored Nextcloud CLI and Calendar NATIVE ACCEPTED
+
+Nova's actual corrected CLI result: **Peanut ok=28 changed=1 unreachable=0 failed=0 skipped=3 rescued=0 ignored=0**. Recovered Nextcloud **34.0.5.1** and Calendar **6.6.2** against the independently recovered 137-table DB, official moving same-series runtime shipped 34.0.6.2. [Receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528). Document-root correction confirmed. Do NOT rerun prior backups, filesystem, DB or OCC acceptance.
+
+Next: `ansible/nextcloud-isolated-http-trial-on-peanut.yml` uses the same retained DB namespace, app code and verified private overlay. Starts temporary Apache with its initialization entrypoint bypassed, no external network or published host port. Prompts for an existing username/password (or app password present in the Nov16 backup) at Nova's terminal; password is hidden and passed via stdin to a disposable local HTTP client, never in arguments, Git or conversation. Authenticated OCS identity, WebDAV existing file listing plus nonempty file read, CalDAV collection listing and calendar query are measured; only codes/counts/status are reported. Browser login not claimed. Stops the Apache container in always; preserves the owner DB for later cleanup. If account lacks a file/calendar, report incomplete, not fabricated success. Production gate stays closed until native functional evidence is accepted. Pixel checks source CI before asking Nova to run.
+
 ## November 21 — OCC retry identified unreadable script; repair document-root traversal
 
 **Native retry** (existing overlay reused): `peanut.arcane.sanctum ok=19 changed=1 unreachable=0 failed=1 skipped=1 rescued=0 ignored=0`, OCC rc 1, `could not open input file`, stderr only. No production change. [Receipt and correction](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7074133954). The retained database and recovered files remain accepted. Do not repeat backup, extraction, DB restoration or remove the overlay.
