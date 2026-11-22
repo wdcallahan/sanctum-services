@@ -26,8 +26,8 @@ class IsolatedNextcloudAppCli(unittest.TestCase):
         self.assertEqual(self.play["vars_files"],["group_vars/nextcloud.yml"])
         s=str(self.tasks[0]["ansible.builtin.assert"]["that"])
         for x in ("peanut.arcane.sanctum","user_id","nextcloud_isolated_app_trial_approved",
-                  "not ansible_check_mode","nextcloud_original_frozen_image",
-                  "nextcloud_app_trial_image != nextcloud_image"):
+                  "not ansible_check_mode","nextcloud_app_trial_image",
+                  "nextcloud:34"):
             self.assertIn(x,self.raw)
         self.assertNotIn("become: true",self.raw)
         self.assertNotIn("kvin.outer.sanctum",self.raw)
@@ -47,16 +47,19 @@ class IsolatedNextcloudAppCli(unittest.TestCase):
         self.assertNotIn("PublishPort",s)
         self.assertNotIn("podman exec sanctum-nextcloud",s)
 
-    def test_locked_original_34_image_and_no_implicit_pull(self):
+    def test_supported_runtime_channel_without_code_sync_or_implicit_pull(self):
         p=self.play
-        self.assertEqual(p["vars"]["nextcloud_app_trial_image"],"{{ nextcloud_original_frozen_image }}")
+        self.assertEqual(p["vars"]["nextcloud_app_trial_image"],"{{ nextcloud_image }}")
         self.assertIn("--pull=never",p["vars"]["nextcloud_app_trial_container_prefix"])
         self.assertIn("--read-only",p["vars"]["nextcloud_app_trial_container_prefix"])
         self.assertIn("--cap-drop=all",p["vars"]["nextcloud_app_trial_container_prefix"])
         self.assertIn("--user=www-data",p["vars"]["nextcloud_app_trial_container_prefix"])
         self.assertIn("--entrypoint=php",p["vars"]["nextcloud_app_trial_container_prefix"])
-        self.assertIn("docker.io/library/nextcloud@sha256:bcf8db",self.raw)
-        self.assertNotIn("podman pull",self.raw)
+        self.assertNotIn("nextcloud@sha256:",self.raw)
+        self.assertIn('argv: [podman, pull, "{{ nextcloud_app_trial_image }}"]',self.raw)
+        self.assertIn("nextcloud_app_trial_runtime_id, 'occ'",self.raw)
+        self.assertIn("34[.]0[.]5",self.raw)
+        self.assertNotIn("occ', 'upgrade'",self.raw)
 
     def test_writes_only_steered_private_trial_copy(self):
         name="Create PRIVATE restored-app-only DB configuration overlay under rootless user namespace"
@@ -68,7 +71,7 @@ class IsolatedNextcloudAppCli(unittest.TestCase):
         order=self.names
         self.assertLess(order.index("Refuse connecting to a nonisolated PostgreSQL or dead test database"),
                         order.index(name))
-        self.assertLess(order.index("Refuse unknown original app image, no implicit registry or major update"),
+        self.assertLess(order.index("Require compatible 34.0 runtime before preparing restored app"),
                         order.index(name))
         self.assertLess(order.index(name),
                         order.index("Run only restored Nextcloud occ status inside networkless DB namespace"))

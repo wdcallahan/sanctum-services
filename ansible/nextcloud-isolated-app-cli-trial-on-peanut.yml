@@ -3,7 +3,9 @@
 # publish an HTTP listener. The only network namespace is container:<id>
 # of Maintenance's --network=none PostgreSQL trial, so a wrong Nextcloud
 # config cannot contact Kvin/shared production DB, DNS, proxy or the LAN.
-# Exact original 34.0.5 image, not the cached production update candidate.
+# Use the supported 34.0 runtime channel, but execute the recovered 34.0.5
+# code from the mounted tree. Bypass the image entrypoint: no code sync,
+# installation or application/schema upgrade is requested.
 - name: Validate restored Nextcloud CLI against isolated PostgreSQL on Peanut
   hosts: yxorp_test
   gather_facts: true
@@ -17,7 +19,7 @@
     nextcloud_app_trial_html: "{{ nextcloud_app_trial_dest }}/html"
     nextcloud_app_trial_password_file: "{{ nextcloud_app_trial_dest }}/postgresql-trial/postgresql-trial-password"
     nextcloud_app_trial_receipt: "{{ nextcloud_app_trial_dest }}/postgresql-trial/postgresql-trial.json"
-    nextcloud_app_trial_image: "{{ nextcloud_original_frozen_image }}"
+    nextcloud_app_trial_image: "{{ nextcloud_image }}"
     nextcloud_app_trial_container_prefix:
       - podman
       - run
@@ -42,11 +44,10 @@
           - not ansible_check_mode
           - nextcloud_isolated_app_trial_approved | default(false) | bool
           - nextcloud_app_trial_recovery_id is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
-          - nextcloud_app_trial_image == 'docker.io/library/nextcloud@sha256:bcf8db2ebb4c5365f8ac8ca89d3857efecd88df68147353fbfe019b6dc888145'
-          - nextcloud_app_trial_image != nextcloud_image
+          - nextcloud_app_trial_image is match('^docker.io/library/nextcloud:34[.]0-apache$')
         fail_msg: >-
           Exact independently staged Peanut app+Maintenance DB must be
-          approved. Never test using the moving production image or host.
+          approved. Use the supported same-series runtime on Peanut only.
 
     - name: Verify original extracted trial tree and private Maintenance handoff exist
       ansible.builtin.stat:
@@ -120,37 +121,49 @@
           - (nextcloud_app_trial_db_inspect.stdout | from_json)[0].Config.Labels['io.sanctum.nextcloud-restore'] == 'peanut'
         fail_msg: The only permitted Nextcloud trial network is an owner-labelled --network=none PG namespace.
 
-    - name: Check immutable original 34.0.5 image cache without accessing a registry
+    - name: Check supported Nextcloud runtime cache on Peanut
       ansible.builtin.command:
         argv: [podman, image, exists, "{{ nextcloud_app_trial_image }}"]
       register: nextcloud_app_trial_image_exists
       changed_when: false
-      failed_when: false
+      failed_when: nextcloud_app_trial_image_exists.rc not in [0, 1]
 
-    - name: Refuse unknown original app image, no implicit registry or major update
-      ansible.builtin.assert:
-        that:
-          - nextcloud_app_trial_image_exists.rc == 0
-        fail_msg: >-
-          Original 34.0.5 Nextcloud image is not already cached on
-          Peanut. Qualify its immutable platform-compatible image before
-          starting any trial; never fall back to :latest or live Kvin.
+    - name: Cache the supported Nextcloud 34.0 runtime if absent
+      ansible.builtin.command:
+        argv: [podman, pull, "{{ nextcloud_app_trial_image }}"]
+      when: nextcloud_app_trial_image_exists.rc == 1
 
-    - name: Inspect exact immutable original Nextcloud image
+    - name: Inspect supported native Nextcloud runtime image
       ansible.builtin.command:
         argv: [podman, image, inspect, "{{ nextcloud_app_trial_image }}"]
       register: nextcloud_app_trial_image_inspect
       changed_when: false
       no_log: true
 
-    - name: Require native platform image identity without changing Peanut cache
+    - name: Require native platform image identity
       ansible.builtin.assert:
         that:
           - (nextcloud_app_trial_image_inspect.stdout | from_json | length) == 1
           - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Os == 'linux'
           - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Architecture == ({'aarch64':'arm64','x86_64':'amd64'}[ansible_facts['architecture']])
-          - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
-        fail_msg: Refuse running old application image for a foreign CPU or unknown OS.
+          - (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Id is match('^(sha256:)?[a-f0-9]{64}$')
+        fail_msg: Refuse running an application runtime image for a foreign CPU or unknown OS.
+
+    - name: Resolve local runtime identity once for both CLI checks
+      ansible.builtin.set_fact:
+        nextcloud_app_trial_runtime_id: "{{ (nextcloud_app_trial_image_inspect.stdout | from_json)[0].Id | regex_replace('^sha256:', '') }}"
+
+    - name: Check runtime shipped application family without mounting restored data
+      ansible.builtin.command:
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=none', nextcloud_app_trial_runtime_id, '-r', 'require \"/usr/src/nextcloud/version.php\"; echo implode(\".\", $OC_Version);'] }}"
+      register: nextcloud_app_trial_runtime_version
+      changed_when: false
+
+    - name: Require compatible 34.0 runtime before preparing restored app
+      ansible.builtin.assert:
+        that:
+          - nextcloud_app_trial_runtime_version.stdout | trim is match('^34[.]0[.][0-9]+([.][0-9]+)?$')
+        fail_msg: The cached runtime is outside the recovered application's supported series.
 
     - name: Create PRIVATE restored-app-only DB configuration overlay under rootless user namespace
       ansible.builtin.command:
@@ -180,7 +193,7 @@
 
     - name: Run only restored Nextcloud occ status inside networkless DB namespace
       ansible.builtin.command:
-        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_image, 'occ', 'status', '--output=json'] }}"
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, 'occ', 'status', '--output=json'] }}"
       register: nextcloud_app_trial_occ
       changed_when: false
       no_log: true
@@ -196,7 +209,7 @@
 
     - name: Run restored Calendar app inspection in same isolated namespace
       ansible.builtin.command:
-        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_image, 'occ', 'app:list', '--output=json'] }}"
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, 'occ', 'app:list', '--output=json'] }}"
       register: nextcloud_app_trial_apps
       changed_when: false
       no_log: true
@@ -213,6 +226,8 @@
         msg:
           observer: peanut.arcane.sanctum
           source_recovery_id: "{{ nextcloud_app_trial_recovery_id }}"
+          runtime_channel: "{{ nextcloud_app_trial_image }}"
+          runtime_shipped_version: "{{ nextcloud_app_trial_runtime_version.stdout | trim }}"
           restored_original_nextcloud_version: "{{ (nextcloud_app_trial_occ.stdout | from_json).version }}"
           restored_calendar_version: "{{ (nextcloud_app_trial_apps.stdout | from_json).enabled.calendar }}"
           restored_nextcloud_occ_status_passed: true
