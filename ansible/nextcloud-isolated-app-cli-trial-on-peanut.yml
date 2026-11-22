@@ -65,7 +65,7 @@
       register: nextcloud_app_trial_inputs
       no_log: true
 
-    - name: Require real staged HTML and private DB handoff, with NO prior override
+    - name: Require real staged HTML and private DB handoff
       ansible.builtin.assert:
         that:
           - nextcloud_app_trial_inputs.results[0].stat.isdir | default(false)
@@ -77,8 +77,7 @@
           - nextcloud_app_trial_inputs.results[4].stat.mode == '0600'
           - nextcloud_app_trial_inputs.results[5].stat.isreg | default(false)
           - nextcloud_app_trial_inputs.results[5].stat.mode == '0600'
-          - not (nextcloud_app_trial_inputs.results[6].stat.exists | default(false))
-        fail_msg: Missing isolated files/DB owner handoff or existing trial config; never overwrite an earlier app test.
+        fail_msg: Missing isolated files or DB owner handoff; existing overlay is verified by the private helper before reuse.
 
     - name: Read private Maintenance DB-only receipt without publishing credentials
       ansible.builtin.slurp:
@@ -177,7 +176,7 @@
           - "{{ nextcloud_app_trial_html }}"
           - "{{ nextcloud_app_trial_password_file }}"
       register: nextcloud_app_trial_config_result
-      changed_when: nextcloud_app_trial_config_result.rc == 0
+      changed_when: (nextcloud_app_trial_config_result.stdout | from_json).overlay_created | default(false) | bool
       no_log: true
 
     - name: Require isolated PHP override created without changing backed-up original config
@@ -196,7 +195,36 @@
         argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, 'occ', 'status', '--output=json'] }}"
       register: nextcloud_app_trial_occ
       changed_when: false
+      failed_when: false
       no_log: true
+
+    - name: Save raw OCC failure locally in the existing private trial only
+      ansible.builtin.copy:
+        content: "{{ {'rc': nextcloud_app_trial_occ.rc, 'stdout': nextcloud_app_trial_occ.stdout | default(''), 'stderr': nextcloud_app_trial_occ.stderr | default('')} | to_nice_json }}"
+        dest: "{{ nextcloud_app_trial_dest }}/occ-status-failure.json"
+        mode: '0600'
+      diff: false
+      no_log: true
+      when: nextcloud_app_trial_occ.rc != 0
+
+    - name: Report bounded OCC failure diagnostics without private contents
+      ansible.builtin.debug:
+        msg:
+          return_code: "{{ nextcloud_app_trial_occ.rc }}"
+          stdout_present: "{{ nextcloud_app_trial_occ.stdout | default('') | length > 0 }}"
+          stderr_present: "{{ nextcloud_app_trial_occ.stderr | default('') | length > 0 }}"
+          known_error_categories: >-
+            {{ ((nextcloud_app_trial_occ.stdout | default('')) ~ ' ' ~ (nextcloud_app_trial_occ.stderr | default('')))
+            | regex_findall('(?i)permission denied|read-only file system|could not open input file|no such file or directory|config directory|config/config[.]php|data directory|connection refused|password authentication failed|could not translate host name|SQLSTATE\\[[0-9A-Z]{5}\\]|redis|memcache|unsupported PHP|PHP Fatal error|PHP Parse error|PHP Warning|could not find driver|network namespace|operation not permitted|OCI runtime|cannot open|failed to open stream|not writable|not readable|owner of the file')
+            | map('lower') | unique | list }}
+          raw_diagnostic_on_peanut: "{{ nextcloud_app_trial_dest }}/occ-status-failure.json"
+      when: nextcloud_app_trial_occ.rc != 0
+
+    - name: Require successful OCC execution before interpreting application state
+      ansible.builtin.assert:
+        that:
+          - nextcloud_app_trial_occ.rc == 0
+        fail_msg: OCC failed; use the bounded diagnostic above. The retained DB and verified overlay are preserved.
 
     - name: Require restored Nextcloud installed and healthy without a DB update
       ansible.builtin.assert:

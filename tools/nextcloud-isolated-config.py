@@ -99,30 +99,42 @@ def prepare(recovery_id, html_dir, password_file):
     private_regular(password_file)
     password = password_file.read_text(encoding="ascii").strip()
     output = html_dir / "config" / NAME
-    # Never permit a later ordered config override to redirect DB back to
-    # production. Also refuse overwriting an existing isolated trial.
+    # Never permit a later override. A failed CLI invocation may already
+    # have created this overlay; verify its exact bytes, never rewrite it.
     for path in (html_dir / "config").glob("*.config.php"):
-        if path.name >= NAME:
-            raise Refusal("unexpected_existing_or_later_config_override")
+        if path.name > NAME:
+            raise Refusal("unexpected_later_config_override")
     source = php_overlay(password)
-    fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
     try:
-        with os.fdopen(fd, "w", encoding="ascii") as target:
-            target.write(source)
-            target.flush()
-            os.fchown(target.fileno(), 33, 33)
-            os.fchmod(target.fileno(), 0o600)
-            os.fsync(target.fileno())
-    except BaseException:
-        output.unlink(missing_ok=True)
-        raise
+        fd = os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    except FileExistsError:
+        fd = os.open(output, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as existing:
+            meta = os.fstat(existing.fileno())
+            if (not stat.S_ISREG(meta.st_mode) or stat.S_IMODE(meta.st_mode) != 0o600
+                    or (meta.st_uid, meta.st_gid) != (33, 33)
+                    or existing.read(len(source) + 1) != source.encode("ascii")):
+                raise Refusal("existing_overlay_does_not_match_owner_handoff")
+        created = False
+    else:
+        try:
+            with os.fdopen(fd, "w", encoding="ascii") as target:
+                target.write(source)
+                target.flush()
+                os.fchown(target.fileno(), 33, 33)
+                os.fchmod(target.fileno(), 0o600)
+                os.fsync(target.fileno())
+        except BaseException:
+            output.unlink(missing_ok=True)
+            raise
+        created = True
     return {"status": "isolated_nextcloud_config_ready",
             "recovery_id": recovery_id, "db_container_id": cid,
             "restored_application_tables": tables,
             "isolated_only": True, "production_database_contacted": False,
             "original_restored_config_unchanged": True,
             "password_written_only_into_private_isolated_override": True,
-            "override_filename": NAME}
+            "overlay_created": created, "override_filename": NAME}
 
 
 def main(argv):

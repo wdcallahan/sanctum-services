@@ -79,6 +79,21 @@ class IsolatedNextcloudAppCli(unittest.TestCase):
                   "occ', 'app:list'","Calendar","full_app_restore_not_yet_accepted: true"):
             self.assertIn(x,self.raw)
 
+    def test_failed_occ_reports_bounded_diagnostics_without_raw_console_output(self):
+        task = self.find("Run only restored Nextcloud occ status")
+        self.assertTrue(task["no_log"])
+        self.assertFalse(task["failed_when"])
+        saved = self.find("Save raw OCC failure")
+        self.assertTrue(saved["no_log"])
+        self.assertEqual(saved["ansible.builtin.copy"]["mode"], "0600")
+        self.assertFalse(saved["diff"])
+        report = self.find("Report bounded OCC failure")
+        msg = report["ansible.builtin.debug"]["msg"]
+        self.assertIn("regex_findall", msg["known_error_categories"])
+        self.assertNotIn("stdout", msg)
+        self.assertNotIn("stderr", msg)
+        self.assertIn("overlay_created", self.raw)
+
     def test_report_does_not_overclaim_auth_or_files(self):
         report=self.find("Report actual networkless Nextcloud recovered application CLI and Calendar trial")[
             "ansible.builtin.debug"]["msg"]

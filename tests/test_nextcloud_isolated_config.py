@@ -121,8 +121,17 @@ class IsolatedConfigContract(unittest.TestCase):
                 self.assertEqual(stat.S_IMODE(output.stat().st_mode),0o600)
                 self.assertIn("'dbname' => 'nextcloud_restore'",output.read_text())
                 self.assertEqual(original.read_text(),"<?php $CONFIG=['dbhost'=>'production'];")
-                with self.assertRaises(trial.Refusal):
-                    trial.prepare(rid,html,password)
+                self.assertTrue(result["overlay_created"])
+                # Simulate namespace ownership after the mocked fchown.
+                from types import SimpleNamespace
+                meta = SimpleNamespace(st_mode=stat.S_IFREG | 0o600, st_uid=33, st_gid=33)
+                with patch.object(trial.os, "fstat", return_value=meta):
+                    again = trial.prepare(rid,html,password)
+                    self.assertFalse(again["overlay_created"])
+                    self.assertEqual(fake_chown.call_count, 1)
+                    output.write_text("wrong overlay")
+                    with self.assertRaises(trial.Refusal):
+                        trial.prepare(rid,html,password)
 
     def test_path_and_override_drift_refused(self):
         self.assertNotIn("subprocess.run(",SOURCE.read_text())
