@@ -77,8 +77,9 @@ commands are not newer authority.
   yet accepted.
 - **November 21 native database restore accepted:** [137 application tables](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132),
   retained isolated PostgreSQL on Peanut, old app files untouched,
-  private [Maintenance #17 handoff](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073941735). Do not recreate it. The old pinned
-  image download is still withdrawn. Next: run the actual restored
+  private [Maintenance #17 handoff](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073941735). Do not recreate it. **WITHDRAWN command:** the old pinned
+  image download remains withdrawn; use the current accepted recovery
+  frontier, not a historical operator packet. Next: run the actual restored
   code against that isolated database with a supported same-series
   PHP runtime, then test login/files/Calendar. See current lead
   handoff and recovery runbook.
