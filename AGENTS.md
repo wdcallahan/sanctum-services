@@ -56,7 +56,7 @@ commands are not newer authority.
   native Kvin/Peanut evidence, live production acceptance, and
   genuine recovery exercise. A green test is not a running service.
 
-## Nextcloud recovery frontier (recorded November 17; refresh from owner issues)
+## Nextcloud recovery frontier (November 21; refresh from owner issues)
 
 - Kvin's rootless **Sunday 03:30 weekly backup timer is installed and
   enabled**. The *installed user service* successfully executed a
@@ -72,17 +72,16 @@ commands are not newer authority.
   The daily updater and production patch are gated on real full app
   and database disaster recovery, [Services #5](https://github.com/wdcallahan/sanctum-services/issues/5).
 - The older `nextcloud-20261116t233618` recovery bundle's HTML/private
-  files are ALREADY restored in a separate tree on Peanut. A full
-  database restoration and isolated functioning Nextcloud login,
-  files and Calendar are NOT yet accepted.
-- **WITHDRAWN command:** The old fixed PostgreSQL image download is
-  still prohibited. November 21 [Maintenance #17 owner correction](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073141882)
-  resolves the source mismatch. Services stages only two reviewed
-  helper files inside the existing Peanut trial; no Maintenance
-  checkout advance. The actual native DB and app restore still await
-  acceptance. Read the current [lead handoff](PROJECT_LEAD_INTRODUCTION.md)
-  and recovery runbook before issuing the next command. Do not repeat
-  accepted recovery stages or reuse the withdrawn digest download.
+  files are ALREADY restored in a separate tree on Peanut. The database restoration has passed;
+  isolated functioning Nextcloud login, files and Calendar are NOT
+  yet accepted.
+- **November 21 native database restore accepted:** [137 application tables](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132),
+  retained isolated PostgreSQL on Peanut, old app files untouched,
+  private Maintenance handoff. Do not recreate it. The old pinned
+  image download is still withdrawn. Next: run the actual restored
+  code against that isolated database with a supported same-series
+  PHP runtime, then test login/files/Calendar. See current lead
+  handoff and recovery runbook.
 
 ## Human handoff after interruption
 
@@ -91,6 +90,9 @@ what remains, why the immediately preceding turn had no command,
 which owner moves next**, and the smallest genuinely new safe step if
 one exists. Do not keep Nova at a terminal waiting on an owner source
 dependency or claim you are running background work.
+
+Pixel must check the complete CI result before passing an executable
+command to Nova; Nova does not watch Actions or wait for a color.
 
 A project turn ends with an explicit **NOVA ACTION REQUIRED**,
 **NOVA DECISION REQUIRED**, **EXTERNAL OWNER DEPENDENCY**,
