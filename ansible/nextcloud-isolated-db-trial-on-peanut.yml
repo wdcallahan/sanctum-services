@@ -10,7 +10,16 @@
   become: false
   gather_facts: true
   vars:
-    nextcloud_db_trial_owner_helper: /home/wdc2/src/sanctum-maintenance/tools/restore-nextcloud-postgresql
+    # Approved Maintenance source revision, not a runtime image pin.
+    # Read its two helper files from Git objects on the controller; never
+    # advance either host's revision-gated Maintenance working tree.
+    nextcloud_db_trial_owner_revision: 7a5f318505d6bd44b909c68240ffc7232015c782
+    nextcloud_db_trial_controller_owner_repo: /home/wdc2/src/sanctum-maintenance
+    nextcloud_db_trial_owner_dir: "{{ nextcloud_db_trial_dest }}/maintenance-helper"
+    nextcloud_db_trial_owner_helper: "{{ nextcloud_db_trial_owner_dir }}/restore-nextcloud-postgresql"
+    nextcloud_db_trial_owner_files:
+      - backup-nextcloud-postgresql
+      - restore-nextcloud-postgresql
     # Restore trials follow supported major 18, not yesterday's rejected
     # permanently frozen runtime digest. This does NOT update shared PG.
     nextcloud_db_trial_pg_image: docker.io/library/postgres:18
@@ -41,13 +50,16 @@
           - nextcloud_isolated_db_trial_approved | default(false) | bool
           - nextcloud_maintenance_restore_contract_approved | default(false) | bool
           - nextcloud_db_trial_recovery_id is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
-          - nextcloud_db_trial_owner_helper == '/home/wdc2/src/sanctum-maintenance/tools/restore-nextcloud-postgresql'
+          - nextcloud_db_trial_owner_revision == '7a5f318505d6bd44b909c68240ffc7232015c782'
+          - nextcloud_db_trial_controller_owner_repo == '/home/wdc2/src/sanctum-maintenance'
+          - nextcloud_db_trial_owner_dir == nextcloud_db_trial_dest ~ '/maintenance-helper'
+          - nextcloud_db_trial_owner_helper == nextcloud_db_trial_owner_dir ~ '/restore-nextcloud-postgresql'
           - nextcloud_db_trial_pg_image == 'docker.io/library/postgres:18'
         fail_msg: >-
           Cannot run a DB restore on a shared server or without explicit
           approval of the isolated Maintenance-owned handoff contract.
 
-    - name: Inspect original Peanut recovery bundle, staged app files and owner helper
+    - name: Inspect original Peanut recovery bundle and staged app files
       ansible.builtin.stat:
         path: "{{ item }}"
         follow: false
@@ -56,10 +68,9 @@
         - "{{ nextcloud_db_trial_bundle }}"
         - "{{ nextcloud_db_trial_dest }}"
         - "{{ nextcloud_db_trial_dest }}/html/config/config.php"
-        - "{{ nextcloud_db_trial_dest }}/data"
         - "{{ nextcloud_db_trial_dest }}/html/data"
         - "{{ nextcloud_db_trial_dest }}/private/nextcloud.env"
-        - "{{ nextcloud_db_trial_owner_helper }}"
+        - "{{ nextcloud_db_trial_owner_dir }}"
         - "{{ nextcloud_db_trial_private_handoff }}"
       register: nextcloud_db_trial_existing
       no_log: true
@@ -74,16 +85,19 @@
           - nextcloud_db_trial_existing.results[1].stat.mode == '0700'
           - nextcloud_db_trial_existing.results[2].stat.isreg | default(false)
           - not (nextcloud_db_trial_existing.results[2].stat.islnk | default(false))
-          - nextcloud_db_trial_existing.results[4].stat.isdir | default(false)
-          - nextcloud_db_trial_existing.results[5].stat.isreg | default(false)
-          - nextcloud_db_trial_existing.results[6].stat.isreg | default(false)
+          - nextcloud_db_trial_existing.results[3].stat.isdir | default(false)
+          - nextcloud_db_trial_existing.results[4].stat.isreg | default(false)
+          - not (nextcloud_db_trial_existing.results[5].stat.islnk | default(false))
+          - not (nextcloud_db_trial_existing.results[5].stat.exists | default(false))
+            or (nextcloud_db_trial_existing.results[5].stat.isdir | default(false)
+                and nextcloud_db_trial_existing.results[5].stat.pw_name == 'wdc2'
+                and nextcloud_db_trial_existing.results[5].stat.mode == '0700')
+          - not (nextcloud_db_trial_existing.results[6].stat.exists | default(false))
           - not (nextcloud_db_trial_existing.results[6].stat.islnk | default(false))
-          - not (nextcloud_db_trial_existing.results[7].stat.exists | default(false))
-          - not (nextcloud_db_trial_existing.results[7].stat.islnk | default(false))
         fail_msg: >-
           Require already-restored isolated HTML/private files, an
-          existing private retained bundle, the Maintenance-owned helper
-          installed on Peanut, and NO previously used handoff directory.
+          existing private retained bundle, a safe helper staging location,
+          and NO previously used handoff directory.
           Do not re-extract or overwrite any accepted restore trial.
 
     - name: Inspect already retained Peanut recovery integrity without printing contents
@@ -105,6 +119,63 @@
           - (nextcloud_db_trial_verified_bundle.stdout | from_json).postgresql_custom_dump_header_recognized | bool
         fail_msg: Incomplete or changed Peanut bundle; refused to create a database container.
 
+    - name: Identify the existing Kvin controller
+      ansible.builtin.command:
+        argv: [hostname, -f]
+      delegate_to: localhost
+      register: nextcloud_db_trial_controller
+      changed_when: false
+
+    - name: Require Kvin as the controller for owner-source staging
+      ansible.builtin.assert:
+        that:
+          - nextcloud_db_trial_controller.stdout | trim == 'kvin.outer.sanctum'
+
+    - name: Check whether the reviewed Maintenance revision is already available in controller Git objects
+      ansible.builtin.command:
+        argv: [git, -C, "{{ nextcloud_db_trial_controller_owner_repo }}", cat-file, -t, "{{ nextcloud_db_trial_owner_revision }}"]
+      delegate_to: localhost
+      register: nextcloud_db_trial_owner_object
+      changed_when: false
+      failed_when: false
+
+    - name: Fetch Maintenance source objects if needed without changing its scheduled checkout
+      ansible.builtin.command:
+        argv: [git, -C, "{{ nextcloud_db_trial_controller_owner_repo }}", fetch, origin, main]
+      delegate_to: localhost
+      when: nextcloud_db_trial_owner_object.rc != 0 or nextcloud_db_trial_owner_object.stdout | trim != 'commit'
+      changed_when: true
+
+    - name: Read the two reviewed owner helper files from the exact Maintenance revision
+      ansible.builtin.command:
+        argv:
+          - git
+          - -C
+          - "{{ nextcloud_db_trial_controller_owner_repo }}"
+          - show
+          - "{{ nextcloud_db_trial_owner_revision }}:tools/{{ item }}"
+        strip_empty_ends: false
+      delegate_to: localhost
+      loop: "{{ nextcloud_db_trial_owner_files }}"
+      register: nextcloud_db_trial_owner_sources
+      changed_when: false
+
+    - name: Create a private owner-helper staging directory inside the existing trial
+      ansible.builtin.file:
+        path: "{{ nextcloud_db_trial_owner_dir }}"
+        state: directory
+        mode: '0700'
+
+    - name: Stage only the two reviewed Maintenance helpers on Peanut
+      ansible.builtin.copy:
+        content: "{{ item.stdout }}"
+        dest: "{{ nextcloud_db_trial_owner_dir }}/{{ item.item }}"
+        mode: '0600'
+      loop: "{{ nextcloud_db_trial_owner_sources.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      no_log: true
+
     - name: Observe compatible PostgreSQL 18 restore-image contract in Maintenance source
       ansible.builtin.command:
         argv:
@@ -121,10 +192,9 @@
         that:
           - (nextcloud_db_trial_owner_image_contract.stdout | trim) == nextcloud_db_trial_pg_image
         fail_msg: >-
-          Maintenance's restore helper still selects a frozen image digest.
-          This is a known November 16 Sanctum-wide audit regression.
-          Do not pull that digest or create a trial DB; the Maintenance owner
-          must reconcile its restore helper to docker.io/library/postgres:18.
+          The staged Maintenance helper does not select the agreed moving
+          PostgreSQL 18 channel. Refuse any image pull or database trial,
+          and reconcile the reviewed owner source before continuing.
 
     - name: Check whether supported PostgreSQL 18 image is already cached on Peanut
       ansible.builtin.command:
@@ -158,7 +228,7 @@
           - (nextcloud_db_trial_platform.stdout | from_json | length) == 1
           - (nextcloud_db_trial_platform.stdout | from_json)[0].Os == 'linux'
           - (nextcloud_db_trial_platform.stdout | from_json)[0].Architecture == ({'aarch64':'arm64','x86_64':'amd64'}[ansible_facts['architecture']])
-          - (nextcloud_db_trial_platform.stdout | from_json)[0].Id is match('^[a-f0-9]{64}$')
+          - (nextcloud_db_trial_platform.stdout | from_json)[0].Id is match('^(sha256:)?[a-f0-9]{64}$')
         fail_msg: >-
           The Maintenance-aligned PostgreSQL 18 image is absent or
           not native on Peanut. Pass the separately authorized image-cache
@@ -289,6 +359,8 @@
           host: peanut.arcane.sanctum
           source_recovery_id: "{{ nextcloud_db_trial_recovery_id }}"
           owner: sanctum-maintenance
+          owner_helper_revision: "{{ nextcloud_db_trial_owner_revision }}"
+          owner_helper_path: "{{ nextcloud_db_trial_owner_helper }}"
           restored_application_tables: "{{ (nextcloud_db_trial_owner_result.stdout | from_json).restored_application_tables }}"
           isolated_db_container: "{{ (nextcloud_db_trial_owner_result.stdout | from_json).container_id }}"
           isolated_postgresql_ready: true

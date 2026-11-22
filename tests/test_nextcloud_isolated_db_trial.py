@@ -40,7 +40,7 @@ class PeanutIsolatedDatabaseTrial(unittest.TestCase):
     def test_uses_owner_helper_not_own_pg_commands(self):
         self.assertEqual(
             self.play["vars"]["nextcloud_db_trial_owner_helper"],
-            "/home/wdc2/src/sanctum-maintenance/tools/restore-nextcloud-postgresql",
+            "{{ nextcloud_db_trial_owner_dir }}/restore-nextcloud-postgresql",
         )
         self.assertEqual(
             self.play["vars"]["nextcloud_db_trial_pg_image"],
@@ -84,9 +84,27 @@ class PeanutIsolatedDatabaseTrial(unittest.TestCase):
         self.assertLess(created,invoked)
         self.assertIn("nextcloud-recovery-bundle.py",self.raw)
         self.assertIn("archive_and_dump_hashes_match_manifest",self.raw)
-        self.assertIn("nextcloud_db_trial_existing.results[4].stat.isdir",self.raw)
-        self.assertIn("not (nextcloud_db_trial_existing.results[7].stat.exists",self.raw)
+        self.assertIn("nextcloud_db_trial_existing.results[3].stat.isdir",self.raw)
+        self.assertIn("not (nextcloud_db_trial_existing.results[6].stat.exists",self.raw)
         self.assertIn("mode: '0700'",self.raw)
+
+    def test_stage_reviewed_owner_files_without_checkout_change(self):
+        variables = self.play["vars"]
+        self.assertRegex(variables["nextcloud_db_trial_owner_revision"], r"^[a-f0-9]{40}$")
+        self.assertEqual(variables["nextcloud_db_trial_owner_files"],
+                         ["backup-nextcloud-postgresql", "restore-nextcloud-postgresql"])
+        read = self.get("Read the two reviewed owner helper files")
+        self.assertEqual(read["delegate_to"], "localhost")
+        self.assertIn("show", read["ansible.builtin.command"]["argv"])
+        self.assertIn("nextcloud_db_trial_owner_revision", read["ansible.builtin.command"]["argv"][-1])
+        stage = self.get("Stage only the two reviewed Maintenance helpers")
+        self.assertEqual(stage["ansible.builtin.copy"]["mode"], "0600")
+        self.assertIn("nextcloud_db_trial_owner_dir", stage["ansible.builtin.copy"]["dest"])
+        self.assertLess(self.names.index(stage["name"]),
+                        self.names.index("Observe compatible PostgreSQL 18 restore-image contract in Maintenance source"))
+        for prohibited in ("git pull", "git checkout", "git reset", "git switch"):
+            self.assertNotIn(prohibited, self.raw)
+        self.assertIn("^(sha256:)?[a-f0-9]{64}$", self.raw)
 
     def test_owner_receipt_and_container_network_none_proof(self):
         self.assertIn("isolated_database_ready_for_application",self.raw)
