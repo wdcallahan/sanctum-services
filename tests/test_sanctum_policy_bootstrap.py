@@ -65,7 +65,11 @@ class NewPixelColdStart(unittest.TestCase):
         self.assertIn("nextcloud-retain-on-peanut.yml", updater)
         self.assertIn("nextcloud-maintenance-activate.yml", updater)
         self.assertIn("nextcloud_complete_restore_qualified_in_source", install)
-        self.assertIn("nextcloud_complete_restore_qualified_in_source: false", (ANS / "group_vars/nextcloud.yml").read_text())
+        acceptance = yaml.safe_load((ANS / "group_vars/nextcloud.yml").read_text())
+        self.assertIs(type(acceptance["nextcloud_complete_restore_qualified_in_source"]), bool)
+        if acceptance["nextcloud_complete_restore_qualified_in_source"]:
+            self.assertRegex(acceptance["nextcloud_restore_acceptance_recovery_id"], r"^nextcloud-[0-9]{8}t[0-9]{6}$")
+            self.assertRegex(acceptance["nextcloud_restore_acceptance_receipt"], r"^https://github[.]com/wdcallahan/sanctum-services/issues/[0-9]+#issuecomment-[0-9]+$")
         # 34.0.5 frozen source is allowed ONLY as a historical migration
         # baseline, not as the desired updater channel.
         config = yaml.safe_load((ANS / "group_vars/nextcloud.yml").read_text())

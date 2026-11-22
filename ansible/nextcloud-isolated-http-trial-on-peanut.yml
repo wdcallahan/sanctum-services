@@ -157,7 +157,7 @@
           ansible.builtin.assert:
             that:
               - (http_inspect.stdout | from_json)[0].HostConfig.NetworkMode == 'container:' ~ db_trial.container_id
-              - not ((http_inspect.stdout | from_json)[0].HostConfig.PortBindings | default({}) | bool)
+              - ((http_inspect.stdout | from_json)[0].HostConfig.PortBindings | default({}, true) | length) == 0
               - (http_inspect.stdout | from_json)[0].Config.Labels['io.sanctum.nextcloud-http-trial'] == 'peanut'
 
         - name: Authenticate and read backed-up files and calendars over local HTTP

@@ -30,6 +30,8 @@ class HttpTrial(unittest.TestCase):
         self.assertIn("http_container.stdout", str(b["always"]))
         self.assertIn("restored_file_read_passed", raw)
         self.assertIn("calendar_query_passed", raw)
+        self.assertIn("HostConfig.PortBindings | default({}, true) | length) == 0", raw)
+        self.assertNotIn("HostConfig.PortBindings | default({}) | bool", raw)
 
     def test_output_protocol_isolated_from_php_diagnostics(self):
         raw = PLAY.read_text()

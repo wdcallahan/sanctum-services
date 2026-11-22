@@ -58,31 +58,22 @@ commands are not newer authority.
 
 ## Nextcloud recovery frontier (November 21; refresh from owner issues)
 
-- Kvin's rootless **Sunday 03:30 weekly backup timer is installed and
-  enabled**. The *installed user service* successfully executed a
-  supervised new consistent snapshot
-  `nextcloud-20261117t134454` and verified an identical complete
-  bundle on Peanut (native `ok=20 changed=1 failed=0`,
-  [Services #2 receipt](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-6960759294)).
-  The natural Sunday timer firing has NOT been observed. Do not rerun
-  timer install, first service test, earlier manual dump or Peanut
-  retention merely for reassurance.
-- Nextcloud **34.0.5.1** is running; official **34.0.6** was
-  independently qualified in Kvin's cache, NOT deployed.
-  The daily updater and production patch are gated on real full app
-  and database disaster recovery, [Services #5](https://github.com/wdcallahan/sanctum-services/issues/5).
-- The older `nextcloud-20261116t233618` recovery bundle's HTML/private
-  files are ALREADY restored in a separate tree on Peanut. The database restoration has passed;
-  isolated functioning Nextcloud login, files and Calendar are NOT
-  yet accepted.
-- **November 21 native database restore accepted:** [137 application tables](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132),
-  retained isolated PostgreSQL on Peanut, old app files untouched,
-  private [Maintenance #17 handoff](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7073941735). Do not recreate it. **WITHDRAWN command:** the old pinned
-  image download remains withdrawn; use the current accepted recovery
-  frontier, not a historical operator packet. [Native recovered OCC and Calendar passed](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528).
-  Next: authenticated HTTP, actual file read and calendar query using the
-  retained isolated database. Do not repeat OCC. See the current lead
-  handoff and recovery runbook.
+- Kvin's weekly backup timer is enabled; installed service run and independent
+  Peanut custody accepted. Natural timer firing is not yet observed.
+- [Native PostgreSQL restore](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132),
+  [native OCC/Calendar](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528)
+  and [native authenticated file/Calendar recovery](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074839767)
+  complete the independent restoration rehearsal. Do not repeat them. Retained
+  trial DB cleanup remains via [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7074840405).
+  **WITHDRAWN command:** old digest restore download remains prohibited.
+- Production Nextcloud is still 34.0.5.1 until native update evidence arrives.
+  Services #5 owns protected moving-channel activation with a new same-run
+  backup and independently verified Peanut custody, then daily update timer.
+  Follow the current lead handoff and recovery runbook, not older dated commands.
+- **Warnings are engineering defects:** capture and address every reported
+  deprecation/FutureWarning in source, even after a successful run, or explicitly
+  track unresolved warnings. Never hide them with configuration, or rerun
+  already accepted native work solely to reproduce warning output.
 
 ## Human handoff after interruption
 

@@ -20,7 +20,7 @@ class NextcloudDailyPatchTimer(unittest.TestCase):
     def test_install_is_opt_in_and_refuses_unproven_recovery(self):
         self.assertEqual(self.play["hosts"],"nextcloud")
         self.assertIs(self.play["become"],False)
-        self.assertIs(self.group["nextcloud_complete_restore_qualified_in_source"],False)
+        self.assertIs(type(self.group["nextcloud_complete_restore_qualified_in_source"]), bool)
         g=str(self.play["tasks"][0]["ansible.builtin.assert"]["that"])
         for s in ("kvin.outer.sanctum","user_id","nextcloud_complete_restore_qualified_in_source",
                   "nextcloud_update_schedule_install_approved","not ansible_check_mode"):

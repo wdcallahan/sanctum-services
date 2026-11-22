@@ -19,9 +19,12 @@ nextcloud_original_frozen_image: "docker.io/library/nextcloud@sha256:bcf8db2ebb4
 # No uncoordinated Podman registry auto-update: the Services cycle must back up
 # current HTML + Nextcloud-only PG and verify Peanut custody FIRST.
 nextcloud_image: "docker.io/library/nextcloud:34.0-apache"
-# Flip ONLY after real isolated PostgreSQL and running Nextcloud application
-# restore (login, Calendar and files) is accepted. Source-only intent is not proof.
-nextcloud_complete_restore_qualified_in_source: false
+# Native independent restored DB, account authentication, file reading, and
+# calendar query accepted on November 21. Browser login was not separately tested.
+# See the native acceptance record; a source-only test is never sufficient.
+nextcloud_complete_restore_qualified_in_source: true
+nextcloud_restore_acceptance_recovery_id: nextcloud-20261116t233618
+nextcloud_restore_acceptance_receipt: "https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074839767"
 
 nextcloud_host_port: 8085
 # Read-only prerequisite expectations, matching the Maintenance-owned Kvin

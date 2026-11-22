@@ -25,26 +25,14 @@ The first application is **Nextcloud**. The active estate also includes **YXORP,
 > Nextcloud returned to normal. **Natural Sunday timer firing not yet
 > observed**; backups not auto-pruned.
 >
-> Official Linux ARM64 Nextcloud **34.0.6** was separately qualified in
-> Kvin's image cache; production remains **34.0.5.1**. The protected
-> within-34 image updater and separate daily update timer are built,
-> but the application update is *not* yet authorized or deployed.
-> The already accepted **Nov16** Peanut recovery point's HTML/private
-> files are extracted and ready for a full isolation trial; the actual
-> restored PostgreSQL + working restored application are **NOT yet
-> natively accepted**. Services has source-qualified a narrow
-> integration using Maintenance's existing networkless/private
-> PostgreSQL handoff, a restored-copy-only Nextcloud config overlay,
-> and an isolated `occ`+Calendar trial. Source and syntax
-> [CI 44177213002 PASSED](https://github.com/wdcallahan/sanctum-services/actions/runs/44177213002).
-> **November 21:** [Native isolated PostgreSQL restore PASSED](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132):
-> 137 restored application tables, private retained owner handoff,
-> networkless DB on Peanut, production unchanged. The old pinned-image
-> command remains withdrawn. [Native restored OCC and Calendar PASSED](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528).
-> Next: authenticate over isolated HTTP and read recovered files and calendars.
-> [Current recovery procedure](docs/runbooks/nextcloud-instance-recovery.md).
-> Authenticated login/files/Calendar recovery acceptance remains
-> necessary before the first production 34.0.6 patch.
+> **November 21:** [Full independent Nextcloud recovery ACCEPTED](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074839767):
+> filesystem, 137 restored database tables, Nextcloud 34.0.5.1 and Calendar
+> 6.6.2 CLI, recovered account authentication, actual file read, and two calendar
+> events. Production untouched; old pinned-image command is withdrawn.
+> Production remains 34.0.5.1 until protected live update acceptance.
+> Next run the backup-gated moving-channel maintenance cycle, then enable
+> the daily updater. No repeat of the accepted recovery stages.
+>
 > See the [lead handoff](PROJECT_LEAD_INTRODUCTION.md),
 > [roadmap](docs/ROADMAP.md) and
 > [Nextcloud recovery runbook](docs/runbooks/nextcloud-instance-recovery.md).

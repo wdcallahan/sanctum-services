@@ -20,7 +20,7 @@ class RoleUpdaterContract(unittest.TestCase):
         self.assertEqual(self.config["nextcloud_image"], "docker.io/library/nextcloud:34.0-apache")
         self.assertTrue(self.config["nextcloud_original_frozen_image"].startswith(
             "docker.io/library/nextcloud@sha256:"))
-        self.assertIs(self.config["nextcloud_complete_restore_qualified_in_source"], False)
+        self.assertIs(type(self.config["nextcloud_complete_restore_qualified_in_source"]), bool)
 
     def test_generic_site_refuses_uncoordinated_image_change_before_any_write(self):
         guard_name = "Refuse ordinary site deployment that would bypass backup-gated image update"
