@@ -30,7 +30,7 @@
           - nextcloud_cycle_update_needed | default(false) | bool
           - nextcloud_cycle_old_image_id | default('') is match('^[a-f0-9]{64}$')
           - nextcloud_cycle_candidate_image_id | default('') is match('^[a-f0-9]{64}$')
-          - nextcloud_cycle_candidate == nextcloud_cycle_target_image
+          - nextcloud_cycle_candidate_channel | default('') == nextcloud_cycle_target_image
           - nextcloud_cycle_recovery_id | default('') is match('^nextcloud-[0-9]{8}t[0-9]{6}$')
           - nextcloud_cycle_backup_verified | default(false) | bool
           - hostvars['peanut.arcane.sanctum'].nextcloud_cycle_peanut_verified | default(false) | bool

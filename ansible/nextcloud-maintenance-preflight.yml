@@ -141,6 +141,7 @@
       ansible.builtin.set_fact:
         nextcloud_cycle_update_needed: "{{ (nextcloud_cycle_before.stdout | from_json)[0].Image != (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Id }}"
         nextcloud_cycle_old_image_id: "{{ (nextcloud_cycle_before.stdout | from_json)[0].Image }}"
+        nextcloud_cycle_candidate_channel: "{{ nextcloud_cycle_candidate }}"
         nextcloud_cycle_candidate_image_id: "{{ (nextcloud_cycle_candidate_inspect.stdout | from_json)[0].Id }}"
         nextcloud_cycle_prior_version: "{{ (nextcloud_cycle_original_occ.stdout | from_json).version }}"
         nextcloud_cycle_expected_version: "{{ (nextcloud_cycle_candidate_php.stdout | from_json).version }}"

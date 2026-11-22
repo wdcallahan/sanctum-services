@@ -67,6 +67,29 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
         self.assertNotIn("systemd_service:", raw)
         self.assertNotIn("pg_dump", raw)
 
+    def test_activation_cross_play_inputs_are_persisted_host_facts(self):
+        # A preflight play's vars disappear at the next play boundary.
+        # Every activation input coming from preflight must be a set_fact
+        # key, rather than an incidental play-local variable.
+        import re
+        facts = set()
+        for task in self.preflight["tasks"]:
+            facts.update(task.get("ansible.builtin.set_fact", {}))
+        activation_local = set(self.activate["vars"])
+        guard = self.activate["tasks"][0]["ansible.builtin.assert"]["that"]
+        referenced = set(re.findall(r"\bnextcloud_cycle_[a-z_]+\b", "\n".join(guard)))
+        external_receipts = {"nextcloud_cycle_backup_verified", "nextcloud_cycle_peanut_verified"}
+        self.assertEqual(referenced - activation_local - external_receipts - facts, set())
+        self.assertIn("nextcloud_cycle_candidate_channel", facts)
+        self.assertNotIn("nextcloud_cycle_candidate == ", "\n".join(guard))
+        for task in self.preflight["tasks"]:
+            if "nextcloud_cycle_candidate_channel" in task.get("ansible.builtin.set_fact", {}):
+                self.assertEqual(task["ansible.builtin.set_fact"]["nextcloud_cycle_candidate_channel"],
+                                 "{{ nextcloud_cycle_candidate }}")
+                break
+        else:
+            self.fail("Candidate channel was not persisted")
+
     def test_new_backup_receipt_used_not_historical_recovery_id(self):
         snap = (ANS / "nextcloud-consistent-backup.yml").read_text()
         retain = (ANS / "nextcloud-retain-on-peanut.yml").read_text()
