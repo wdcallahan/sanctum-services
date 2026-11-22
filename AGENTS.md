@@ -66,10 +66,17 @@ commands are not newer authority.
   complete the independent restoration rehearsal. Do not repeat them. Retained
   trial DB cleanup remains via [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7074840405).
   **WITHDRAWN command:** old digest restore download remains prohibited.
-- Production Nextcloud is still 34.0.5.1 until native update evidence arrives.
-  Services #5 owns protected moving-channel activation with a new same-run
-  backup and independently verified Peanut custody, then daily update timer.
-  Follow the current lead handoff and recovery runbook, not older dated commands.
+- **November 22 LIVE:** protected Nextcloud 34.0.6 image activation already
+  happened after fresh recovery point `nextcloud-20261122t164508` was verified
+  independently on Peanut. The original activation play falsely failed before
+  checking HTTP/Calendar because it waited for OCC rc=0, not the new version;
+  the follow-up [native read-only check](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7087238141)
+  confirms running 34.0.6.2, no maintenance/DB migration, matching image and
+  Quadlet. **The .update-halted latch is active.** Do not rerun upgrade/backup
+  or install timer; first run the source-qualified **post-promotion acceptance**
+  play, which verifies current HTTP/Calendar/image/mounts and releases only
+  that specific latch after all checks pass. Then install daily update timer.
+  Check lead handoff/current Services #5, not old operator packets.
 - **Warnings are engineering defects:** capture and address every reported
   deprecation/FutureWarning in source, even after a successful run, or explicitly
   track unresolved warnings. Never hide them with configuration, or rerun

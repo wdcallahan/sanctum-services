@@ -15,6 +15,8 @@ on:
       - "ansible/nextcloud-qualify-maintenance-image.yml"
       - "ansible/nextcloud-maintenance-preflight.yml"
       - "ansible/nextcloud-maintenance-activate.yml"
+      - "ansible/nextcloud-post-promotion-accept-on-kvin.yml"
+      - "tests/test_nextcloud_post_promotion_accept.py"
       - "ansible/nextcloud-maintenance-cycle.yml"
       - "ansible/nextcloud-scheduled-backup.yml"
       - "ansible/nextcloud-backup-schedule-install.yml"
@@ -240,6 +242,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_nextcloud_update_readiness.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_maintenance_image.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_maintenance_cycle.py'
+          python3 -m unittest discover -s tests -p 'test_nextcloud_post_promotion_accept.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_role_update_guard.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_backup_schedule.py'
           python3 -m unittest discover -s tests -p 'test_nextcloud_backup_service_first_run.py'
@@ -323,6 +326,7 @@ jobs:
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-qualify-maintenance-image.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-maintenance-preflight.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-maintenance-activate.yml --syntax-check
+          ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-post-promotion-accept-on-kvin.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-maintenance-cycle.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-scheduled-backup.yml --syntax-check
           ansible-playbook -i ansible/inventory/hosts.yml ansible/nextcloud-backup-schedule-install.yml --syntax-check

@@ -27,6 +27,10 @@ class NextcloudDailyPatchTimer(unittest.TestCase):
             self.assertIn(s,g)
         raw=(ANS/"nextcloud-update-schedule-install.yml").read_text()
         self.assertIn("sanctum-nextcloud-backup.timer",raw)
+        self.assertIn("Observe previous failed activation latch", raw)
+        self.assertIn("Require no unresolved promotion failure before scheduling", raw)
+        self.assertLess(raw.index("Require no unresolved promotion failure before scheduling"),
+                        raw.index("Install only Services-owned daily maintenance service and timer"))
         self.assertIn("Pull=never",raw)
         self.assertIn("AutoUpdate=registry",raw)
         self.assertIn("ImageName == nextcloud_image",raw)

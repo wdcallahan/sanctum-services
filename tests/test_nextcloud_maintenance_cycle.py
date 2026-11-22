@@ -90,6 +90,20 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
         else:
             self.fail("Candidate channel was not persisted")
 
+    def test_activation_waits_for_expected_version_and_normal_mode_not_only_exit_code(self):
+        task = next(t for t in self.activate["tasks"]
+                    if "block" in t)["block"][2]
+        self.assertIn("Wait for official application update", task["name"])
+        wait = task["until"]
+        self.assertIn("nextcloud_activation_after_occ.rc == 0", wait)
+        self.assertIn("nextcloud_cycle_expected_version", wait)
+        self.assertIn("from_json", wait)
+        self.assertIn(".maintenance", wait)
+        self.assertIn(".installed", wait)
+        self.assertIn(".needsDbUpgrade", wait)
+        self.assertEqual(task["retries"], 30)
+        self.assertEqual(task["delay"], 10)
+
     def test_new_backup_receipt_used_not_historical_recovery_id(self):
         snap = (ANS / "nextcloud-consistent-backup.yml").read_text()
         retain = (ANS / "nextcloud-retain-on-peanut.yml").read_text()

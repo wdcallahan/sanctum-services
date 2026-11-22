@@ -29,9 +29,15 @@ The first application is **Nextcloud**. The active estate also includes **YXORP,
 > filesystem, 137 restored database tables, Nextcloud 34.0.5.1 and Calendar
 > 6.6.2 CLI, recovered account authentication, actual file read, and two calendar
 > events. Production untouched; old pinned-image command is withdrawn.
-> Production remains 34.0.5.1 until protected live update acceptance.
-> Next run the backup-gated moving-channel maintenance cycle, then enable
-> the daily updater. No repeat of the accepted recovery stages.
+> **November 22:** Protected live patch now reports **34.0.6.2** in an
+> actual read-only Kvin observation, with current moving-channel Quadlet and
+> no maintenance or database upgrade pending. The first activation script
+> mistimed its expected-version check, so a failed-promotion latch remains
+> while HTTP, Calendar, image and mount post-checks are completed.
+> [Current issue and evidence](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7087238141).
+> **Do not repeat update or backup.** Accept the existing update and release
+> its exact latch only after successful current checks, then enable the daily
+> updater.
 >
 > See the [lead handoff](PROJECT_LEAD_INTRODUCTION.md),
 > [roadmap](docs/ROADMAP.md) and

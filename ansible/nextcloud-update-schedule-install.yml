@@ -27,6 +27,18 @@
           Do not install an unattended stateful-app upgrade timer before
           actual full app+DB recovery and operator-approved live promotion.
 
+    - name: Observe previous failed activation latch before enabling unattended updates
+      ansible.builtin.stat:
+        path: /home/wdc2/.local/share/sanctum-services/backups/nextcloud/.update-halted
+        follow: false
+      register: nextcloud_update_timer_halted
+
+    - name: Require no unresolved promotion failure before scheduling
+      ansible.builtin.assert:
+        that:
+          - not (nextcloud_update_timer_halted.stat.exists | default(false))
+        fail_msg: A failed prior promotion still has a halt latch; complete native service review before enabling the daily timer.
+
     - name: Read installed source-owned Nextcloud Quadlet privately before timer activation
       ansible.builtin.slurp:
         src: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container

@@ -129,7 +129,15 @@
           failed_when: false
           retries: 30
           delay: 10
-          until: nextcloud_activation_after_occ.rc == 0
+          # OCC can exit 0 while the entrypoint is still completing an
+          # application update. Poll actual installed version and normal mode,
+          # otherwise the successful update is mislabeled a failure.
+          until: >-
+            nextcloud_activation_after_occ.rc == 0
+            and ((nextcloud_activation_after_occ.stdout | default('{}', true) | from_json).installed | default(false) | bool)
+            and not ((nextcloud_activation_after_occ.stdout | default('{}', true) | from_json).maintenance | default(true) | bool)
+            and not ((nextcloud_activation_after_occ.stdout | default('{}', true) | from_json).needsDbUpgrade | default(false) | bool)
+            and (((nextcloud_activation_after_occ.stdout | default('{}', true) | from_json).version | default('')).split('.')[:3] | join('.')) == nextcloud_cycle_expected_version
           no_log: true
 
         - name: Require installed updated Nextcloud, no pending database upgrade and normal mode
