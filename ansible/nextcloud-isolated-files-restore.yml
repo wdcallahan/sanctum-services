@@ -93,14 +93,19 @@
         state: directory
         mode: '0700'
 
-    - name: Create separate application and private-input restore targets
+    # The archive contains children, not the document root. Match the
+    # production role's traversable root; its enclosing trial stays 0700.
+    - name: Create traversable restored application document root
       ansible.builtin.file:
-        path: "{{ item }}"
+        path: "{{ nextcloud_isolated_html }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create private input restore target
+      ansible.builtin.file:
+        path: "{{ nextcloud_isolated_private }}"
         state: directory
         mode: '0700'
-      loop:
-        - "{{ nextcloud_isolated_html }}"
-        - "{{ nextcloud_isolated_private }}"
 
     - name: Restore only the verified HTML archive into the fresh isolated tree
       ansible.builtin.command:

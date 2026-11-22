@@ -190,9 +190,56 @@
           - not ((nextcloud_app_trial_config_result.stdout | from_json).production_database_contacted | bool)
         fail_msg: Private Nextcloud trial config was not safely prepared.
 
+    # The archive contains children, not the document root itself.
+    # A previous staging play created html as 0700 owned by rootless UID 0.
+    # Match the production role's traversable 0755 document root, while
+    # the enclosing recovery directory remains 0700 and protects all data.
+    - name: Observe restored document root without following links
+      ansible.builtin.stat:
+        path: "{{ nextcloud_app_trial_html }}"
+        follow: false
+      register: nextcloud_app_trial_document_root
+
+    - name: Require expected private trial document root before permission repair
+      ansible.builtin.assert:
+        that:
+          - nextcloud_app_trial_document_root.stat.isdir | default(false)
+          - not (nextcloud_app_trial_document_root.stat.islnk | default(false))
+          - nextcloud_app_trial_document_root.stat.pw_name == 'wdc2'
+          - nextcloud_app_trial_document_root.stat.mode in ['0700', '0755']
+          - nextcloud_app_trial_inputs.results[0].stat.pw_name == 'wdc2'
+          - nextcloud_app_trial_inputs.results[0].stat.mode == '0700'
+        fail_msg: Unexpected restored document-root metadata; do not recursively change permissions.
+
+    - name: Restore document-root traversal matching the production role
+      ansible.builtin.file:
+        path: "{{ nextcloud_app_trial_html }}"
+        state: directory
+        mode: '0755'
+        recurse: false
+
+    - name: Check restored entrypoint readability as www-data in the mounted namespace
+      ansible.builtin.command:
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, '-r', 'echo json_encode([\"occ_readable\" => is_readable(\"/var/www/html/occ\"), \"config_readable\" => is_readable(\"/var/www/html/config/config.php\"), \"overlay_readable\" => is_readable(\"/var/www/html/config/zzzz-sanctum-isolated.config.php\"), \"data_traversable\" => is_executable(\"/var/www/html/data\")]);'] }}"
+      register: nextcloud_app_trial_entrypoint
+      changed_when: false
+
+    - name: Report mounted restored application access checks
+      ansible.builtin.debug:
+        msg: "{{ nextcloud_app_trial_entrypoint.stdout | from_json }}"
+
+    - name: Require actual www-data access before running OCC
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_app_trial_entrypoint.stdout | from_json).occ_readable | bool
+          - (nextcloud_app_trial_entrypoint.stdout | from_json).config_readable | bool
+          - (nextcloud_app_trial_entrypoint.stdout | from_json).overlay_readable | bool
+          - (nextcloud_app_trial_entrypoint.stdout | from_json).data_traversable | bool
+        fail_msg: Restored application files remain inaccessible to www-data; preserve the trial.
+
     - name: Run only restored Nextcloud occ status inside networkless DB namespace
       ansible.builtin.command:
-        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, 'occ', 'status', '--output=json'] }}"
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, '/var/www/html/occ', 'status', '--output=json'] }}"
       register: nextcloud_app_trial_occ
       changed_when: false
       failed_when: false
@@ -215,7 +262,7 @@
           stderr_present: "{{ nextcloud_app_trial_occ.stderr | default('') | length > 0 }}"
           known_error_categories: >-
             {{ ((nextcloud_app_trial_occ.stdout | default('')) ~ ' ' ~ (nextcloud_app_trial_occ.stderr | default('')))
-            | regex_findall('(?i)permission denied|read-only file system|could not open input file|no such file or directory|config directory|config/config[.]php|data directory|connection refused|password authentication failed|could not translate host name|SQLSTATE\\[[0-9A-Z]{5}\\]|redis|memcache|unsupported PHP|PHP Fatal error|PHP Parse error|PHP Warning|could not find driver|network namespace|operation not permitted|OCI runtime|cannot open|failed to open stream|not writable|not readable|owner of the file')
+            | regex_findall('(?i)permission denied|read-only file system|could not open input file|no such file or directory|config directory|config/config[.]php|data directory|connection refused|password authentication failed|could not translate host name|SQLSTATE|redis|memcache|unsupported PHP|PHP Fatal error|PHP Parse error|PHP Warning|could not find driver|network namespace|operation not permitted|OCI runtime|cannot open|failed to open stream|not writable|not readable|owner of the file')
             | map('lower') | unique | list }}
           raw_diagnostic_on_peanut: "{{ nextcloud_app_trial_dest }}/occ-status-failure.json"
       when: nextcloud_app_trial_occ.rc != 0
@@ -237,7 +284,7 @@
 
     - name: Run restored Calendar app inspection in same isolated namespace
       ansible.builtin.command:
-        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, 'occ', 'app:list', '--output=json'] }}"
+        argv: "{{ nextcloud_app_trial_container_prefix + ['--network=container:' ~ (nextcloud_app_trial_owner_receipt.content | b64decode | from_json).container_id, '--volume=' ~ nextcloud_app_trial_html ~ ':/var/www/html:Z', nextcloud_app_trial_runtime_id, '/var/www/html/occ', 'app:list', '--output=json'] }}"
       register: nextcloud_app_trial_apps
       changed_when: false
       no_log: true

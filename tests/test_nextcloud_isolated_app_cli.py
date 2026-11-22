@@ -57,7 +57,7 @@ class IsolatedNextcloudAppCli(unittest.TestCase):
         self.assertIn("--entrypoint=php",p["vars"]["nextcloud_app_trial_container_prefix"])
         self.assertNotIn("nextcloud@sha256:",self.raw)
         self.assertIn('argv: [podman, pull, "{{ nextcloud_app_trial_image }}"]',self.raw)
-        self.assertIn("nextcloud_app_trial_runtime_id, 'occ'",self.raw)
+        self.assertIn("nextcloud_app_trial_runtime_id, '/var/www/html/occ'",self.raw)
         self.assertIn("34[.]0[.]5",self.raw)
         self.assertNotIn("occ', 'upgrade'",self.raw)
 
@@ -78,6 +78,20 @@ class IsolatedNextcloudAppCli(unittest.TestCase):
         for x in ("--network=container:",":/var/www/html:Z","occ', 'status'",
                   "occ', 'app:list'","Calendar","full_app_restore_not_yet_accepted: true"):
             self.assertIn(x,self.raw)
+
+    def test_document_root_traversal_only_and_runtime_readability(self):
+        root = self.find("Restore document-root traversal")
+        self.assertEqual(root["ansible.builtin.file"]["path"], "{{ nextcloud_app_trial_html }}")
+        self.assertEqual(root["ansible.builtin.file"]["mode"], "0755")
+        self.assertFalse(root["ansible.builtin.file"]["recurse"])
+        guard = self.find("Require expected private trial document root")["ansible.builtin.assert"]["that"]
+        self.assertIn("nextcloud_app_trial_inputs.results[0].stat.mode == '0700'", guard)
+        probe = self.find("Check restored entrypoint readability")
+        self.assertIn("is_readable", probe["ansible.builtin.command"]["argv"])
+        self.assertIn("/var/www/html/occ", probe["ansible.builtin.command"]["argv"])
+        self.assertLess(self.names.index(root["name"]), self.names.index(probe["name"]))
+        self.assertLess(self.names.index(probe["name"]), self.names.index("Run only restored Nextcloud occ status inside networkless DB namespace"))
+        self.assertNotIn(r"SQLSTATE\\[[", self.raw)
 
     def test_failed_occ_reports_bounded_diagnostics_without_raw_console_output(self):
         task = self.find("Run only restored Nextcloud occ status")

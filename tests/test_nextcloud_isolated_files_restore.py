@@ -72,6 +72,11 @@ class IsolatedNextcloudFilesRestore(unittest.TestCase):
         self.assertNotIn("state: started", self.source)
         self.assertNotIn("become: true", self.source)
 
+    def test_document_root_matches_production_and_parent_remains_private(self):
+        self.assertEqual(self.find("Create traversable restored application")["ansible.builtin.file"]["mode"], "0755")
+        self.assertEqual(self.find("Create a uniquely named private isolated")["ansible.builtin.file"]["mode"], "0700")
+        self.assertEqual(self.find("Create private input restore target")["ansible.builtin.file"]["mode"], "0700")
+
     def test_report_does_not_claim_usable_application(self):
         report = self.find("Report filesystem-only")["ansible.builtin.debug"]["msg"]
         for expected_false in (
