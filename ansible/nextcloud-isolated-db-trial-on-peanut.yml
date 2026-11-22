@@ -141,7 +141,9 @@
 
     - name: Fetch Maintenance source objects if needed without changing its scheduled checkout
       ansible.builtin.command:
-        argv: [git, -C, "{{ nextcloud_db_trial_controller_owner_repo }}", fetch, origin, main]
+        # Fetch only the reviewed object; do not move any ref, scheduled
+        # checkout, or FETCH_HEAD in the controller's Maintenance repository.
+        argv: [git, -C, "{{ nextcloud_db_trial_controller_owner_repo }}", fetch, --no-tags, --no-write-fetch-head, origin, "{{ nextcloud_db_trial_owner_revision }}"]
       delegate_to: localhost
       when: nextcloud_db_trial_owner_object.rc != 0 or nextcloud_db_trial_owner_object.stdout | trim != 'commit'
       changed_when: true
