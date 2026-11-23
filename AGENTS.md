@@ -63,12 +63,17 @@ commands are not newer authority.
   Protected recovery `nextcloud-20261122t164508` independently retained on
   Peanut; former `.update-halted` marker verified and removed. [Services #5
   acceptance](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7088520030).
-- **Do not rerun** update, backup, or one-time latch release. **Next**: enable
-  source-managed daily update timer with
-  `ansible/nextcloud-update-schedule-install.yml` after full CI, then bank native
-  installation acceptance. No immediate update from timer install. Its daily
-  04:15 check and weekly backup share the `.nextcloud-cycle.lock` flock.
-  Natural timer firings remain unobserved until real evidence is returned.
+- **Do not rerun** update, backup, or one-time latch release. **November 23
+  architecture correction:** do not install a private Nextcloud update timer;
+  old installer and timer have been removed from source. Ordinary containers
+  use the EXISTING rootless user `podman-auto-update.timer`. Nextcloud's
+  stateful DB migration requires its guarded backup/Peanut/activation one-shot,
+  triggered as a causal `OnSuccess` handoff from the shared Podman update
+  service, and deliberately remains excluded from Podman image-only rollback.
+  New source-only installer: `ansible/nextcloud-update-handoff-install.yml`.
+  Nova must explicitly approve attaching it to the shared service after CI;
+  no new update timer and no server apply yet. Natural event not proven.
+  Weekly backup timer remains a separate backup task, not update scheduling.
 - Previously [accepted full independent DB/OCC/files/Calendar recovery](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074839767)
   remains banked; retained disposable DB cleanup is Maintenance-owned
   [#17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7074840405).

@@ -55,7 +55,7 @@ class NewPixelColdStart(unittest.TestCase):
         managed = (ANS / "files/sanctum-nextcloud-kvin-maintenance.container").read_text()
         backup_timer = (ANS / "files/sanctum-nextcloud-backup.timer").read_text()
         updater = (ANS / "nextcloud-maintenance-cycle.yml").read_text()
-        install = (ANS / "nextcloud-update-schedule-install.yml").read_text()
+        install = (ANS / "nextcloud-update-handoff-install.yml").read_text()
         configured = yaml.safe_load((ANS / "group_vars/nextcloud.yml").read_text())["nextcloud_image"]
         self.assertIn("Image=" + configured, managed)
         self.assertIn("Pull=never", managed)

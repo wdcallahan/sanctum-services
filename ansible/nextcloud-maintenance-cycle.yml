@@ -1,14 +1,17 @@
 ---
-# Future attended/automated maintenance workflow, NOT YET APPROVED FOR LIVE USE.
+# Native protected 34.0.6.2 promotion ACCEPTED November 22; reusable for future
+# patches as a causal handoff from existing rootless Podman update service.
 # This explicitly orders: candidate decision -> NEW consistent Kvin snapshot ->
 # independently checked Peanut custody -> production activation.
 # The final activation play refuses until an actual full DB+app restore has been
 # source-accepted, and requires its own approval. Do not put Nextcloud under
 # the unrelated global podman-auto-update.timer.
 #
-# Native operator/runtime is currently ansible-playbook on Kvin (the already
-# accepted backup/retention execution path). A future scheduled controller
-# will use the same Ansible entry with a single run lock; no timer is installed.
+# Native operator/runtime is ansible-playbook on Kvin. The established user
+# podman-auto-update.timer -> service is the sole update scheduler. On
+# successful service completion a source-managed OnSuccess drop-in triggers
+# this guarded Nextcloud one-shot (never generic image-only rollback).
+# The independent weekly backup timer shares its flock lock.
 - import_playbook: nextcloud-maintenance-preflight.yml
 
 # No update == no maintenance-mode pause, no fresh backup, no restart.

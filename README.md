@@ -15,8 +15,13 @@ records established decisions that a new session must not reverse.
 > LAN port. A complete pre-upgrade Kvin backup has independent Peanut custody.
 > The earlier failed-update latch was intentionally released after acceptance;
 > do not repeat those operations. [Native receipt](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7088520030).
-> **Next:** install and observe the source-managed daily patch timer; the timer
-> is not yet installed, and natural timer firing has not been observed.
+> **November 23 architecture correction:** no separate Nextcloud patch timer.
+> The ordinary Kvin rootless `podman-auto-update.timer` remains the shared
+> container-update clock. Nextcloud needs an app/database-consistent backup
+> and independent Peanut custody *before* restart; therefore it stays out of
+> Podman's image-only rollback. The proposed source-only `OnSuccess` handoff
+> from the existing Podman updater is not yet installed or authorized.
+> [Current decision and evidence](https://github.com/wdcallahan/sanctum-services/issues/5).
 >
 The first application is **Nextcloud**. The active estate also includes **YXORP, LinkStack, Uptime Kuma and EyesOnly** (Search is owned by its own project); **Pi-hole is retired**. The [future-services section of the estate register](docs/SERVICE-ESTATE.md#future-services-backlog-not-deployed-by-this-register) records three explicit plans—**Sanctum VPN, Luanti and Home Assistant**—and keeps earlier brainstorming candidates clearly marked **uncommitted** rather than manufacturing installation tasks. We build for useful services **and** real hands-on engineering experience.
 

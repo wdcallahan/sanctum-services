@@ -1,0 +1,173 @@
+---
+# Attach one existing Nextcloud guarded transaction to the EXISTING rootless
+# podman-auto-update.service completion. Do not install another timer.
+# Podman auto-update performs ordinary registry-based updates for eligible
+# containers. Nextcloud is deliberately excluded from native image-only
+# rollbacks because its startup can migrate persistent application and DB data.
+# After the Podman unit succeeds, systemd triggers the same proven Nextcloud
+# image-decision -> backup -> Peanut custody -> guarded activation workflow.
+# Source installation does NOT run the updater or restart Nextcloud.
+- name: Join Nextcloud maintenance to existing shared user Podman update lifecycle
+  hosts: nextcloud
+  gather_facts: true
+  become: false
+  vars:
+    nextcloud_handoff_systemd_dir: /home/wdc2/.config/systemd/user
+    nextcloud_handoff_dropin_dir: /home/wdc2/.config/systemd/user/podman-auto-update.service.d
+    nextcloud_handoff_dropin_file: /home/wdc2/.config/systemd/user/podman-auto-update.service.d/nextcloud.conf
+    nextcloud_handoff_unit: sanctum-nextcloud-maintenance-update.service
+    nextcloud_handoff_legacy_timer: /home/wdc2/.config/systemd/user/sanctum-nextcloud-maintenance-update.timer
+    nextcloud_handoff_quadlet: /home/wdc2/.config/containers/systemd/sanctum-nextcloud.container
+    nextcloud_handoff_halt: /home/wdc2/.local/share/sanctum-services/backups/nextcloud/.update-halted
+    nextcloud_handoff_xdg: "/run/user/{{ ansible_facts['user_uid'] }}"
+  tasks:
+    - name: Require exact approved single-scheduler Nextcloud integration scope
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'kvin.outer.sanctum'
+          - ansible_facts['fqdn'] == inventory_hostname
+          - ansible_facts['user_id'] == 'wdc2'
+          - ansible_user == 'wdc2'
+          - ansible_facts['architecture'] == 'aarch64'
+          - not ansible_check_mode
+          - nextcloud_shared_update_handoff_approved | default(false) | bool
+          - nextcloud_complete_restore_qualified_in_source | bool
+          - nextcloud_image == 'docker.io/library/nextcloud:34.0-apache'
+        fail_msg: Only approved Kvin user-Podman integration is permitted; no new timer.
+
+    - name: Observe failure marker and any redundant Nextcloud timer without following links
+      ansible.builtin.stat:
+        path: "{{ item }}"
+        follow: false
+      loop:
+        - "{{ nextcloud_handoff_halt }}"
+        - "{{ nextcloud_handoff_legacy_timer }}"
+      register: nextcloud_handoff_existing
+
+    - name: Refuse unsafe activation or duplicate Nextcloud update timer
+      ansible.builtin.assert:
+        that:
+          - not (nextcloud_handoff_existing.results[0].stat.exists | default(false))
+          - not (nextcloud_handoff_existing.results[1].stat.exists | default(false))
+        fail_msg: Previous failed promotion or redundant per-app timer exists; preserve and investigate rather than adding another owner.
+
+    - name: Observe existing native user Podman updater and independent backup timers
+      ansible.builtin.command:
+        argv: "{{ item }}"
+      loop:
+        - [systemctl, --user, is-enabled, podman-auto-update.timer]
+        - [systemctl, --user, is-active, podman-auto-update.timer]
+        - [systemctl, --user, is-enabled, sanctum-nextcloud-backup.timer]
+        - [systemctl, --user, is-enabled, sanctum-nextcloud-maintenance-update.timer]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_handoff_xdg }}"
+      register: nextcloud_handoff_timers
+      changed_when: false
+      failed_when: false
+
+    - name: Require active shared updater, backup and no enabled private updater
+      ansible.builtin.assert:
+        that:
+          - nextcloud_handoff_timers.results[0].rc == 0
+          - nextcloud_handoff_timers.results[0].stdout | trim == 'enabled'
+          - nextcloud_handoff_timers.results[1].rc == 0
+          - nextcloud_handoff_timers.results[1].stdout | trim == 'active'
+          - nextcloud_handoff_timers.results[2].rc == 0
+          - nextcloud_handoff_timers.results[2].stdout | trim == 'enabled'
+          - nextcloud_handoff_timers.results[3].stdout | trim not in ['enabled', 'enabled-runtime', 'linked', 'linked-runtime']
+        fail_msg: Shared rootless Podman and weekly backup timer requirements not met or a duplicate update timer exists.
+
+    - name: Read existing accepted Nextcloud Quadlet privately
+      ansible.builtin.slurp:
+        src: "{{ nextcloud_handoff_quadlet }}"
+      register: nextcloud_handoff_quadlet_contents
+      no_log: true
+
+    - name: Require existing moving-channel Nextcloud with managed migration boundary
+      ansible.builtin.assert:
+        that:
+          - "'Image=docker.io/library/nextcloud:34.0-apache' in existing_quadlet_lines"
+          - "'Pull=never' in existing_quadlet_lines"
+          - "'AutoUpdate=registry' not in existing_quadlet_lines"
+          - "'ContainerName=sanctum-nextcloud' in existing_quadlet_lines"
+          - "'PublishPort=0.0.0.0:8085:80/tcp' in existing_quadlet_lines"
+        fail_msg: Nextcloud must not also be registered for generic image-only Podman auto-update.
+      vars:
+        existing_quadlet_lines: "{{ (nextcloud_handoff_quadlet_contents.content | b64decode).splitlines() }}"
+
+    - name: Inspect actual Nextcloud container without exposing private configuration
+      ansible.builtin.command:
+        argv: [podman, container, inspect, sanctum-nextcloud]
+      register: nextcloud_handoff_live
+      changed_when: false
+      no_log: true
+
+    - name: Require running native-accepted moving-channel instance
+      ansible.builtin.assert:
+        that:
+          - (nextcloud_handoff_live.stdout | from_json | length) == 1
+          - (nextcloud_handoff_live.stdout | from_json)[0].State.Running | bool
+          - (nextcloud_handoff_live.stdout | from_json)[0].ImageName == nextcloud_image
+        fail_msg: Cannot attach update handoff to an unexpected Nextcloud runtime.
+
+    - name: Create only the normal systemd user directory and Podman updater drop-in directory
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - "{{ nextcloud_handoff_systemd_dir }}"
+        - "{{ nextcloud_handoff_dropin_dir }}"
+
+    - name: Install guarded Nextcloud transaction service without a timer
+      ansible.builtin.copy:
+        src: files/sanctum-nextcloud-maintenance-update.service
+        dest: "{{ nextcloud_handoff_systemd_dir }}/{{ nextcloud_handoff_unit }}"
+        mode: '0644'
+      register: nextcloud_handoff_service_copy
+
+    - name: Attach guarded transaction after existing shared Podman updater succeeds
+      ansible.builtin.copy:
+        src: files/podman-auto-update-nextcloud-handoff.conf
+        dest: "{{ nextcloud_handoff_dropin_file }}"
+        mode: '0644'
+      register: nextcloud_handoff_dropin_copy
+
+    - name: Reload only systemd user unit definitions after handoff source changes
+      ansible.builtin.systemd_service:
+        scope: user
+        daemon_reload: true
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_handoff_xdg }}"
+      when: nextcloud_handoff_service_copy.changed or nextcloud_handoff_dropin_copy.changed
+
+    - name: Read actual shared updater causal handoff without running either service
+      ansible.builtin.command:
+        argv: [systemctl, --user, show, podman-auto-update.service, --property=OnSuccess, --value]
+      environment:
+        XDG_RUNTIME_DIR: "{{ nextcloud_handoff_xdg }}"
+      register: nextcloud_handoff_live_dependency
+      changed_when: false
+
+    - name: Require Nextcloud guarded transaction is triggered by shared updater completion
+      ansible.builtin.assert:
+        that:
+          - nextcloud_handoff_unit in nextcloud_handoff_live_dependency.stdout.split()
+        fail_msg: Shared user Podman updater does not report the source-owned Nextcloud OnSuccess handoff.
+
+    - name: Report single shared Podman scheduling authority and deferred native first run
+      ansible.builtin.debug:
+        msg:
+          host: "{{ inventory_hostname }}"
+          shared_scheduler: podman-auto-update.timer
+          shared_updater: podman-auto-update.service
+          existing_user_timer_preserved: true
+          nextcloud_handoff_unit: "{{ nextcloud_handoff_unit }}"
+          nextcloud_private_update_timer_installed: false
+          nextcloud_uses_generic_image_only_rollback: false
+          nextcloud_guarded_backup_and_peanut_custody_before_activation: true
+          shared_lock_with_independent_weekly_backup: true
+          app_or_database_not_changed_by_handoff_install: true
+          no_image_update_or_service_restart_triggered: true
+          first_natural_shared_update_handoff_not_yet_observed: true
+          next_action: Bank first naturally triggered shared updater and Nextcloud handoff receipt without repeating accepted upgrade or backup
