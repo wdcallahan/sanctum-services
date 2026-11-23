@@ -37,7 +37,10 @@ The first application is **Nextcloud**. The active estate also includes **YXORP,
 > [Current issue and evidence](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7087238141).
 > **Do not repeat update or backup.** Accept the existing update and release
 > its exact latch only after successful current checks, then enable the daily
-> updater.
+> updater. Native follow-up confirmed **Calendar 6.7.0 enabled** (supported
+> for Nextcloud 34); older exact 6.6.2 acceptance check was invalid.
+> The one-time and recurring guards now test nonregression, not a frozen
+> Calendar version.
 >
 > See the [lead handoff](PROJECT_LEAD_INTRODUCTION.md),
 > [roadmap](docs/ROADMAP.md) and

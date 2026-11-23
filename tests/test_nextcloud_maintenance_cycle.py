@@ -131,7 +131,12 @@ class NextcloudMaintenanceCycle(unittest.TestCase):
         ):
             self.assertIn(x, s)
         self.assertIn("state: restarted", raw)
-        self.assertIn("Calendar 6.6.2", raw)
+        self.assertIn("Require enabled nonregressing stable Calendar", raw)
+        self.assertIn("enabled.calendar is defined", raw)
+        self.assertIn("ansible.builtin.version('6.6.2', '>=', version_type='pep440')", raw)
+        self.assertIn("actual_enabled_calendar_version", raw)
+        self.assertNotIn("calendar_version_preserved:", raw)
+        self.assertNotIn("enabled.calendar == '6.6.2'", raw)
         self.assertIn("without unsafe image downgrade", raw)
         self.assertIn("Persist failed application-upgrade latch", raw)
         self.assertIn(".update-halted", raw)

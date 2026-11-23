@@ -47,6 +47,15 @@ class PostPromotionAcceptance(unittest.TestCase):
             self.assertNotIn("ansible.builtin.file", t)
         self.assertIn("no_log: true", self.source)
 
+    def test_calendar_compatibility_accepts_actual_native_6_7_not_exact_old_pin(self):
+        check = self.find("Require enabled stable Calendar")
+        conditions = "\\n".join(check["ansible.builtin.assert"]["that"])
+        self.assertIn("enabled.calendar is defined", conditions)
+        self.assertIn("enabled.calendar is match(", conditions)
+        self.assertIn("ansible.builtin.version('6.7.0', '>=', version_type='pep440')", conditions)
+        self.assertNotIn("enabled.calendar == '6.6.2'", self.source)
+        self.assertIn("calendar_version_enabled", self.source)
+
     def test_no_other_mutations_or_recovery_repetition(self):
         for prohibited in ("podman pull", "podman run", "podman rm",
                            "state: restarted", "state: started",

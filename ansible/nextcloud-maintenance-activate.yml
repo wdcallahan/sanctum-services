@@ -177,12 +177,78 @@
           changed_when: false
           no_log: true
 
-        - name: Require previously accepted Calendar 6.6.2 remains enabled
+        - name: Require enabled nonregressing stable Calendar after Nextcloud update
           ansible.builtin.assert:
             that:
               - (nextcloud_activation_apps.stdout | from_json).enabled.calendar is defined
-              - (nextcloud_activation_apps.stdout | from_json).enabled.calendar == '6.6.2'
-            fail_msg: Calendar 6.6.2 is no longer enabled at accepted version after update.
+              - (nextcloud_activation_apps.stdout | from_json).enabled.calendar is match('^[0-9]+[.][0-9]+[.][0-9]+
+
+        - name: Inspect actual updated container and published listener
+          ansible.builtin.command:
+            argv: "{{ item }}"
+          loop:
+            - [podman, container, inspect, sanctum-nextcloud]
+            - [podman, port, sanctum-nextcloud, 80/tcp]
+          register: nextcloud_activation_after_runtime
+          changed_when: false
+          no_log: true
+
+        - name: Require candidate image, same four mounted paths and original port
+          ansible.builtin.assert:
+            that:
+              - (nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].State.Running | bool
+              - (nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].ImageName == nextcloud_cycle_target_image
+              - (nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].Image == nextcloud_cycle_candidate_image_id
+              - "((nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].Mounts | map(attribute='Source') | list | sort) == ((nextcloud_activation_images.results[0].stdout | from_json)[0].Mounts | map(attribute='Source') | list | sort)"
+              - "((nextcloud_activation_after_runtime.results[0].stdout | from_json)[0].Mounts | map(attribute='Destination') | list | sort) == ((nextcloud_activation_images.results[0].stdout | from_json)[0].Mounts | map(attribute='Destination') | list | sort)"
+              - "'0.0.0.0:8085' in nextcloud_activation_after_runtime.results[1].stdout"
+            fail_msg: Nextcloud runtime image, persisted mounts or publishing changed unexpectedly.
+
+      rescue:
+        - name: Persist failed application-upgrade latch before any unattended retry
+          ansible.builtin.copy:
+            content: |
+              Nextcloud update failed after promotion attempt.
+              Recovery point: {{ nextcloud_cycle_recovery_id }}
+              Full application+database restore may be required.
+              Examine the original Ansible failure before clearing this marker.
+            dest: /home/wdc2/.local/share/sanctum-services/backups/nextcloud/.update-halted
+            mode: '0600'
+
+        - name: Report failed promotion and protected complete recovery point without unsafe image downgrade
+          ansible.builtin.debug:
+            msg:
+              status: update_failed_requires_operator_review
+              protected_recovery_id: "{{ nextcloud_cycle_recovery_id }}"
+              independently_retained_on_peanut: true
+              image_only_downgrade_not_attempted: true
+              full_app_and_database_restore_required_for_reversal: true
+              no_other_service_changed_by_this_playbook: true
+        - name: Stop this maintenance cycle rather than silently reporting success
+          ansible.builtin.fail:
+            msg: Nextcloud 34 maintenance promotion failed; examine the original failure and protected full backup before any recovery action.
+
+    - name: Report verified 34 maintenance deployment with independently retained recovery point
+      ansible.builtin.debug:
+        msg:
+          updated_from: "{{ nextcloud_cycle_prior_version }}"
+          updated_to: "{{ nextcloud_cycle_expected_version }}"
+          running_image: "{{ nextcloud_cycle_target_image }}"
+          native_platform: linux/arm64
+          source_version_family: "34.0.x"
+          actual_enabled_calendar_version: "{{ (nextcloud_activation_apps.stdout | from_json).enabled.calendar }}"
+          production_database_service_untouched: true
+          pre_upgrade_recovery_id: "{{ nextcloud_cycle_recovery_id }}"
+          independently_verified_on_peanut: true
+          existing_nextcloud_user_service_restarted: true
+          original_persistent_mounts_preserved: true
+          source_managed_quadlet: "{{ nextcloud_cycle_rootless_quadlet }}"
+          independent_podman_auto_update_disabled_for_this_app: true
+          client_login_and_calendar_sync_not_checked_by_this_play: true
+          next_action: Accept normal user files and Calendar clients, then publish routine controller scheduling and canonical source reconciliation
+)
+              - (nextcloud_activation_apps.stdout | from_json).enabled.calendar is ansible.builtin.version('6.6.2', '>=', version_type='pep440')
+            fail_msg: Calendar is missing, disabled, prerelease or below the accepted 6.6.2 baseline.
 
         - name: Inspect actual updated container and published listener
           ansible.builtin.command:

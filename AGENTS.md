@@ -75,7 +75,12 @@ commands are not newer authority.
   Quadlet. **The .update-halted latch is active.** Do not rerun upgrade/backup
   or install timer; first run the source-qualified **post-promotion acceptance**
   play, which verifies current HTTP/Calendar/image/mounts and releases only
-  that specific latch after all checks pass. Then install daily update timer.
+  that specific latch after all checks pass. **November 22 Calendar observation:**
+  Calendar **6.7.0 is enabled**, supported by Nextcloud 34, while old
+  assertion expected exact 6.6.2. Corrected one-time and recurring guards
+  accept stable nonregressing versions (no frozen app pin). Source CI then
+  repeat only the narrow post-promotion acceptance; do NOT repeat upgrade.
+  Then install daily update timer if native acceptance passes.
   Check lead handoff/current Services #5, not old operator packets.
 - **Warnings are engineering defects:** capture and address every reported
   deprecation/FutureWarning in source, even after a successful run, or explicitly
