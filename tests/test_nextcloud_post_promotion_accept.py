@@ -39,7 +39,7 @@ class PostPromotionAcceptance(unittest.TestCase):
         i = self.names.index(release_name)
         for needed in ("Require latch identifies only", "Require running candidate image",
                        "Require the actual completed", "Require HTTP and OCC",
-                       "Require existing Calendar", "Require existing 8085"):
+                       "Require enabled stable Calendar", "Require existing 8085"):
             self.assertLess(self.names.index(self.find(needed)["name"]), i)
         for t in self.tasks[:i]:
             self.assertNotIn("ansible.builtin.copy", t)
