@@ -10,6 +10,14 @@ proposing an operator command. The active
 [whole-Sanctum audit (Maintenance #38)](https://github.com/wdcallahan/sanctum-maintenance/issues/38)
 records established decisions that a new session must not reverse.
 
+> **November 22 — native Nextcloud promotion accepted:** production Nextcloud
+> **34.0.6.2** with enabled Calendar **6.7.0**, healthy HTTP, same storage and
+> LAN port. A complete pre-upgrade Kvin backup has independent Peanut custody.
+> The earlier failed-update latch was intentionally released after acceptance;
+> do not repeat those operations. [Native receipt](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7088520030).
+> **Next:** install and observe the source-managed daily patch timer; the timer
+> is not yet installed, and natural timer firing has not been observed.
+>
 The first application is **Nextcloud**. The active estate also includes **YXORP, LinkStack, Uptime Kuma and EyesOnly** (Search is owned by its own project); **Pi-hole is retired**. The [future-services section of the estate register](docs/SERVICE-ESTATE.md#future-services-backlog-not-deployed-by-this-register) records three explicit plans—**Sanctum VPN, Luanti and Home Assistant**—and keeps earlier brainstorming candidates clearly marked **uncommitted** rather than manufacturing installation tasks. We build for useful services **and** real hands-on engineering experience.
 
 > **Current status — November 17, 2026:** Kvar remains unplugged;

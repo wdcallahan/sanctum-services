@@ -56,36 +56,26 @@ commands are not newer authority.
   native Kvin/Peanut evidence, live production acceptance, and
   genuine recovery exercise. A green test is not a running service.
 
-## Nextcloud recovery frontier (November 21; refresh from owner issues)
+## Nextcloud recovery frontier (November 22; current native evidence)
 
-- Kvin's weekly backup timer is enabled; installed service run and independent
-  Peanut custody accepted. Natural timer firing is not yet observed.
-- [Native PostgreSQL restore](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7073940132),
-  [native OCC/Calendar](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074239528)
-  and [native authenticated file/Calendar recovery](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074839767)
-  complete the independent restoration rehearsal. Do not repeat them. Retained
-  trial DB cleanup remains via [Maintenance #17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7074840405).
-  **WITHDRAWN command:** old digest restore download remains prohibited.
-- **November 22 LIVE:** protected Nextcloud 34.0.6 image activation already
-  happened after fresh recovery point `nextcloud-20261122t164508` was verified
-  independently on Peanut. The original activation play falsely failed before
-  checking HTTP/Calendar because it waited for OCC rc=0, not the new version;
-  the follow-up [native read-only check](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7087238141)
-  confirms running 34.0.6.2, no maintenance/DB migration, matching image and
-  Quadlet. **The .update-halted latch is active.** Do not rerun upgrade/backup
-  or install timer; first run the source-qualified **post-promotion acceptance**
-  play, which verifies current HTTP/Calendar/image/mounts and releases only
-  that specific latch after all checks pass. **November 22 Calendar observation:**
-  Calendar **6.7.0 is enabled**, supported by Nextcloud 34, while old
-  assertion expected exact 6.6.2. Corrected one-time and recurring guards
-  accept stable nonregressing versions (no frozen app pin). Source CI then
-  repeat only the narrow post-promotion acceptance; do NOT repeat upgrade.
-  Then install daily update timer if native acceptance passes.
-  Check lead handoff/current Services #5, not old operator packets.
-- **Warnings are engineering defects:** capture and address every reported
-  deprecation/FutureWarning in source, even after a successful run, or explicitly
-  track unresolved warnings. Never hide them with configuration, or rerun
-  already accepted native work solely to reproduce warning output.
+- The real guarded update was **NATIVE ACCEPTED**: running Nextcloud 34.0.6.2,
+  Calendar 6.7.0 enabled, HTTP/mounts/listener correct, no pending DB upgrade.
+  Protected recovery `nextcloud-20261122t164508` independently retained on
+  Peanut; former `.update-halted` marker verified and removed. [Services #5
+  acceptance](https://github.com/wdcallahan/sanctum-services/issues/5#issuecomment-7088520030).
+- **Do not rerun** update, backup, or one-time latch release. **Next**: enable
+  source-managed daily update timer with
+  `ansible/nextcloud-update-schedule-install.yml` after full CI, then bank native
+  installation acceptance. No immediate update from timer install. Its daily
+  04:15 check and weekly backup share the `.nextcloud-cycle.lock` flock.
+  Natural timer firings remain unobserved until real evidence is returned.
+- Previously [accepted full independent DB/OCC/files/Calendar recovery](https://github.com/wdcallahan/sanctum-services/issues/2#issuecomment-7074839767)
+  remains banked; retained disposable DB cleanup is Maintenance-owned
+  [#17](https://github.com/wdcallahan/sanctum-maintenance/issues/17#issuecomment-7074840405).
+  **WITHDRAWN command:** old pinned-image restore retrieval is forbidden.
+- **Warnings are engineering defects:** address every reported deprecation or
+  FutureWarning in owned source, or track the outstanding issue; never hide
+  warnings, nor repeat accepted native operations just for cleaner output.
 
 ## Human handoff after interruption
 
